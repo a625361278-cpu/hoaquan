@@ -1,0 +1,9 @@
+server/vendor/
+server/runtime/
+server/.env
+server/.phpunit.result.cache
+client/node_modules/
+client/dist/
+*.log
+.DS_Store
+Thumbs.db

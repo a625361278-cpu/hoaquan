@@ -1,0 +1,38 @@
+{
+	"pages": [
+		{
+			"path": "pages/login/index",
+			"style": {
+				"navigationBarTitleText": "登录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "Hoa Quán",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/game/add",
+			"style": {
+				"navigationBarTitleText": "添加游戏账号",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/profile/index",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"navigationStyle": "custom"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "Hoa Quán",
+		"navigationBarBackgroundColor": "#FFFFFF",
+		"backgroundColor": "#F4F7FB"
+	}
+}
