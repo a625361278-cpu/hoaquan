@@ -45,6 +45,8 @@ CentOS 部署和一键更新脚本见 [docs/deploy-centos.md](docs/deploy-centos
 bash deploy/server_update.sh
 ```
 
+如果是直接把代码文件夹或压缩包拷贝给别人部署，不依赖 Git 仓库，使用 [docs/code-copy-deploy.md](docs/code-copy-deploy.md)。
+
 ## 当前业务边界
 
 - 具体游戏、系统配置和第三方 API 尚未确定，因此不创建假游戏配置。
