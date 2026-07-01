@@ -23,8 +23,8 @@ return [
         'handler' => Http::class,
         'listen' => 'http://0.0.0.0:8790',
         'count' => cpu_count() * 4,
-        'user' => '',
-        'group' => '',
+        'user' => app_env('WEBMAN_USER', ''),
+        'group' => app_env('WEBMAN_GROUP', ''),
         'reusePort' => false,
         'eventLoop' => '',
         'context' => [],
@@ -39,6 +39,8 @@ return [
     'monitor' => [
         'handler' => app\process\Monitor::class,
         'reloadable' => false,
+        'user' => app_env('WEBMAN_USER', ''),
+        'group' => app_env('WEBMAN_GROUP', ''),
         'constructor' => [
             // Monitor these directories
             'monitorDir' => array_merge([
