@@ -4,6 +4,7 @@
  */
 chdir(__DIR__);
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/support/bootstrap.php';
 
 use Dotenv\Dotenv;
 use support\App;
@@ -68,6 +69,7 @@ function write_process_file($runtimeProcessPath, $processName, $firm): string
     $fileContent = <<<EOF
 <?php
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../support/bootstrap.php';
 
 use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
