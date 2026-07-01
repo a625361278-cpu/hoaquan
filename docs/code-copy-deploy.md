@@ -377,6 +377,8 @@ php scripts/sync_database.php
 php scripts/sync_admin.php
 ```
 
+同步完成后，后台菜单包含 GameAssist 用户管理入口；仪表盘注册统计来自 `ga_users`，不是后台账号或 `wa_users`。
+
 默认后台账号：
 
 ```text
@@ -740,4 +742,3 @@ npm run build:h5
 ```
 
 然后刷新浏览器缓存。
-

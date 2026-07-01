@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        <meta charset="utf-8">
+        <title>GameAssist用户</title>
+        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    </head>
+    <body class="pear-container">
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <form class="layui-form top-search-from">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">用户ID</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="id" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">账号</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="account" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">邮箱</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="email" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">昵称</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="nickname" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">状态</label>
+                        <div class="layui-input-block">
+                            <select name="status">
+                                <option value="">全部</option>
+                                <option value="1">正常</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">注册时间</label>
+                        <div class="layui-input-block" id="created_at">
+                            <input type="text" autocomplete="off" name="created_at[]" id="created_at-date-start" class="layui-input inline-block" placeholder="开始时间">
+                            -
+                            <input type="text" autocomplete="off" name="created_at[]" id="created_at-date-end" class="layui-input inline-block" placeholder="结束时间">
+                        </div>
+                    </div>
+                    <div class="layui-form-item layui-inline">
+                        <label class="layui-form-label"></label>
+                        <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="table-query">
+                            <i class="layui-icon layui-icon-search"></i>查询
+                        </button>
+                        <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="table-reset">
+                            <i class="layui-icon layui-icon-refresh"></i>重置
+                        </button>
+                    </div>
+                    <div class="toggle-btn">
+                        <a class="layui-hide">展开<i class="layui-icon layui-icon-down"></i></a>
+                        <a class="layui-hide">收起<i class="layui-icon layui-icon-up"></i></a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <table id="data-table" lay-filter="data-table"></table>
+            </div>
+        </div>
+
+        <script type="text/html" id="table-toolbar">
+            <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="refresh">
+                <i class="layui-icon layui-icon-refresh"></i>刷新
+            </button>
+        </script>
+
+        <script type="text/html" id="table-bar">
+            <button class="pear-btn pear-btn-xs tool-btn" lay-event="resetPassword" permission="app.admin.game-assist-user.resetPassword">重置密码</button>
+        </script>
+
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/pear/pear.js"></script>
+        <script src="/app/admin/admin/js/permission.js"></script>
+        <script src="/app/admin/admin/js/common.js"></script>
+        <script>
+            const PRIMARY_KEY = "id";
+            const SELECT_API = "/app/admin/game-assist-user/select";
+            const UPDATE_API = "/app/admin/game-assist-user/update";
+            const RESET_PASSWORD_URL = "/app/admin/game-assist-user/reset-password";
+
+            layui.use(["laydate"], function() {
+                layui.laydate.render({
+                    elem: "#created_at",
+                    range: ["#created_at-date-start", "#created_at-date-end"],
+                    type: "datetime",
+                });
+            });
+
+            layui.use(["table", "form", "common", "popup", "util"], function() {
+                let table = layui.table;
+                let form = layui.form;
+                let $ = layui.$;
+                let common = layui.common;
+                let util = layui.util;
+
+                let cols = [
+                    {title: "用户ID", field: "id", sort: true, width: 90},
+                    {title: "账号", field: "account", minWidth: 140},
+                    {title: "邮箱", field: "email", minWidth: 180},
+                    {title: "昵称", field: "nickname", minWidth: 120},
+                    {title: "余额", field: "balance", width: 110},
+                    {title: "到期时间", field: "expire_at", width: 120},
+                    {
+                        title: "状态",
+                        field: "status",
+                        width: 110,
+                        templet: function (d) {
+                            let checked = d.status === 1 ? "checked" : "";
+                            return '<input type="checkbox" value="'+util.escape(d.id)+'" lay-filter="status" lay-skin="switch" lay-text="正常|禁用" '+checked+'/>';
+                        }
+                    },
+                    {title: "注册时间", field: "created_at", minWidth: 170},
+                    {title: "更新时间", field: "updated_at", minWidth: 170},
+                    {title: "操作", toolbar: "#table-bar", align: "center", fixed: "right", width: 120}
+                ];
+
+                function render()
+                {
+                    table.render({
+                        elem: "#data-table",
+                        url: SELECT_API,
+                        page: true,
+                        cols: [cols],
+                        skin: "line",
+                        size: "lg",
+                        toolbar: "#table-toolbar",
+                        autoSort: false,
+                        defaultToolbar: ["filter", "print", "exports"]
+                    });
+                }
+
+                render();
+
+                form.on("switch(status)", function (data) {
+                    let load = layer.load();
+                    $.post(UPDATE_API, {id: this.value, status: data.elem.checked ? 1 : 0}, function (res) {
+                        layer.close(load);
+                        if (res.code) {
+                            return layui.popup.failure(res.msg, function () {
+                                data.elem.checked = !data.elem.checked;
+                                form.render();
+                            });
+                        }
+                        return layui.popup.success("操作成功");
+                    });
+                });
+
+                table.on("tool(data-table)", function(obj) {
+                    if (obj.event === "resetPassword") {
+                        layer.open({
+                            type: 2,
+                            title: "重置密码",
+                            shade: 0.1,
+                            area: [common.isModile() ? "100%" : "420px", common.isModile() ? "100%" : "260px"],
+                            content: RESET_PASSWORD_URL + "?" + PRIMARY_KEY + "=" + obj.data[PRIMARY_KEY]
+                        });
+                    }
+                });
+
+                table.on("toolbar(data-table)", function(obj) {
+                    if (obj.event === "refresh") {
+                        refreshTable();
+                    }
+                });
+
+                form.on("submit(table-query)", function(data) {
+                    table.reload("data-table", {
+                        page: {curr: 1},
+                        where: data.field
+                    });
+                    return false;
+                });
+
+                form.on("submit(table-reset)", function() {
+                    table.reload("data-table", {where: []});
+                });
+
+                table.on("sort(data-table)", function(obj){
+                    table.reload("data-table", {
+                        initSort: obj,
+                        scrollPos: "fixed",
+                        where: {
+                            field: obj.field,
+                            order: obj.type
+                        }
+                    });
+                });
+
+                window.refreshTable = function() {
+                    table.reloadData("data-table", {scrollPos: "fixed"});
+                }
+            });
+        </script>
+    </body>
+</html>

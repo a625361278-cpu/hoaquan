@@ -126,7 +126,7 @@ php scripts/sync_database.php
 php scripts/sync_admin.php
 ```
 
-这两个脚本用于同步项目业务表结构、后台品牌、webman-admin 原生菜单和管理员权限。
+这两个脚本用于同步项目业务表结构、后台品牌、webman-admin 原生菜单和管理员权限。后台的 GameAssist 用户管理入口和仪表盘注册统计都以 `ga_users` 为准，不统计后台账号或 `wa_users`。
 
 默认后台账号：
 
@@ -430,4 +430,3 @@ server/config/process.php
 ```
 
 同时更新 Nginx 里的 `proxy_pass` 端口。
-

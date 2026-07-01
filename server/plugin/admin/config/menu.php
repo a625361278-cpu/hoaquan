@@ -55,9 +55,9 @@ return [
         'type' => 0,
         'children' => [
             [
-                'title' => '用户',
-                'key' => 'plugin\\admin\\app\\controller\\UserController',
-                'href' => '/app/admin/user/index',
+                'title' => 'GameAssist用户',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistUserController',
+                'href' => '/app/admin/game-assist-user/index',
                 'type' => 1,
                 'weight' => 800,
             ]
