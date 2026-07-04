@@ -47,7 +47,22 @@ class DbUserRepository implements UserRepositoryInterface
         return Db::table('ga_users')->where('email', $email)->exists();
     }
 
-    public function create(string $account, string $email, string $nickname, string $passwordHash): array
+    public function findByInviteCode(string $inviteCode): ?array
+    {
+        $row = Db::table('ga_users')
+            ->where('invite_code', $inviteCode)
+            ->where('status', 1)
+            ->first();
+
+        return $row ? (array)$row : null;
+    }
+
+    public function inviteCodeExists(string $inviteCode): bool
+    {
+        return Db::table('ga_users')->where('invite_code', $inviteCode)->exists();
+    }
+
+    public function create(string $account, string $email, string $nickname, string $passwordHash, ?int $invitedByUserId = null, string $inviteRegisteredIp = '', ?string $inviteCode = null): array
     {
         $now = date('Y-m-d H:i:s');
         $id = Db::table('ga_users')->insertGetId([
@@ -55,6 +70,9 @@ class DbUserRepository implements UserRepositoryInterface
             'email' => $email,
             'nickname' => $nickname,
             'password_hash' => $passwordHash,
+            'invite_code' => $inviteCode,
+            'invited_by_user_id' => $invitedByUserId,
+            'invite_registered_ip' => $inviteRegisteredIp,
             'status' => 1,
             'created_at' => $now,
             'updated_at' => $now,
@@ -63,6 +81,32 @@ class DbUserRepository implements UserRepositoryInterface
         $user = $this->findActiveById((int)$id);
         if (!$user) {
             throw new \RuntimeException('用户创建后读取失败');
+        }
+        return $user;
+    }
+
+    public function updateInviteCode(int $id, string $inviteCode): array
+    {
+        $updated = Db::table('ga_users')
+            ->where('id', $id)
+            ->where('status', 1)
+            ->whereNull('invite_code')
+            ->update([
+                'invite_code' => $inviteCode,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+        if ($updated !== 1) {
+            $user = $this->findActiveById($id);
+            if ($user && ($user['invite_code'] ?? '') === $inviteCode) {
+                return $user;
+            }
+            throw new \RuntimeException('邀请码更新失败，用户状态异常');
+        }
+
+        $user = $this->findActiveById($id);
+        if (!$user) {
+            throw new \RuntimeException('邀请码更新后读取用户失败');
         }
         return $user;
     }

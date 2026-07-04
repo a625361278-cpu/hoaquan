@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="<?=admin_html_lang()?>">
     <head>
         <meta charset="utf-8">
-        <title>GameAssist用户</title>
+        <title><?=admin_t('admin.gameassist.title')?></title>
         <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
         <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
     </head>
@@ -11,59 +11,59 @@
             <div class="layui-card-body">
                 <form class="layui-form top-search-from">
                     <div class="layui-form-item">
-                        <label class="layui-form-label">用户ID</label>
+                        <label class="layui-form-label"><?=admin_t('admin.gameassist.id')?></label>
                         <div class="layui-input-block">
                             <input type="number" name="id" class="layui-input">
                         </div>
                     </div>
                     <div class="layui-form-item">
-                        <label class="layui-form-label">账号</label>
+                        <label class="layui-form-label"><?=admin_t('admin.gameassist.account')?></label>
                         <div class="layui-input-block">
                             <input type="text" name="account" class="layui-input">
                         </div>
                     </div>
                     <div class="layui-form-item">
-                        <label class="layui-form-label">邮箱</label>
+                        <label class="layui-form-label"><?=admin_t('admin.gameassist.email')?></label>
                         <div class="layui-input-block">
                             <input type="text" name="email" class="layui-input">
                         </div>
                     </div>
                     <div class="layui-form-item">
-                        <label class="layui-form-label">昵称</label>
+                        <label class="layui-form-label"><?=admin_t('admin.gameassist.nickname')?></label>
                         <div class="layui-input-block">
                             <input type="text" name="nickname" class="layui-input">
                         </div>
                     </div>
                     <div class="layui-form-item">
-                        <label class="layui-form-label">状态</label>
+                        <label class="layui-form-label"><?=admin_t('admin.gameassist.status')?></label>
                         <div class="layui-input-block">
                             <select name="status">
-                                <option value="">全部</option>
-                                <option value="1">正常</option>
-                                <option value="0">禁用</option>
+                                <option value=""><?=admin_t('admin.gameassist.all')?></option>
+                                <option value="1"><?=admin_t('admin.gameassist.normal')?></option>
+                                <option value="0"><?=admin_t('admin.gameassist.disabled')?></option>
                             </select>
                         </div>
                     </div>
                     <div class="layui-form-item">
-                        <label class="layui-form-label">注册时间</label>
+                        <label class="layui-form-label"><?=admin_t('admin.gameassist.created_at')?></label>
                         <div class="layui-input-block" id="created_at">
-                            <input type="text" autocomplete="off" name="created_at[]" id="created_at-date-start" class="layui-input inline-block" placeholder="开始时间">
+                            <input type="text" autocomplete="off" name="created_at[]" id="created_at-date-start" class="layui-input inline-block" placeholder="<?=admin_t('admin.gameassist.start_time')?>">
                             -
-                            <input type="text" autocomplete="off" name="created_at[]" id="created_at-date-end" class="layui-input inline-block" placeholder="结束时间">
+                            <input type="text" autocomplete="off" name="created_at[]" id="created_at-date-end" class="layui-input inline-block" placeholder="<?=admin_t('admin.gameassist.end_time')?>">
                         </div>
                     </div>
                     <div class="layui-form-item layui-inline">
                         <label class="layui-form-label"></label>
                         <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="table-query">
-                            <i class="layui-icon layui-icon-search"></i>查询
+                            <i class="layui-icon layui-icon-search"></i><?=admin_t('admin.common.search')?>
                         </button>
                         <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="table-reset">
-                            <i class="layui-icon layui-icon-refresh"></i>重置
+                            <i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.reset')?>
                         </button>
                     </div>
                     <div class="toggle-btn">
-                        <a class="layui-hide">展开<i class="layui-icon layui-icon-down"></i></a>
-                        <a class="layui-hide">收起<i class="layui-icon layui-icon-up"></i></a>
+                        <a class="layui-hide"><?=admin_t('admin.common.expand')?><i class="layui-icon layui-icon-down"></i></a>
+                        <a class="layui-hide"><?=admin_t('admin.common.collapse')?><i class="layui-icon layui-icon-up"></i></a>
                     </div>
                 </form>
             </div>
@@ -77,12 +77,12 @@
 
         <script type="text/html" id="table-toolbar">
             <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="refresh">
-                <i class="layui-icon layui-icon-refresh"></i>刷新
+                <i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.refresh')?>
             </button>
         </script>
 
         <script type="text/html" id="table-bar">
-            <button class="pear-btn pear-btn-xs tool-btn" lay-event="resetPassword" permission="app.admin.game-assist-user.resetPassword">重置密码</button>
+            <button class="pear-btn pear-btn-xs tool-btn" lay-event="resetPassword" permission="app.admin.game-assist-user.resetPassword"><?=admin_t('admin.gameassist.reset_password')?></button>
         </script>
 
         <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
@@ -111,24 +111,24 @@
                 let util = layui.util;
 
                 let cols = [
-                    {title: "用户ID", field: "id", sort: true, width: 90},
-                    {title: "账号", field: "account", minWidth: 140},
-                    {title: "邮箱", field: "email", minWidth: 180},
-                    {title: "昵称", field: "nickname", minWidth: 120},
-                    {title: "余额", field: "balance", width: 110},
-                    {title: "到期时间", field: "expire_at", width: 120},
+                    {title: "<?=admin_t('admin.gameassist.id')?>", field: "id", sort: true, width: 90},
+                    {title: "<?=admin_t('admin.gameassist.account')?>", field: "account", minWidth: 140},
+                    {title: "<?=admin_t('admin.gameassist.email')?>", field: "email", minWidth: 180},
+                    {title: "<?=admin_t('admin.gameassist.nickname')?>", field: "nickname", minWidth: 120},
+                    {title: "<?=admin_t('admin.gameassist.balance')?>", field: "balance", width: 110},
+                    {title: "<?=admin_t('admin.gameassist.expire_at')?>", field: "expire_at", width: 120},
                     {
-                        title: "状态",
+                        title: "<?=admin_t('admin.gameassist.status')?>",
                         field: "status",
                         width: 110,
                         templet: function (d) {
                             let checked = d.status === 1 ? "checked" : "";
-                            return '<input type="checkbox" value="'+util.escape(d.id)+'" lay-filter="status" lay-skin="switch" lay-text="正常|禁用" '+checked+'/>';
+                            return '<input type="checkbox" value="'+util.escape(d.id)+'" lay-filter="status" lay-skin="switch" lay-text="<?=admin_t('admin.gameassist.normal')?>|<?=admin_t('admin.gameassist.disabled')?>" '+checked+'/>';
                         }
                     },
-                    {title: "注册时间", field: "created_at", minWidth: 170},
-                    {title: "更新时间", field: "updated_at", minWidth: 170},
-                    {title: "操作", toolbar: "#table-bar", align: "center", fixed: "right", width: 120}
+                    {title: "<?=admin_t('admin.gameassist.created_at')?>", field: "created_at", minWidth: 170},
+                    {title: "<?=admin_t('admin.gameassist.updated_at')?>", field: "updated_at", minWidth: 170},
+                    {title: "<?=admin_t('admin.gameassist.operation')?>", toolbar: "#table-bar", align: "center", fixed: "right", width: 120}
                 ];
 
                 function render()
@@ -158,7 +158,7 @@
                                 form.render();
                             });
                         }
-                        return layui.popup.success("操作成功");
+                        return layui.popup.success("<?=admin_t('admin.common.operation_success')?>");
                     });
                 });
 
@@ -166,7 +166,7 @@
                     if (obj.event === "resetPassword") {
                         layer.open({
                             type: 2,
-                            title: "重置密码",
+                            title: "<?=admin_t('admin.gameassist.reset_password')?>",
                             shade: 0.1,
                             area: [common.isModile() ? "100%" : "420px", common.isModile() ? "100%" : "260px"],
                             content: RESET_PASSWORD_URL + "?" + PRIMARY_KEY + "=" + obj.data[PRIMARY_KEY]

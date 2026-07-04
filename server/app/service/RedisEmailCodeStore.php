@@ -3,6 +3,7 @@
 namespace app\service;
 
 use app\exception\ApiException;
+use app\support\I18n;
 use support\Redis;
 
 class RedisEmailCodeStore implements EmailCodeStoreInterface
@@ -14,11 +15,16 @@ class RedisEmailCodeStore implements EmailCodeStoreInterface
     private const PURPOSE_REGISTER = 'register';
     private const PURPOSE_PASSWORD_RESET = 'password_reset';
 
+    public function __construct(private string $locale = I18n::DEFAULT_LOCALE)
+    {
+        $this->locale = I18n::normalizeLocale($this->locale);
+    }
+
     public function assertCanSend(string $email, string $purpose = self::PURPOSE_REGISTER): void
     {
         $ttl = Redis::ttl($this->cooldownKey($email, $purpose));
         if ($ttl > 0) {
-            throw new ApiException("验证码发送太频繁，请{$ttl}秒后再试", 429);
+            throw new ApiException(I18n::t('api.auth.email_code_cooldown', ['seconds' => $ttl], $this->locale), 429);
         }
     }
 
@@ -33,10 +39,10 @@ class RedisEmailCodeStore implements EmailCodeStoreInterface
         $key = $this->codeKey($email, $purpose);
         $hash = Redis::get($key);
         if (!$hash) {
-            throw new ApiException('邮箱验证码已过期或未发送', 422);
+            throw new ApiException(I18n::t('api.auth.email_code_expired', [], $this->locale), 422);
         }
         if (!password_verify($code, (string)$hash)) {
-            throw new ApiException('邮箱验证码错误', 422);
+            throw new ApiException(I18n::t('api.auth.email_code_invalid', [], $this->locale), 422);
         }
         Redis::del($key);
     }

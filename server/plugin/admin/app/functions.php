@@ -5,6 +5,7 @@
 
 use plugin\admin\app\model\Admin;
 use plugin\admin\app\model\AdminRole;
+use app\support\I18n;
 use support\Response;
 
 /**
@@ -91,4 +92,19 @@ function admin_error_401_script(): Response
 <script>top.location.href = '/app/admin';</script>
 EOF
   );
+}
+
+function admin_locale(): string
+{
+    return I18n::localeFromRequest();
+}
+
+function admin_t(string $key, array $parameters = []): string
+{
+    return I18n::t($key, $parameters, admin_locale());
+}
+
+function admin_html_lang(): string
+{
+    return admin_locale() === 'vi' ? 'vi' : 'zh-cn';
 }

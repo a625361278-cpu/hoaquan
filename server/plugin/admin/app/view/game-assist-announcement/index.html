@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="<?=admin_html_lang()?>">
+    <head>
+        <meta charset="utf-8">
+        <title><?=admin_t('admin.announcement.title')?></title>
+        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    </head>
+    <body class="pear-container">
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <form class="layui-form top-search-from">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.announcement.title_zh_cn')?></label>
+                        <div class="layui-input-block">
+                            <input type="text" name="title_zh_cn" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.announcement.status')?></label>
+                        <div class="layui-input-block">
+                            <select name="status">
+                                <option value=""><?=admin_t('admin.gameassist.all')?></option>
+                                <option value="1"><?=admin_t('admin.announcement.enabled')?></option>
+                                <option value="0"><?=admin_t('admin.announcement.disabled')?></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item layui-inline">
+                        <label class="layui-form-label"></label>
+                        <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="table-query">
+                            <i class="layui-icon layui-icon-search"></i><?=admin_t('admin.common.search')?>
+                        </button>
+                        <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="table-reset">
+                            <i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.reset')?>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <table id="data-table" lay-filter="data-table"></table>
+            </div>
+        </div>
+
+        <script type="text/html" id="table-toolbar">
+            <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="insert" permission="app.admin.game-assist-announcement.insert">
+                <i class="layui-icon layui-icon-add-1"></i><?=admin_t('admin.announcement.add')?>
+            </button>
+            <button class="pear-btn pear-btn-md" lay-event="refresh">
+                <i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.refresh')?>
+            </button>
+        </script>
+
+        <script type="text/html" id="table-bar">
+            <button class="pear-btn pear-btn-primary pear-btn-xs tool-btn" lay-event="edit" permission="app.admin.game-assist-announcement.update"><?=admin_t('admin.common.edit')?></button>
+            <button class="pear-btn pear-btn-danger pear-btn-xs tool-btn" lay-event="remove" permission="app.admin.game-assist-announcement.delete"><?=admin_t('admin.common.delete')?></button>
+        </script>
+
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/pear/pear.js"></script>
+        <script src="/app/admin/admin/js/permission.js"></script>
+        <script src="/app/admin/admin/js/common.js"></script>
+        <script>
+            const PRIMARY_KEY = "id";
+            const SELECT_API = "/app/admin/game-assist-announcement/select";
+            const INSERT_URL = "/app/admin/game-assist-announcement/insert";
+            const UPDATE_URL = "/app/admin/game-assist-announcement/update";
+            const DELETE_API = "/app/admin/game-assist-announcement/delete";
+
+            layui.use(["table", "form", "common", "popup"], function() {
+                let table = layui.table;
+                let form = layui.form;
+                let common = layui.common;
+                let $ = layui.$;
+
+                let cols = [
+                    {title: "<?=admin_t('admin.announcement.id')?>", field: "id", sort: true, width: 90},
+                    {title: "<?=admin_t('admin.announcement.title_zh_cn')?>", field: "title_zh_cn", minWidth: 180},
+                    {title: "<?=admin_t('admin.announcement.title_vi')?>", field: "title_vi", minWidth: 180},
+                    {
+                        title: "<?=admin_t('admin.announcement.status')?>",
+                        field: "status",
+                        width: 120,
+                        templet: function (d) {
+                            return d.status === 1
+                                ? '<span class="layui-badge layui-bg-green"><?=admin_t('admin.announcement.enabled')?></span>'
+                                : '<span class="layui-badge"><?=admin_t('admin.announcement.disabled')?></span>';
+                        }
+                    },
+                    {title: "<?=admin_t('admin.announcement.published_at')?>", field: "published_at", minWidth: 170, sort: true},
+                    {title: "<?=admin_t('admin.announcement.updated_at')?>", field: "updated_at", minWidth: 170},
+                    {title: "<?=admin_t('admin.gameassist.operation')?>", toolbar: "#table-bar", align: "center", fixed: "right", width: 150}
+                ];
+
+                table.render({
+                    elem: "#data-table",
+                    url: SELECT_API,
+                    page: true,
+                    cols: [cols],
+                    skin: "line",
+                    size: "lg",
+                    toolbar: "#table-toolbar",
+                    autoSort: false,
+                    defaultToolbar: ["filter", "print", "exports"]
+                });
+
+                table.on("tool(data-table)", function(obj) {
+                    if (obj.event === "edit") {
+                        layer.open({
+                            type: 2,
+                            title: "<?=admin_t('admin.announcement.edit')?>",
+                            shade: 0.1,
+                            area: [common.isModile() ? "100%" : "760px", common.isModile() ? "100%" : "680px"],
+                            content: UPDATE_URL + "?" + PRIMARY_KEY + "=" + obj.data[PRIMARY_KEY]
+                        });
+                    }
+                    if (obj.event === "remove") {
+                        layer.confirm("<?=admin_t('admin.announcement.delete_confirm')?>", function(index) {
+                            layer.close(index);
+                            $.post(DELETE_API, {id: [obj.data[PRIMARY_KEY]]}, function(res) {
+                                if (res.code) return layui.popup.failure(res.msg);
+                                layui.popup.success("<?=admin_t('admin.common.operation_success')?>", refreshTable);
+                            });
+                        });
+                    }
+                });
+
+                table.on("toolbar(data-table)", function(obj) {
+                    if (obj.event === "insert") {
+                        layer.open({
+                            type: 2,
+                            title: "<?=admin_t('admin.announcement.add')?>",
+                            shade: 0.1,
+                            area: [common.isModile() ? "100%" : "760px", common.isModile() ? "100%" : "680px"],
+                            content: INSERT_URL
+                        });
+                    }
+                    if (obj.event === "refresh") {
+                        refreshTable();
+                    }
+                });
+
+                form.on("submit(table-query)", function(data) {
+                    table.reload("data-table", {
+                        page: {curr: 1},
+                        where: data.field
+                    });
+                    return false;
+                });
+
+                form.on("submit(table-reset)", function() {
+                    table.reload("data-table", {where: []});
+                });
+
+                table.on("sort(data-table)", function(obj){
+                    table.reload("data-table", {
+                        initSort: obj,
+                        scrollPos: "fixed",
+                        where: {
+                            field: obj.field,
+                            order: obj.type
+                        }
+                    });
+                });
+
+                window.refreshTable = function() {
+                    table.reloadData("data-table", {scrollPos: "fixed"});
+                }
+            });
+        </script>
+    </body>
+</html>

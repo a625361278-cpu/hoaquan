@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="<?=admin_html_lang()?>">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <title>登录</title>
+        <title><?=admin_t('admin.login.title')?></title>
         <link rel="icon" href="/app/admin/admin/images/gameassist-logo.svg" type="image/svg+xml" />
         <!-- 样 式 文 件 -->
         <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
@@ -17,21 +17,38 @@
                 <div class="title pear-text"><?=$title?></div>
             </div>
             <div class="layui-form-item">
-                <input lay-verify="required" hover class="layui-input" type="text" name="username" value="" placeholder="用户名" />
+                <input lay-verify="required" hover class="layui-input" type="text" name="username" value="" placeholder="<?=admin_t('admin.login.username')?>" />
             </div>
             <div class="layui-form-item">
-                <input lay-verify="required" hover class="layui-input" type="password" name="password" value="" placeholder="密码" />
+                <input lay-verify="required" hover class="layui-input" type="password" name="password" value="" placeholder="<?=admin_t('admin.login.password')?>" />
             </div>
             <div class="layui-form-item">
-                <input hover  lay-verify="required" class="code layui-input layui-input-inline" name="captcha" placeholder="验证码" />
+                <input hover  lay-verify="required" class="code layui-input layui-input-inline" name="captcha" placeholder="<?=admin_t('admin.login.captcha')?>" />
                 <img class="codeImage" width="120px"/>
             </div>
             <div class="layui-form-item">
                 <button type="submit" class="pear-btn pear-btn-primary login" lay-submit lay-filter="login">
-                    登 入
+                    <?=admin_t('admin.login.submit')?>
                 </button>
             </div>
+            <div class="layui-form-item language-row">
+                <span><?=admin_t('admin.common.language')?>：</span>
+                <a href="javascript:;" data-locale="zh_CN">中文</a>
+                <span>/</span>
+                <a href="javascript:;" data-locale="vi">Tiếng Việt</a>
+            </div>
         </form>
+        <style>
+            .language-row {
+                text-align: center;
+                color: rgba(255,255,255,.72);
+                font-size: 13px;
+            }
+            .language-row a {
+                color: #40cfff;
+                padding: 0 6px;
+            }
+        </style>
         <script>
             var color = localStorage.getItem("theme-color-color");
             var second = localStorage.getItem("theme-color-second");
@@ -61,7 +78,7 @@
                         success: function (res) {
                             layer.closeAll('loading');
                             if (!res.code) {
-                                layui.popup.success('登录成功', function () {
+                                layui.popup.success('<?=admin_t('admin.account.login_success')?>', function () {
                                     location.reload();
                                 })
                             } else {
@@ -74,6 +91,10 @@
                 });
                 $('.codeImage').on('click', function () {
                     switchCaptcha();
+                });
+                $('[data-locale]').on('click', function () {
+                    document.cookie = 'gameassist_locale=' + this.dataset.locale + '; path=/; max-age=31536000; SameSite=Lax';
+                    location.reload();
                 });
             })
         </script>

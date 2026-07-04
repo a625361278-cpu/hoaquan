@@ -35,6 +35,21 @@ return [
             'publicPath' => public_path()
         ]
     ],
+    'game_account_log_ws' => [
+        'handler' => app\process\GameAccountLogWebSocket::class,
+        'listen' => 'websocket://0.0.0.0:8791',
+        'count' => 1,
+        'user' => app_env('WEBMAN_USER', ''),
+        'group' => app_env('WEBMAN_GROUP', ''),
+        'reusePort' => false,
+    ],
+    'third_party_connection_worker' => [
+        'handler' => app\process\ThirdPartyConnectionWorker::class,
+        'count' => 1,
+        'user' => app_env('WEBMAN_USER', ''),
+        'group' => app_env('WEBMAN_GROUP', ''),
+        'reusePort' => false,
+    ],
     // File update detection and automatic reload
     'monitor' => [
         'handler' => app\process\Monitor::class,

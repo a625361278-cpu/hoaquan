@@ -62,7 +62,27 @@ class ArrayUserRepository implements UserRepositoryInterface
         return false;
     }
 
-    public function create(string $account, string $email, string $nickname, string $passwordHash): array
+    public function findByInviteCode(string $inviteCode): ?array
+    {
+        foreach ($this->users as $user) {
+            if (($user['invite_code'] ?? null) === $inviteCode && $user['status'] === 1) {
+                return $user;
+            }
+        }
+        return null;
+    }
+
+    public function inviteCodeExists(string $inviteCode): bool
+    {
+        foreach ($this->users as $user) {
+            if (($user['invite_code'] ?? null) === $inviteCode) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function create(string $account, string $email, string $nickname, string $passwordHash, ?int $invitedByUserId = null, string $inviteRegisteredIp = '', ?string $inviteCode = null): array
     {
         $user = [
             'id' => $this->nextId++,
@@ -73,10 +93,27 @@ class ArrayUserRepository implements UserRepositoryInterface
             'avatar' => '',
             'balance' => '0.00',
             'expire_at' => null,
+            'invite_code' => $inviteCode,
+            'invited_by_user_id' => $invitedByUserId,
+            'invite_registered_ip' => $inviteRegisteredIp,
+            'bound_role_id' => null,
+            'role_bound_at' => null,
             'status' => 1,
         ];
         $this->users[] = $user;
         return $user;
+    }
+
+    public function updateInviteCode(int $id, string $inviteCode): array
+    {
+        foreach ($this->users as &$user) {
+            if ((int)$user['id'] === $id && $user['status'] === 1) {
+                $user['invite_code'] = $inviteCode;
+                return $user;
+            }
+        }
+
+        throw new \RuntimeException('邀请码更新失败，用户状态异常');
     }
 
     public function updatePasswordHash(int $id, string $passwordHash): void

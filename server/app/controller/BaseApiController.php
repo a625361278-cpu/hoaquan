@@ -8,18 +8,20 @@ use app\service\RedisEmailCodeStore;
 use app\service\RedisTokenStore;
 use app\service\SmtpMailer;
 use app\service\SystemSettingService;
+use app\support\I18n;
 use support\Request;
 
 class BaseApiController
 {
-    protected function authService(): AuthService
+    protected function authService(?Request $request = null): AuthService
     {
         $settings = new SystemSettingService();
         return new AuthService(
             new DbUserRepository(),
             new RedisTokenStore(),
-            new RedisEmailCodeStore(),
-            new SmtpMailer($settings)
+            new RedisEmailCodeStore(I18n::localeFromRequest($request)),
+            new SmtpMailer($settings, I18n::localeFromRequest($request)),
+            I18n::localeFromRequest($request)
         );
     }
 

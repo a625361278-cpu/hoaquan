@@ -2,6 +2,7 @@
 
 namespace plugin\admin\app\controller;
 
+use app\support\I18n;
 use plugin\admin\app\model\GameAssistUser;
 use plugin\admin\app\service\GameAssistUserAdminService;
 use RuntimeException;
@@ -18,7 +19,7 @@ class GameAssistUserController extends Crud
     public function __construct()
     {
         $this->model = new GameAssistUser();
-        $this->service = new GameAssistUserAdminService();
+        $this->service = new GameAssistUserAdminService(I18n::localeFromRequest());
     }
 
     public function index(): Response
@@ -28,12 +29,12 @@ class GameAssistUserController extends Crud
 
     public function insert(Request $request): Response
     {
-        throw new BusinessException('后台不允许直接创建GameAssist用户，请使用用户端真实注册流程');
+        throw new BusinessException(I18n::t('admin.gameassist.create_forbidden', [], I18n::localeFromRequest()));
     }
 
     public function delete(Request $request): Response
     {
-        throw new BusinessException('后台不允许删除GameAssist用户，请通过禁用状态处理');
+        throw new BusinessException(I18n::t('admin.gameassist.delete_forbidden', [], I18n::localeFromRequest()));
     }
 
     public function resetPassword(Request $request): Response
@@ -46,7 +47,7 @@ class GameAssistUserController extends Crud
         $password = (string)$request->post('password', '');
         $user = $this->model->find($id);
         if (!$user) {
-            throw new BusinessException('用户不存在', 2);
+            throw new BusinessException(I18n::t('admin.gameassist.user_not_found', [], I18n::localeFromRequest()), 2);
         }
 
         try {
@@ -75,7 +76,7 @@ class GameAssistUserController extends Crud
         $primaryKey = $this->model->getKeyName();
         $id = $request->post($primaryKey);
         if (!$this->model->find($id)) {
-            throw new BusinessException('用户不存在', 2);
+            throw new BusinessException(I18n::t('admin.gameassist.user_not_found', [], I18n::localeFromRequest()), 2);
         }
 
         try {

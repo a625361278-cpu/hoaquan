@@ -5,6 +5,7 @@ namespace plugin\admin\app\controller;
 use plugin\admin\app\common\Auth;
 use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Admin;
+use app\support\I18n;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -63,21 +64,21 @@ class AccountController extends Crud
         $this->checkDatabaseAvailable();
         $captcha = $request->post('captcha', '');
         if (strtolower($captcha) !== session('captcha-login')) {
-            return $this->json(1, '验证码错误');
+            return $this->json(1, $this->t('admin.account.captcha_error'));
         }
         $request->session()->forget('captcha-login');
         $username = $request->post('username', '');
         $password = $request->post('password', '');
         if (!$username) {
-            return $this->json(1, '用户名不能为空');
+            return $this->json(1, $this->t('admin.account.user_empty'));
         }
         $this->checkLoginLimit($username);
         $admin = Admin::where('username', $username)->first();
         if (!$admin || !Util::passwordVerify($password, $admin->password)) {
-            return $this->json(1, '账户不存在或密码错误');
+            return $this->json(1, $this->t('admin.account.user_or_password_error'));
         }
         if ($admin->status != 0) {
-            return $this->json(1, '当前账户暂时无法登录');
+            return $this->json(1, $this->t('admin.account.current_account_disabled'));
         }
         $admin->login_at = date('Y-m-d H:i:s');
         $admin->save();
@@ -86,7 +87,7 @@ class AccountController extends Crud
         $session = $request->session();
         $admin['password'] = md5($admin['password']);
         $session->set('admin', $admin);
-        return $this->json(0, '登录成功', [
+        return $this->json(0, $this->t('admin.account.login_success'), [
             'nickname' => $admin['nickname'],
             'token' => $request->sessionId(),
         ]);
@@ -100,7 +101,7 @@ class AccountController extends Crud
     public function logout(Request $request): Response
     {
         $request->session()->delete('admin');
-        return $this->json(0);
+        return $this->json(0, $this->t('admin.account.logout_success'));
     }
 
     /**
@@ -171,13 +172,13 @@ class AccountController extends Crud
         $hash = Admin::find(admin_id())['password'];
         $password = $request->post('password');
         if (!$password) {
-            return $this->json(2, '密码不能为空');
+            return $this->json(2, $this->t('admin.account.password_empty'));
         }
         if ($request->post('password_confirm') !== $password) {
-            return $this->json(3, '两次密码输入不一致');
+            return $this->json(3, $this->t('admin.account.password_repeat_error'));
         }
         if (!Util::passwordVerify($request->post('old_password'), $hash)) {
-            return $this->json(1, '原始密码不正确');
+            return $this->json(1, $this->t('admin.account.password_original_error'));
         }
         $update_data = [
             'password' => Util::passwordHash($password)
@@ -232,7 +233,7 @@ class AccountController extends Crud
         $limit_info['count']++;
         file_put_contents($limit_file, json_encode($limit_info));
         if ($limit_info['count'] >= 5) {
-            throw new BusinessException('登录失败次数过多，请5分钟后再试');
+            throw new BusinessException($this->t('admin.account.login_limit'));
         }
     }
 
@@ -253,8 +254,13 @@ class AccountController extends Crud
     protected function checkDatabaseAvailable()
     {
         if (!config('plugin.admin.database')) {
-            throw new BusinessException('请重启webman');
+            throw new BusinessException($this->t('admin.account.restart_required'));
         }
+    }
+
+    private function t(string $key): string
+    {
+        return I18n::t($key, [], I18n::localeFromRequest());
     }
 
 }

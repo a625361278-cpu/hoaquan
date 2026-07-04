@@ -3,13 +3,15 @@
 namespace app\service;
 
 use app\exception\ApiException;
+use app\support\I18n;
 
 class SmtpMailer implements MailerInterface
 {
     private array $config;
 
-    public function __construct(SystemSettingService $settings)
+    public function __construct(SystemSettingService $settings, private string $locale = I18n::DEFAULT_LOCALE)
     {
+        $this->locale = I18n::normalizeLocale($this->locale);
         $this->config = $settings->smtpConfig();
     }
 
@@ -24,7 +26,7 @@ class SmtpMailer implements MailerInterface
 
         $socket = @stream_socket_client($remote, $errno, $error, 15, STREAM_CLIENT_CONNECT);
         if (!$socket) {
-            throw new ApiException("SMTP连接失败：{$error}", 500);
+            throw new ApiException(I18n::t('api.smtp.connect_failed', ['error' => $error], $this->locale), 500);
         }
 
         try {
@@ -35,7 +37,7 @@ class SmtpMailer implements MailerInterface
             if ($encryption === 'tls') {
                 $this->command($socket, 'STARTTLS', 220);
                 if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-                    throw new ApiException('SMTP TLS握手失败', 500);
+                    throw new ApiException(I18n::t('api.smtp.tls_failed', [], $this->locale), 500);
                 }
                 $this->command($socket, 'EHLO gameassist.local', 250);
             }
@@ -59,17 +61,17 @@ class SmtpMailer implements MailerInterface
     private function assertConfigured(): void
     {
         if (!$this->config['enabled']) {
-            throw new ApiException('SMTP未启用，无法发送邮箱验证码', 503);
+            throw new ApiException(I18n::t('api.smtp.disabled', [], $this->locale), 503);
         }
 
         foreach (['host', 'port', 'username', 'password', 'from_email'] as $field) {
             if (empty($this->config[$field])) {
-                throw new ApiException("SMTP配置缺失：{$field}", 503);
+                throw new ApiException(I18n::t('api.smtp.missing_config', ['field' => $field], $this->locale), 503);
             }
         }
 
         if (!in_array(strtolower($this->config['encryption']), ['tls', 'ssl', 'none'], true)) {
-            throw new ApiException('SMTP加密方式配置错误', 503);
+            throw new ApiException(I18n::t('api.smtp.encryption_invalid', [], $this->locale), 503);
         }
     }
 
@@ -107,7 +109,7 @@ class SmtpMailer implements MailerInterface
         do {
             $line = fgets($socket, 515);
             if ($line === false) {
-                throw new ApiException('SMTP响应读取失败', 500);
+                throw new ApiException(I18n::t('api.smtp.read_failed', [], $this->locale), 500);
             }
             $response .= $line;
             $code = (int)substr($line, 0, 3);
@@ -115,7 +117,7 @@ class SmtpMailer implements MailerInterface
         } while ($continued);
 
         if (!in_array($code, $expectedCodes, true)) {
-            throw new ApiException('SMTP返回异常：' . trim($response), 500);
+            throw new ApiException(I18n::t('api.smtp.response_error', ['response' => trim($response)], $this->locale), 500);
         }
 
         return $response;

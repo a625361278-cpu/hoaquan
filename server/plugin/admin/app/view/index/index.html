@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="<?=admin_html_lang()?>">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-        <title>主页</title>
+        <title>Hoa Quán</title>
         <link rel="icon" href="/app/admin/admin/images/gameassist-logo.svg" type="image/svg+xml" />
         <!-- 依 赖 样 式 -->
         <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
@@ -44,8 +44,10 @@
                         <a class="layui-icon layui-icon-username" href="javascript:;"></a>
                         <!-- 功 能 菜 单 -->
                         <dl class="layui-nav-child">
-                            <dd><a user-menu-url="/app/admin/account/index" user-menu-id="10" user-menu-title="基本资料">基本资料</a></dd>
-                            <dd><a href="javascript:void(0);" class="logout">注销登录</a></dd>
+                            <dd><a user-menu-url="/app/admin/account/index" user-menu-id="10" user-menu-title="<?=admin_t('admin.account.basic_profile')?>"><?=admin_t('admin.account.basic_profile')?></a></dd>
+                            <dd><a href="javascript:void(0);" class="logout"><?=admin_t('admin.common.logout')?></a></dd>
+                            <dd><a href="javascript:void(0);" class="switch-locale" data-locale="zh_CN">中文</a></dd>
+                            <dd><a href="javascript:void(0);" class="switch-locale" data-locale="vi">Tiếng Việt</a></dd>
                         </dl>
                     </li>
                     <!-- 主 题 配 置 -->
@@ -120,7 +122,7 @@
                             if (res.code) {
                                 return popup.error(res.msg);
                             }
-                            popup.success("注销成功",function(){
+                            popup.success(res.msg || "<?=admin_t('admin.account.logout_success')?>",function(){
                                 location.reload();
                             })
                         }
@@ -134,6 +136,11 @@
                     success: function (res) {
                         window.Admin.Account = res.data;
                     }
+                });
+
+                $(".switch-locale").on("click", function () {
+                    document.cookie = "gameassist_locale=" + this.dataset.locale + "; path=/; max-age=31536000; SameSite=Lax";
+                    location.reload();
                 });
 
                 // 消息点击回调

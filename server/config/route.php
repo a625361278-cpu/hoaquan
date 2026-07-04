@@ -17,12 +17,17 @@ use Webman\Route;
 Route::options('/api/{path:.+}', function () {
     return response('', 204)->withHeaders([
         'Access-Control-Allow-Origin' => '*',
-        'Access-Control-Allow-Headers' => 'Content-Type, Authorization',
+        'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Locale, X-Timestamp, X-Signature',
         'Access-Control-Allow-Methods' => 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     ]);
 });
 
+Route::get('/ws/game-accounts/{id}/logs', function () {
+    return response('Game account log WebSocket is configured at the reverse-proxy/runtime layer.', 426);
+});
+
 Route::group('/api', function () {
+    Route::get('/i18n/messages', [app\controller\I18nController::class, 'messages']);
     Route::post('/auth/login', [app\controller\AuthController::class, 'login']);
     Route::post('/auth/email-code/send', [app\controller\AuthController::class, 'sendEmailCode']);
     Route::post('/auth/password/email-code/send', [app\controller\AuthController::class, 'sendPasswordEmailCode']);
@@ -30,7 +35,21 @@ Route::group('/api', function () {
     Route::post('/auth/register', [app\controller\AuthController::class, 'register']);
     Route::post('/auth/logout', [app\controller\AuthController::class, 'logout']);
     Route::get('/me', [app\controller\AuthController::class, 'me']);
+    Route::get('/profile', [app\controller\ProfileController::class, 'show']);
+    Route::post('/profile/redeem-card', [app\controller\ProfileController::class, 'redeemCard']);
+    Route::get('/announcements/latest', [app\controller\AnnouncementController::class, 'latest']);
     Route::get('/game-accounts', [app\controller\GameAccountController::class, 'index']);
     Route::post('/game-accounts', [app\controller\GameAccountController::class, 'store']);
+    Route::post('/game-accounts/{id}/start', [app\controller\GameAccountController::class, 'start']);
+    Route::post('/game-accounts/{id}/stop', [app\controller\GameAccountController::class, 'stop']);
+    Route::post('/game-accounts/{id}/password', [app\controller\GameAccountController::class, 'updatePassword']);
+    Route::delete('/game-accounts/{id}', [app\controller\GameAccountController::class, 'delete']);
+    Route::post('/game-accounts/{id}/quota', [app\controller\GameAccountController::class, 'quota']);
+    Route::get('/game-accounts/{id}/logs', [app\controller\GameAccountController::class, 'logs']);
+    Route::delete('/game-accounts/{id}/logs', [app\controller\GameAccountController::class, 'clearLogs']);
+    Route::get('/game-accounts/{id}/config', [app\controller\GameAccountController::class, 'config']);
+    Route::post('/game-accounts/{id}/config', [app\controller\GameAccountController::class, 'saveConfig']);
+    Route::get('/third-party/game-accounts/{id}/config', [app\controller\ThirdPartyController::class, 'config']);
+    Route::post('/third-party/game-accounts/{id}/logs', [app\controller\ThirdPartyController::class, 'appendLogs']);
     Route::post('/third-party/apply-config', [app\controller\ThirdPartyController::class, 'applyConfig']);
 });

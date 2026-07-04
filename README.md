@@ -88,6 +88,7 @@ bash deploy/server_update.sh
 - 后台仪表盘的今日注册、7日注册、30日注册和总用户数均统计 `ga_users.created_at`，不使用后台用户表。
 - GameAssist 用户后台只允许查看、启用/禁用和重置密码；余额 `balance` 与到期日 `expire_at` 只读展示，不能通过普通用户管理表单修改。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
+- 后台“第三方连接”读取 `third_party_ws_urls` 连接池配置，可查看每条 WebSocket 槽位的连接状态、承载账号和最近错误，并支持单条/全部启动或强制关闭。强制关闭会先停止该连接上的账号，再断开连接。
 
 ## 邀请与个人中心
 
@@ -109,6 +110,7 @@ bash deploy/server_update.sh
 - WebSocket 模式需要配置 `third_party_ws_urls`，每行一个第三方长连接槽位；旧 `third_party_ws_url` 仅作为未配置多地址列表时的兼容来源。
 - 单条连接承载账号数由 `third_party_ws_connection_capacity` 控制，默认 `10`。连接池满时启动会明确失败，不进入本地预览或伪造运行中。
 - 常驻进程：`server/config/process.php` 中的 `third_party_connection_worker`，默认 1 个进程。它使用 Redis 指令队列 `gameassist:third_party_ws:commands`，连接状态写入 `gameassist:third_party_ws:accounts:{account_id}`，并在状态中记录账号所在连接槽位 `slot_id`。
+- 后台预启动第三方连接同样通过 `gameassist:third_party_ws:commands` 写入槽位级指令；槽位运行状态写入 `gameassist:third_party_ws:slots:{slot_id}`。HTTP 后台请求只排队和读取状态，不在请求进程里直接建立 WebSocket 长连接。
 - 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端校验账号、验证密码可解密、读取本地配置 JSON，把状态改为 `starting` 并写入启动任务；接口成功只表示任务已提交，不表示第三方登录成功。
 - 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端写入停止任务，把本地状态改为 `stopped`，并清空当前账号运行日志。
 - 第三方读取游戏配置：`GET /api/third-party/game-accounts/{id}/config`。

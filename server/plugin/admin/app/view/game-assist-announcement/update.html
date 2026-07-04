@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="<?=admin_html_lang()?>">
+    <head>
+        <meta charset="utf-8">
+        <title><?=admin_t('admin.announcement.edit')?></title>
+        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    </head>
+    <body>
+        <form class="layui-form" lay-filter="announcement-form">
+            <div class="mainBox">
+                <div class="main-container mr-5">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label required"><?=admin_t('admin.announcement.title_zh_cn')?></label>
+                        <div class="layui-input-block">
+                            <input type="text" name="title_zh_cn" required lay-verify="required" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label required"><?=admin_t('admin.announcement.title_vi')?></label>
+                        <div class="layui-input-block">
+                            <input type="text" name="title_vi" required lay-verify="required" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label required"><?=admin_t('admin.announcement.content_zh_cn')?></label>
+                        <div class="layui-input-block">
+                            <textarea name="content_zh_cn" required lay-verify="required" class="layui-textarea" rows="7" placeholder="<?=admin_t('admin.announcement.content_placeholder')?>"></textarea>
+                            <div class="layui-form-mid layui-word-aux"><?=admin_t('admin.announcement.color_help')?></div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label required"><?=admin_t('admin.announcement.content_vi')?></label>
+                        <div class="layui-input-block">
+                            <textarea name="content_vi" required lay-verify="required" class="layui-textarea" rows="7" placeholder="<?=admin_t('admin.announcement.content_placeholder')?>"></textarea>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label required"><?=admin_t('admin.announcement.status')?></label>
+                        <div class="layui-input-block">
+                            <select name="status" required lay-verify="required">
+                                <option value="0"><?=admin_t('admin.announcement.disabled')?></option>
+                                <option value="1"><?=admin_t('admin.announcement.enabled')?></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label required"><?=admin_t('admin.announcement.published_at')?></label>
+                        <div class="layui-input-block">
+                            <input type="text" name="published_at" id="published_at" required lay-verify="required" class="layui-input">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom">
+                <div class="button-container">
+                    <button type="submit" class="pear-btn pear-btn-primary pear-btn-md" lay-submit lay-filter="save">
+                        <?=admin_t('admin.common.submit')?>
+                    </button>
+                    <button type="reset" class="pear-btn pear-btn-md">
+                        <?=admin_t('admin.common.reset')?>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/pear/pear.js"></script>
+        <script src="/app/admin/admin/js/permission.js"></script>
+        <script>
+            const PRIMARY_KEY = "id";
+            const SELECT_API = "/app/admin/game-assist-announcement/select" + location.search;
+            const UPDATE_API = "/app/admin/game-assist-announcement/update";
+
+            layui.use(["form", "laydate", "popup"], function () {
+                let $ = layui.$;
+                layui.laydate.render({
+                    elem: "#published_at",
+                    type: "datetime"
+                });
+
+                $.ajax({
+                    url: SELECT_API,
+                    dataType: "json",
+                    success: function (res) {
+                        if (res.code) return layui.popup.failure(res.msg);
+                        if (!res.data || !res.data[0]) return layui.popup.failure("<?=admin_t('admin.announcement.not_found')?>");
+                        layui.form.val("announcement-form", res.data[0]);
+                    }
+                });
+
+                layui.form.on("submit(save)", function (data) {
+                    data.field[PRIMARY_KEY] = layui.url().search[PRIMARY_KEY];
+                    $.ajax({
+                        url: UPDATE_API,
+                        type: "POST",
+                        dataType: "json",
+                        data: data.field,
+                        success: function (res) {
+                            if (res.code) return layui.popup.failure(res.msg);
+                            layui.popup.success("<?=admin_t('admin.common.operation_success')?>", function () {
+                                parent.refreshTable();
+                                parent.layer.close(parent.layer.getFrameIndex(window.name));
+                            });
+                        }
+                    });
+                    return false;
+                });
+            });
+        </script>
+    </body>
+</html>

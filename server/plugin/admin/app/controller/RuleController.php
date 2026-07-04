@@ -2,6 +2,7 @@
 
 namespace plugin\admin\app\controller;
 
+use app\support\I18n;
 use Exception;
 use plugin\admin\app\common\Tree;
 use plugin\admin\app\common\Util;
@@ -75,6 +76,7 @@ class RuleController extends Crud
         $formatted_items = [];
         foreach ($items as $item) {
             $item['pid'] = (int)$item['pid'];
+            $item['title'] = $this->translateMenuTitle($item);
             $item['name'] = $item['title'];
             $item['value'] = $item['id'];
             $item['icon'] = $item['icon'] ? "layui-icon {$item['icon']}" : '';
@@ -90,6 +92,35 @@ class RuleController extends Crud
         $this->removeNotContain($tree_items, 'type', $types);
         $menus = $this->empty_filter(Tree::arrayValues($tree_items));
         return $this->json(0, 'ok', $menus);
+    }
+
+    private function translateMenuTitle(array $item): string
+    {
+        $map = [
+            'database' => 'admin.menu.database',
+            'auth' => 'admin.menu.auth',
+            'user' => 'admin.menu.user',
+            'common' => 'admin.menu.common',
+            'plugin' => 'admin.menu.plugin',
+            'dev' => 'admin.menu.dev',
+            'plugin\\admin\\app\\controller\\TableController' => 'admin.menu.all_tables',
+            'plugin\\admin\\app\\controller\\AdminController' => 'admin.menu.account',
+            'plugin\\admin\\app\\controller\\RoleController' => 'admin.menu.role',
+            'plugin\\admin\\app\\controller\\RuleController' => 'admin.menu.rule',
+            'plugin\\admin\\app\\controller\\GameAssistUserController' => 'admin.menu.gameassist_user',
+            'plugin\\admin\\app\\controller\\AccountController' => 'admin.menu.profile',
+            'plugin\\admin\\app\\controller\\UploadController' => 'admin.menu.attachment',
+            'plugin\\admin\\app\\controller\\DictController' => 'admin.menu.dict',
+            'plugin\\admin\\app\\controller\\GameAssistThirdPartyConnectionController' => 'admin.menu.third_party_connection',
+            'plugin\\admin\\app\\controller\\ConfigController' => 'admin.menu.system',
+            'plugin\\admin\\app\\controller\\PluginController' => 'admin.menu.app_plugin',
+            'plugin\\admin\\app\\controller\\DevController' => 'admin.menu.form_build',
+        ];
+        $key = (string)($item['key'] ?? '');
+        if (isset($map[$key])) {
+            return I18n::t($map[$key], [], I18n::localeFromRequest());
+        }
+        return (string)$item['title'];
     }
 
     private function empty_filter($menus)

@@ -2,6 +2,7 @@
 
 namespace plugin\admin\app\controller;
 
+use app\support\I18n;
 use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Option;
 use plugin\admin\app\service\GameAssistUserStats;
@@ -44,7 +45,7 @@ class IndexController
             $name = 'system_config';
             $config = Option::where('name', $name)->value('value');
             $config = json_decode($config, true);
-            $title = $config['logo']['title'] ?? 'webman admin';
+            $title = I18n::t('admin.brand.title', [], I18n::localeFromRequest());
             $logo = $config['logo']['image'] ?? '/app/admin/admin/images/logo.png';
             return raw_view('account/login',['logo'=>$logo,'title'=>$title]);
         }

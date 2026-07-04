@@ -11,7 +11,7 @@ class AuthController extends BaseApiController
     public function login(Request $request): Response
     {
         $input = $this->jsonInput($request);
-        return ApiResponse::json($this->authService()->login(
+        return ApiResponse::json($this->authService($request)->login(
             (string)($input['account'] ?? ''),
             (string)($input['password'] ?? '')
         ));
@@ -20,19 +20,21 @@ class AuthController extends BaseApiController
     public function register(Request $request): Response
     {
         $input = $this->jsonInput($request);
-        return ApiResponse::json($this->authService()->register(
+        return ApiResponse::json($this->authService($request)->register(
             (string)($input['account'] ?? ''),
             (string)($input['email'] ?? ''),
             (string)($input['email_code'] ?? ''),
             (string)($input['password'] ?? ''),
-            (string)($input['password_confirmation'] ?? '')
+            (string)($input['password_confirmation'] ?? ''),
+            (string)($input['invite_code'] ?? ''),
+            (string)$request->getRealIp()
         ));
     }
 
     public function sendEmailCode(Request $request): Response
     {
         $input = $this->jsonInput($request);
-        return ApiResponse::json($this->authService()->sendRegisterEmailCode(
+        return ApiResponse::json($this->authService($request)->sendRegisterEmailCode(
             (string)($input['email'] ?? '')
         ));
     }
@@ -40,7 +42,7 @@ class AuthController extends BaseApiController
     public function sendPasswordEmailCode(Request $request): Response
     {
         $input = $this->jsonInput($request);
-        return ApiResponse::json($this->authService()->sendPasswordResetEmailCode(
+        return ApiResponse::json($this->authService($request)->sendPasswordResetEmailCode(
             (string)($input['account'] ?? ''),
             (string)($input['email'] ?? '')
         ));
@@ -49,7 +51,7 @@ class AuthController extends BaseApiController
     public function resetPassword(Request $request): Response
     {
         $input = $this->jsonInput($request);
-        return ApiResponse::json($this->authService()->resetPassword(
+        return ApiResponse::json($this->authService($request)->resetPassword(
             (string)($input['account'] ?? ''),
             (string)($input['email'] ?? ''),
             (string)($input['email_code'] ?? ''),
@@ -60,11 +62,11 @@ class AuthController extends BaseApiController
 
     public function logout(Request $request): Response
     {
-        return ApiResponse::json($this->authService()->logout($this->bearerToken($request)));
+        return ApiResponse::json($this->authService($request)->logout($this->bearerToken($request)));
     }
 
     public function me(Request $request): Response
     {
-        return ApiResponse::json($this->authService()->currentUser($this->bearerToken($request)));
+        return ApiResponse::json($this->authService($request)->currentUser($this->bearerToken($request)));
     }
 }

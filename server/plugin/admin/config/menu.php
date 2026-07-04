@@ -92,6 +92,20 @@ return [
                 'weight' => 600,
             ],
             [
+                'title' => '公告管理',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistAnnouncementController',
+                'href' => '/app/admin/game-assist-announcement/index',
+                'type' => 1,
+                'weight' => 550,
+            ],
+            [
+                'title' => '第三方连接',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistThirdPartyConnectionController',
+                'href' => '/app/admin/game-assist-third-party-connection/index',
+                'type' => 1,
+                'weight' => 540,
+            ],
+            [
                 'title' => '系统设置',
                 'key' => 'plugin\\admin\\app\\controller\\ConfigController',
                 'href' => '/app/admin/config/index',

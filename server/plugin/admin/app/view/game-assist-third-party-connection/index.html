@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="<?=admin_html_lang()?>">
+    <head>
+        <meta charset="utf-8">
+        <title><?=admin_t('admin.third_party_connection.title')?></title>
+        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    </head>
+    <body class="pear-container">
+        <div class="layui-card">
+            <div class="layui-card-body">
+                <table id="data-table" lay-filter="data-table"></table>
+            </div>
+        </div>
+
+        <script type="text/html" id="table-toolbar">
+            <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="startAll" permission="app.admin.game-assist-third-party-connection.startAll">
+                <i class="layui-icon layui-icon-play"></i><?=admin_t('admin.third_party_connection.start_all')?>
+            </button>
+            <button class="pear-btn pear-btn-danger pear-btn-md" lay-event="stopAll" permission="app.admin.game-assist-third-party-connection.stopAll">
+                <i class="layui-icon layui-icon-pause"></i><?=admin_t('admin.third_party_connection.stop_all')?>
+            </button>
+            <button class="pear-btn pear-btn-md" lay-event="refresh">
+                <i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.refresh')?>
+            </button>
+        </script>
+
+        <script type="text/html" id="table-bar">
+            <button class="pear-btn pear-btn-primary pear-btn-xs tool-btn" lay-event="start" permission="app.admin.game-assist-third-party-connection.start"><?=admin_t('admin.third_party_connection.start')?></button>
+            <button class="pear-btn pear-btn-danger pear-btn-xs tool-btn" lay-event="stop" permission="app.admin.game-assist-third-party-connection.stop"><?=admin_t('admin.third_party_connection.stop')?></button>
+        </script>
+
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/pear/pear.js"></script>
+        <script src="/app/admin/admin/js/permission.js"></script>
+        <script src="/app/admin/admin/js/common.js"></script>
+        <script>
+            const SELECT_API = "/app/admin/game-assist-third-party-connection/select";
+            const START_API = "/app/admin/game-assist-third-party-connection/start";
+            const STOP_API = "/app/admin/game-assist-third-party-connection/stop";
+            const START_ALL_API = "/app/admin/game-assist-third-party-connection/start-all";
+            const STOP_ALL_API = "/app/admin/game-assist-third-party-connection/stop-all";
+
+            layui.use(["table", "common", "popup", "util"], function() {
+                let table = layui.table;
+                let common = layui.common;
+                let $ = layui.$;
+
+                let stateLabels = {
+                    disconnected: "<?=admin_t('admin.third_party_connection.state_disconnected')?>",
+                    connecting: "<?=admin_t('admin.third_party_connection.state_connecting')?>",
+                    connected: "<?=admin_t('admin.third_party_connection.state_connected')?>",
+                    stopping: "<?=admin_t('admin.third_party_connection.state_stopping')?>",
+                    error: "<?=admin_t('admin.third_party_connection.state_error')?>"
+                };
+                let stateClasses = {
+                    disconnected: "layui-bg-gray",
+                    connecting: "layui-bg-orange",
+                    connected: "layui-bg-green",
+                    stopping: "layui-bg-orange",
+                    error: ""
+                };
+
+                table.render({
+                    elem: "#data-table",
+                    url: SELECT_API,
+                    page: false,
+                    cols: [[
+                        {title: "<?=admin_t('admin.third_party_connection.slot_id')?>", field: "slot_id", width: 100},
+                        {title: "<?=admin_t('admin.third_party_connection.url')?>", field: "url", minWidth: 260},
+                        {
+                            title: "<?=admin_t('admin.third_party_connection.state')?>",
+                            field: "state",
+                            width: 120,
+                            templet: function (d) {
+                                let state = d.state || "disconnected";
+                                let label = stateLabels[state] || state;
+                                let cls = stateClasses[state] || "";
+                                return '<span class="layui-badge ' + cls + '">' + layui.util.escape(label) + '</span>';
+                            }
+                        },
+                        {
+                            title: "<?=admin_t('admin.third_party_connection.account_count')?>",
+                            width: 130,
+                            templet: function (d) {
+                                return layui.util.escape(String(d.account_count || 0)) + " / " + layui.util.escape(String(d.capacity || 0));
+                            }
+                        },
+                        {title: "<?=admin_t('admin.third_party_connection.account_ids')?>", field: "account_ids_text", minWidth: 170},
+                        {title: "<?=admin_t('admin.third_party_connection.last_error')?>", field: "last_error", minWidth: 220},
+                        {title: "<?=admin_t('admin.third_party_connection.updated_at')?>", field: "updated_at_text", width: 170},
+                        {title: "<?=admin_t('admin.gameassist.operation')?>", toolbar: "#table-bar", align: "center", fixed: "right", width: 140}
+                    ]],
+                    skin: "line",
+                    size: "lg",
+                    toolbar: "#table-toolbar",
+                    defaultToolbar: ["filter", "print", "exports"]
+                });
+
+                table.on("tool(data-table)", function(obj) {
+                    if (obj.event === "start") {
+                        postAction(START_API, {slot_id: obj.data.slot_id});
+                    }
+                    if (obj.event === "stop") {
+                        layer.confirm("<?=admin_t('admin.third_party_connection.stop_confirm')?>", function(index) {
+                            layer.close(index);
+                            postAction(STOP_API, {slot_id: obj.data.slot_id});
+                        });
+                    }
+                });
+
+                table.on("toolbar(data-table)", function(obj) {
+                    if (obj.event === "startAll") {
+                        postAction(START_ALL_API, {});
+                    }
+                    if (obj.event === "stopAll") {
+                        layer.confirm("<?=admin_t('admin.third_party_connection.stop_all_confirm')?>", function(index) {
+                            layer.close(index);
+                            postAction(STOP_ALL_API, {});
+                        });
+                    }
+                    if (obj.event === "refresh") {
+                        refreshTable();
+                    }
+                });
+
+                function postAction(url, data) {
+                    $.post(url, data, function(res) {
+                        if (res.code) return layui.popup.failure(res.msg);
+                        layui.popup.success("<?=admin_t('admin.common.operation_success')?>", refreshTable);
+                    });
+                }
+
+                window.refreshTable = function() {
+                    table.reloadData("data-table", {scrollPos: "fixed"});
+                };
+            });
+        </script>
+    </body>
+</html>

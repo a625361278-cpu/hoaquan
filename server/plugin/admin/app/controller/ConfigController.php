@@ -2,6 +2,7 @@
 
 namespace plugin\admin\app\controller;
 
+use app\support\I18n;
 use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Option;
 use support\exception\BusinessException;
@@ -56,7 +57,10 @@ class ConfigController extends Base
                 $option->save();
             }
         }
-        return json_decode($config, true);
+        $config = json_decode($config, true);
+        $config['logo']['title'] = I18n::t('admin.brand.title', [], I18n::localeFromRequest());
+        $config['tab']['index']['title'] = I18n::t('admin.config.dashboard', [], I18n::localeFromRequest());
+        return $config;
     }
 
     /**
