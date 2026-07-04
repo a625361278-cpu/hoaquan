@@ -1,0 +1,1554 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gameassist.local/schemas/third-party-game-config.schema.json",
+  "title": "GameAssist Third Party Start Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "request_id",
+    "account_id",
+    "game_username",
+    "game_password",
+    "config"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "start",
+      "description": "WebSocket 包类型，启动固定为 start"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "本次请求编号，第三方回 started/error 时建议原样带回"
+    },
+    "account_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "GameAssist 游戏账号 ID；同一长连接承载多个账号时用于路由"
+    },
+    "game_username": {
+      "type": "string",
+      "minLength": 1,
+      "description": "用户填写的游戏账号"
+    },
+    "game_password": {
+      "type": "string",
+      "minLength": 1,
+      "description": "后端解密后的游戏密码，仅用于启动通信"
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basic",
+        "plant",
+        "order",
+        "union",
+        "activity"
+      ],
+      "properties": {
+        "basic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reputation",
+            "debug",
+            "reconnectInterval",
+            "task",
+            "mail",
+            "benefit",
+            "sign",
+            "pearl",
+            "shop",
+            "randomEvent",
+            "cat"
+          ],
+          "properties": {
+            "reputation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "threshold"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number",
+                  "default": 80
+                }
+              }
+            },
+            "debug": {
+              "type": "boolean",
+              "default": false
+            },
+            "reconnectInterval": {
+              "type": "number",
+              "default": 5
+            },
+            "task": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "daily",
+                "weekly",
+                "main",
+                "story",
+                "achieve"
+              ],
+              "properties": {
+                "daily": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "weekly": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "main": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "story": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "achieve": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "mail": {
+              "type": "boolean",
+              "default": false
+            },
+            "benefit": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "buff",
+                "box",
+                "shareRwd",
+                "antiFraudBox"
+              ],
+              "properties": {
+                "buff": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "box": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "shareRwd": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "antiFraudBox": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "sign": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "daily",
+                "patch"
+              ],
+              "properties": {
+                "daily": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "patch": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "pearl": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "freePearl",
+                "autoHire",
+                "maxHireLevel",
+                "maxHireTicketUsage",
+                "open",
+                "protectEnabled",
+                "buyHireBook",
+                "maxSpendDmd"
+              ],
+              "properties": {
+                "freePearl": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoHire": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "maxHireLevel": {
+                  "type": "number",
+                  "default": 0
+                },
+                "maxHireTicketUsage": {
+                  "type": "number",
+                  "default": 0
+                },
+                "open": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "protectEnabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "buyHireBook": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "maxSpendDmd": {
+                  "type": "number",
+                  "default": 25
+                }
+              }
+            },
+            "shop": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "videoGift",
+                "cultivateShop",
+                "vipShop"
+              ],
+              "properties": {
+                "videoGift": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "cultivateShop": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "autoBuy",
+                    "maxSpendGold"
+                  ],
+                  "properties": {
+                    "autoBuy": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "maxSpendGold": {
+                      "type": "number",
+                      "default": 0
+                    }
+                  }
+                },
+                "vipShop": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "autoBuy",
+                    "maxSpendDmd",
+                    "maxSpendFloralCoin"
+                  ],
+                  "properties": {
+                    "autoBuy": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "maxSpendDmd": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "maxSpendFloralCoin": {
+                      "type": "number",
+                      "default": 0
+                    }
+                  }
+                }
+              }
+            },
+            "randomEvent": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "cat": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "autoRecall",
+                "autoBuyFood",
+                "autoFeed",
+                "autoStroke"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoRecall": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoBuyFood": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoFeed": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoStroke": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        },
+        "plant": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cultivate",
+            "water",
+            "flower",
+            "friendSteal",
+            "elves",
+            "art",
+            "market"
+          ],
+          "properties": {
+            "cultivate": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "videoSpeedup",
+                "upgrade",
+                "targetLevel"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "videoSpeedup": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "upgrade": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "targetLevel": {
+                  "type": "number",
+                  "default": 20
+                }
+              }
+            },
+            "water": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "timedEnabled",
+                "threshold",
+                "forceCollectEnabled",
+                "forceCollectTime"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "timedEnabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number",
+                  "default": 0
+                },
+                "forceCollectEnabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "forceCollectTime": {
+                  "type": "string",
+                  "default": ""
+                }
+              }
+            },
+            "flower": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "unlockLand",
+                "harvestEnabled",
+                "plantEnabled",
+                "videoSpeedup",
+                "useSpeedCard",
+                "speedCardLimit",
+                "waterThreshold",
+                "taskMode",
+                "taskLogEnabled",
+                "taskPriority",
+                "plantingMode",
+                "flowerQuality",
+                "minFlowerLevel"
+              ],
+              "properties": {
+                "unlockLand": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "harvestEnabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "plantEnabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "videoSpeedup": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "useSpeedCard": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "speedCardLimit": {
+                  "type": "number",
+                  "default": 20
+                },
+                "waterThreshold": {
+                  "type": "number",
+                  "default": 0
+                },
+                "taskMode": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "taskLogEnabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "taskPriority": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "customerOrder",
+                    "residentOrder",
+                    "artSell",
+                    "flowerNews",
+                    "palaceOrder",
+                    "unionRace"
+                  ],
+                  "properties": {
+                    "customerOrder": {
+                      "type": "number",
+                      "default": 1
+                    },
+                    "residentOrder": {
+                      "type": "number",
+                      "default": 2
+                    },
+                    "artSell": {
+                      "type": "number",
+                      "default": 6
+                    },
+                    "flowerNews": {
+                      "type": "number",
+                      "default": 3
+                    },
+                    "palaceOrder": {
+                      "type": "number",
+                      "default": 4
+                    },
+                    "unionRace": {
+                      "type": "number",
+                      "default": 3
+                    }
+                  }
+                },
+                "plantingMode": {
+                  "type": "string",
+                  "default": "quality"
+                },
+                "flowerQuality": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                },
+                "minFlowerLevel": {
+                  "type": "number",
+                  "default": 0
+                }
+              }
+            },
+            "friendSteal": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "includeElf",
+                "stealMode",
+                "qualities",
+                "buyCount",
+                "buyStealCount"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "includeElf": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "stealMode": {
+                  "type": "string",
+                  "default": "quality"
+                },
+                "qualities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                },
+                "buyCount": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "buyStealCount": {
+                  "type": "number",
+                  "default": 0
+                }
+              }
+            },
+            "elves": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "plant",
+                "selectedIds",
+                "applyAid",
+                "recvAid",
+                "helpFriend",
+                "dispatch",
+                "speedupDispatch",
+                "recvDispatchReward",
+                "recvPass",
+                "recvPassTask",
+                "recvFlowerPass",
+                "recvFlowerPassTask"
+              ],
+              "properties": {
+                "plant": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "selectedIds": {
+                  "type": "string",
+                  "default": ""
+                },
+                "applyAid": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "recvAid": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "helpFriend": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "dispatch": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "speedupDispatch": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "recvDispatchReward": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "recvPass": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "recvPassTask": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "recvFlowerPass": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "recvFlowerPassTask": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "art": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "unlockShelf",
+                "autoPut",
+                "sellMode",
+                "specifiedArts",
+                "flowerArtPerRack",
+                "exp",
+                "bookReward"
+              ],
+              "properties": {
+                "unlockShelf": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoPut": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "sellMode": {
+                  "type": "string",
+                  "default": "specified"
+                },
+                "specifiedArts": {
+                  "type": "string",
+                  "default": ""
+                },
+                "flowerArtPerRack": {
+                  "type": "number",
+                  "default": 12
+                },
+                "exp": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "bookReward": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "market": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "unlockShelf",
+                "autoPut",
+                "putMode",
+                "qualities",
+                "priceIndex",
+                "maxSell",
+                "putPassword",
+                "autoBuyPutCount",
+                "buyPutCount",
+                "autoBuyFromFriend",
+                "buyMode",
+                "minPutTimeDiff"
+              ],
+              "properties": {
+                "unlockShelf": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoPut": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "putMode": {
+                  "type": "string",
+                  "default": "quality"
+                },
+                "qualities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                },
+                "priceIndex": {
+                  "type": "number",
+                  "default": 0
+                },
+                "maxSell": {
+                  "type": "number",
+                  "default": 25
+                },
+                "putPassword": {
+                  "type": "string",
+                  "default": ""
+                },
+                "autoBuyPutCount": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "buyPutCount": {
+                  "type": "number",
+                  "default": 0
+                },
+                "autoBuyFromFriend": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "buyMode": {
+                  "type": "string",
+                  "default": "quality"
+                },
+                "minPutTimeDiff": {
+                  "type": "number",
+                  "default": 0
+                }
+              }
+            }
+          }
+        },
+        "order": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "resident",
+            "customer",
+            "palace",
+            "group"
+          ],
+          "properties": {
+            "resident": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "normal",
+                "normalMaxNum",
+                "satin",
+                "satinMaxNum",
+                "building",
+                "buildingMaxNum",
+                "qualities"
+              ],
+              "properties": {
+                "normal": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "normalMaxNum": {
+                  "type": "number",
+                  "default": 1200
+                },
+                "satin": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "satinMaxNum": {
+                  "type": "number",
+                  "default": 120
+                },
+                "building": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "buildingMaxNum": {
+                  "type": "number",
+                  "default": 120
+                },
+                "qualities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                }
+              }
+            },
+            "customer": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "rejectEnabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "rejectEnabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "palace": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "qualities",
+                "ignoreQuality"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "qualities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                },
+                "ignoreQuality": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "group": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "oneMore",
+                "submitOnlyCultivatedFlowers",
+                "qualities"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "oneMore": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "submitOnlyCultivatedFlowers": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "qualities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "union": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "land",
+            "build",
+            "flower",
+            "fmlRace",
+            "exchange",
+            "energyForest"
+          ],
+          "properties": {
+            "land": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "harvest",
+                "plant",
+                "plantMode",
+                "flowers",
+                "maxFlowerLevel"
+              ],
+              "properties": {
+                "harvest": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "plant": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "plantMode": {
+                  "type": "string",
+                  "default": "quality"
+                },
+                "flowers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                },
+                "maxFlowerLevel": {
+                  "type": "number",
+                  "default": 0
+                }
+              }
+            },
+            "build": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "video",
+                "coin",
+                "dmd"
+              ],
+              "properties": {
+                "video": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "coin": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "dmd": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "flower": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "share",
+                "shareMode",
+                "shareQualities",
+                "touch",
+                "touchMode",
+                "touchQualities"
+              ],
+              "properties": {
+                "share": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "shareMode": {
+                  "type": "string",
+                  "default": "quality"
+                },
+                "shareQualities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                },
+                "touch": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "touchMode": {
+                  "type": "string",
+                  "default": "quality"
+                },
+                "touchQualities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ]
+                }
+              }
+            },
+            "fmlRace": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "autoEnableModules",
+                "useSpeedCard",
+                "minScore",
+                "upgradedMinScore",
+                "dropLowScore",
+                "onlyUpgradeTask",
+                "excludeOtherUpgradeTask",
+                "taskTypePriority",
+                "autoUpgradeTask",
+                "deleteLowScoreTask",
+                "deleteTaskMaxScore",
+                "keepSystemUpgrade",
+                "keepPlayerUpgrade"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoEnableModules": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "useSpeedCard": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "minScore": {
+                  "type": "number",
+                  "default": 25
+                },
+                "upgradedMinScore": {
+                  "type": "number",
+                  "default": 50
+                },
+                "dropLowScore": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "onlyUpgradeTask": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "excludeOtherUpgradeTask": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "taskTypePriority": {
+                  "type": "number",
+                  "default": 0
+                },
+                "autoUpgradeTask": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "deleteLowScoreTask": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "deleteTaskMaxScore": {
+                  "type": "number",
+                  "default": 0
+                },
+                "keepSystemUpgrade": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "keepPlayerUpgrade": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "exchange": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "autoRecv"
+              ],
+              "properties": {
+                "autoRecv": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "energyForest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "collect"
+              ],
+              "properties": {
+                "collect": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        },
+        "activity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flowerLetter",
+            "flowerNews",
+            "fishDry",
+            "bubble",
+            "fishFun",
+            "flowerStory",
+            "redPacket",
+            "recvLuck",
+            "call",
+            "familyHelp",
+            "moneyTree",
+            "zooGameElim",
+            "lantern",
+            "cake",
+            "merge",
+            "spool",
+            "dragonBoat",
+            "honey",
+            "card"
+          ],
+          "properties": {
+            "flowerLetter": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "unlockSlot",
+                "autoEnableModules"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "unlockSlot": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoEnableModules": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "flowerNews": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "refreshEnabled",
+                "maxFinishCountPerBatch"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "refreshEnabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "maxFinishCountPerBatch": {
+                  "type": "number",
+                  "default": 0
+                }
+              }
+            },
+            "fishDry": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "showResult",
+                "autoRestart"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "showResult": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoRestart": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "bubble": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "fishFun": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "autoClaimEnergy",
+                "speed",
+                "showResult",
+                "autoRestart"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoClaimEnergy": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "speed": {
+                  "type": "string",
+                  "default": "normal"
+                },
+                "showResult": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoRestart": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "flowerStory": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "autoClaimEnergy",
+                "speed"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoClaimEnergy": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "speed": {
+                  "type": "string",
+                  "default": "normal"
+                }
+              }
+            },
+            "redPacket": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "recvLuck": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "call": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "familyHelp": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "recvBoxes"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "recvBoxes": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "moneyTree": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "zooGameElim": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "lantern": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "cake": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "autoClaimEnergy",
+                "useItems",
+                "speed"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoClaimEnergy": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "useItems": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "speed": {
+                  "type": "string",
+                  "default": "normal"
+                }
+              }
+            },
+            "merge": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "autoClaimEnergy",
+                "speed"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoClaimEnergy": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "speed": {
+                  "type": "string",
+                  "default": "normal"
+                }
+              }
+            },
+            "spool": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "autoClaimReward",
+                "openBox",
+                "autoRestart",
+                "speed"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoClaimReward": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "openBox": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoRestart": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "speed": {
+                  "type": "string",
+                  "default": "normal"
+                }
+              }
+            },
+            "dragonBoat": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "autoSign",
+                "autoOpenBox",
+                "giftBuy"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoSign": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "autoOpenBox": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "giftBuy": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "honey": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "reward"
+              ],
+              "properties": {
+                "reward": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "card": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "reward",
+                "smoke"
+              ],
+              "properties": {
+                "reward": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "smoke": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

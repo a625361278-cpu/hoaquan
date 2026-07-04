@@ -1,0 +1,1806 @@
+Hoa Quán 第三方 WebSocket 对接协议说明
+
+一、连接方式
+
+服务端会连接第三方提供的 WebSocket 地址。后台可以配置多个 WebSocket 地址，每一行代表一个长连接槽位。同一条长连接可以承载多个游戏账号，单条连接默认最多 10 个账号，具体容量以后端后台配置为准。连接建立后，服务端会发送启动包，第三方根据包内账号、密码和配置启动游戏任务。
+
+所有消息均使用 JSON 字符串。所有账号相关消息都必须携带 account_id，用于区分同一长连接上的不同账号。当前游戏只有一个区服，启动包不传 server_id、server_name，第三方也不需要返回区服字段。
+
+二、后端发送：启动账号 start
+
+request_id 是本次请求编号，由后端发送，第三方回 started/error 时建议原样带回。它不是游戏账号、区服或角色 ID。
+
+示例：
+
+{
+  "type": "start",
+  "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
+  "account_id": 10001,
+  "game_username": "game_account_001",
+  "game_password": "plain-password-used-only-during-start",
+  "config": {
+    "basic": {
+      "reputation": {
+        "enabled": false,
+        "threshold": 80
+      },
+      "debug": false,
+      "reconnectInterval": 5,
+      "task": {
+        "daily": false,
+        "weekly": false,
+        "main": false,
+        "story": false,
+        "achieve": false
+      },
+      "mail": false,
+      "benefit": {
+        "buff": false,
+        "box": false,
+        "shareRwd": false,
+        "antiFraudBox": false
+      },
+      "sign": {
+        "daily": false,
+        "patch": false
+      },
+      "pearl": {
+        "freePearl": false,
+        "autoHire": false,
+        "maxHireLevel": 0,
+        "maxHireTicketUsage": 0,
+        "open": false,
+        "protectEnabled": false,
+        "buyHireBook": false,
+        "maxSpendDmd": 25
+      },
+      "shop": {
+        "videoGift": false,
+        "cultivateShop": {
+          "autoBuy": false,
+          "maxSpendGold": 0
+        },
+        "vipShop": {
+          "autoBuy": false,
+          "maxSpendDmd": 0,
+          "maxSpendFloralCoin": 0
+        }
+      },
+      "randomEvent": {
+        "enabled": false
+      },
+      "cat": {
+        "enabled": false,
+        "autoRecall": false,
+        "autoBuyFood": false,
+        "autoFeed": false,
+        "autoStroke": false
+      }
+    },
+    "plant": {
+      "cultivate": {
+        "enabled": false,
+        "videoSpeedup": false,
+        "upgrade": false,
+        "targetLevel": 20
+      },
+      "water": {
+        "enabled": false,
+        "timedEnabled": false,
+        "threshold": 0,
+        "forceCollectEnabled": false,
+        "forceCollectTime": ""
+      },
+      "flower": {
+        "unlockLand": false,
+        "harvestEnabled": false,
+        "plantEnabled": false,
+        "videoSpeedup": false,
+        "useSpeedCard": false,
+        "speedCardLimit": 20,
+        "waterThreshold": 0,
+        "taskMode": true,
+        "taskLogEnabled": false,
+        "taskPriority": {
+          "customerOrder": 1,
+          "residentOrder": 2,
+          "artSell": 6,
+          "flowerNews": 3,
+          "palaceOrder": 4,
+          "unionRace": 3
+        },
+        "plantingMode": "quality",
+        "flowerQuality": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ],
+        "minFlowerLevel": 0
+      },
+      "friendSteal": {
+        "enabled": false,
+        "includeElf": false,
+        "stealMode": "quality",
+        "qualities": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ],
+        "buyCount": false,
+        "buyStealCount": 0
+      },
+      "elves": {
+        "plant": false,
+        "selectedIds": "",
+        "applyAid": false,
+        "recvAid": false,
+        "helpFriend": false,
+        "dispatch": false,
+        "speedupDispatch": false,
+        "recvDispatchReward": false,
+        "recvPass": false,
+        "recvPassTask": false,
+        "recvFlowerPass": false,
+        "recvFlowerPassTask": false
+      },
+      "art": {
+        "unlockShelf": false,
+        "autoPut": false,
+        "sellMode": "specified",
+        "specifiedArts": "",
+        "flowerArtPerRack": 12,
+        "exp": false,
+        "bookReward": false
+      },
+      "market": {
+        "unlockShelf": false,
+        "autoPut": false,
+        "putMode": "quality",
+        "qualities": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ],
+        "priceIndex": 0,
+        "maxSell": 25,
+        "putPassword": "",
+        "autoBuyPutCount": false,
+        "buyPutCount": 0,
+        "autoBuyFromFriend": false,
+        "buyMode": "quality",
+        "minPutTimeDiff": 0
+      }
+    },
+    "order": {
+      "resident": {
+        "normal": false,
+        "normalMaxNum": 1200,
+        "satin": false,
+        "satinMaxNum": 120,
+        "building": false,
+        "buildingMaxNum": 120,
+        "qualities": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ]
+      },
+      "customer": {
+        "enabled": false,
+        "rejectEnabled": false
+      },
+      "palace": {
+        "enabled": false,
+        "qualities": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ],
+        "ignoreQuality": false
+      },
+      "group": {
+        "enabled": false,
+        "oneMore": false,
+        "submitOnlyCultivatedFlowers": false,
+        "qualities": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ]
+      }
+    },
+    "union": {
+      "land": {
+        "harvest": false,
+        "plant": false,
+        "plantMode": "quality",
+        "flowers": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ],
+        "maxFlowerLevel": 0
+      },
+      "build": {
+        "video": false,
+        "coin": false,
+        "dmd": false
+      },
+      "flower": {
+        "share": false,
+        "shareMode": "quality",
+        "shareQualities": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ],
+        "touch": false,
+        "touchMode": "quality",
+        "touchQualities": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ]
+      },
+      "fmlRace": {
+        "enabled": false,
+        "autoEnableModules": false,
+        "useSpeedCard": false,
+        "minScore": 25,
+        "upgradedMinScore": 50,
+        "dropLowScore": false,
+        "onlyUpgradeTask": false,
+        "excludeOtherUpgradeTask": true,
+        "taskTypePriority": 0,
+        "autoUpgradeTask": false,
+        "deleteLowScoreTask": false,
+        "deleteTaskMaxScore": 0,
+        "keepSystemUpgrade": false,
+        "keepPlayerUpgrade": false
+      },
+      "exchange": {
+        "autoRecv": false
+      },
+      "energyForest": {
+        "collect": false
+      }
+    },
+    "activity": {
+      "flowerLetter": {
+        "enabled": false,
+        "unlockSlot": false,
+        "autoEnableModules": false
+      },
+      "flowerNews": {
+        "enabled": false,
+        "refreshEnabled": false,
+        "maxFinishCountPerBatch": 0
+      },
+      "fishDry": {
+        "enabled": false,
+        "showResult": false,
+        "autoRestart": false
+      },
+      "bubble": {
+        "enabled": false
+      },
+      "fishFun": {
+        "enabled": false,
+        "autoClaimEnergy": false,
+        "speed": "normal",
+        "showResult": false,
+        "autoRestart": false
+      },
+      "flowerStory": {
+        "enabled": false,
+        "autoClaimEnergy": false,
+        "speed": "normal"
+      },
+      "redPacket": {
+        "enabled": false
+      },
+      "recvLuck": {
+        "enabled": false
+      },
+      "call": {
+        "enabled": false
+      },
+      "familyHelp": {
+        "enabled": false,
+        "recvBoxes": false
+      },
+      "moneyTree": {
+        "enabled": false
+      },
+      "zooGameElim": {
+        "enabled": false
+      },
+      "lantern": {
+        "enabled": false
+      },
+      "cake": {
+        "enabled": false,
+        "autoClaimEnergy": false,
+        "useItems": false,
+        "speed": "normal"
+      },
+      "merge": {
+        "enabled": false,
+        "autoClaimEnergy": false,
+        "speed": "normal"
+      },
+      "spool": {
+        "enabled": false,
+        "autoClaimReward": false,
+        "openBox": false,
+        "autoRestart": false,
+        "speed": "normal"
+      },
+      "dragonBoat": {
+        "enabled": false,
+        "autoSign": false,
+        "autoOpenBox": false,
+        "giftBuy": false
+      },
+      "honey": {
+        "reward": false
+      },
+      "card": {
+        "reward": false,
+        "smoke": false
+      }
+    }
+  }
+}
+
+字段说明：
+
+type：字符串，固定为 start。
+request_id：字符串，本次请求编号。
+account_id：数字，GameAssist 游戏账号 ID。同一长连接承载多个账号时，第三方必须用它区分账号。
+game_username：字符串，用户填写的游戏账号。
+game_password：字符串，本次启动使用的游戏密码。
+config：对象，用户保存的完整游戏配置，字段见下文。
+
+三、第三方返回：启动成功 started
+
+{
+  "type": "started",
+  "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
+  "account_id": 10001,
+  "display_name": "role-name"
+}
+
+启动成功时返回。display_name 可选，用于显示角色名。
+
+四、第三方返回：失败 error
+
+{
+  "type": "error",
+  "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
+  "account_id": 10001,
+  "message": "login failed"
+}
+
+启动失败或运行中失败时返回。message 必填，说明真实失败原因。
+
+五、第三方推送：日志 log
+
+{
+  "type": "log",
+  "account_id": 10001,
+  "level": "info",
+  "category": "runtime",
+  "time": "2026-07-04 12:00:00",
+  "message": "started"
+}
+
+level/category/time 可选，message 必填。
+
+六、第三方推送：状态 status
+
+{
+  "type": "status",
+  "account_id": 10001,
+  "level": 14,
+  "water": 1,
+  "diamond": 754,
+  "coin": 236000
+}
+
+status 用于同步运行资源数据。除 account_id 外，其他字段可按第三方实际可获取的数据扩展，例如等级、水滴、元宝、金币、订单统计等。
+
+七、后端发送：停止账号 stop
+
+{
+  "type": "stop",
+  "request_id": "b0ff0f0e5f584d1fb1c164a40ff6d68a",
+  "account_id": 10001
+}
+
+收到 stop 后，第三方停止当前 account_id 对应的账号任务，不影响同一长连接上的其他账号。
+
+八、config 完整字段说明
+
+basic.reputation.enabled
+  名称：礼仪分监控
+  分页/分组：基础 / 基础设置
+  类型：switch
+  默认值：false
+  说明：每10分钟检查礼仪分，低于阈值时自动停止所有任务
+
+basic.reputation.threshold
+  名称：礼仪分阈值
+  分页/分组：基础 / 基础设置
+  类型：number
+  默认值：80
+  说明：礼仪分低于此值时停止所有任务
+
+basic.debug
+  名称：道具日志
+  分页/分组：基础 / 基础设置
+  类型：switch
+  默认值：false
+  说明：开启后记录道具增加和消耗详情
+
+basic.reconnectInterval
+  名称：重连间隔
+  分页/分组：基础 / 基础设置
+  类型：number
+  默认值：5
+  说明：网络异常断开后自动重连间隔，默认设置为 5 分钟
+
+basic.task.daily
+  名称：每日任务
+  分页/分组：基础 / 任务配置
+  类型：switch
+  默认值：false
+  说明：自动领取每日任务完成奖励，阶段宝箱奖励
+
+basic.task.weekly
+  名称：每周任务
+  分页/分组：基础 / 任务配置
+  类型：switch
+  默认值：false
+  说明：自动领取每周任务完成奖励
+
+basic.task.main
+  名称：主线任务
+  分页/分组：基础 / 任务配置
+  类型：switch
+  默认值：false
+  说明：自动领取主线任务完成奖励
+
+basic.task.story
+  名称：主线剧情
+  分页/分组：基础 / 任务配置
+  类型：switch
+  默认值：false
+  说明：自动领取主线剧情任务奖励
+
+basic.task.achieve
+  名称：花坊悬赏
+  分页/分组：基础 / 任务配置
+  类型：switch
+  默认值：false
+  说明：自动领取花坊悬赏完成奖励
+
+basic.mail
+  名称：自动领取
+  分页/分组：基础 / 邮件配置
+  类型：switch
+  默认值：false
+  说明：自动领取邮件奖励
+
+basic.benefit.buff
+  名称：双倍金币
+  分页/分组：基础 / 福利配置
+  类型：switch
+  默认值：false
+  说明：自动领取双倍金币福利
+
+basic.benefit.box
+  名称：福利宝箱
+  分页/分组：基础 / 福利配置
+  类型：switch
+  默认值：false
+  说明：每1小时自动开启福利宝箱
+
+basic.benefit.shareRwd
+  名称：分享奖励
+  分页/分组：基础 / 福利配置
+  类型：switch
+  默认值：false
+  说明：当制作了新花艺、培育了新花朵或升级时自动分享，领取分享奖励
+
+basic.benefit.antiFraudBox
+  名称：防骗宝箱
+  分页/分组：基础 / 福利配置
+  类型：switch
+  默认值：false
+  说明：每天自动签到并领取防骗宝箱奖励
+
+basic.sign.daily
+  名称：自动祈愿
+  分页/分组：基础 / 每日祈愿
+  类型：switch
+  默认值：false
+  说明：自动祈愿
+
+basic.sign.patch
+  名称：自动补签
+  分页/分组：基础 / 每日祈愿
+  类型：switch
+  默认值：false
+  说明：自动补签
+
+basic.pearl.freePearl
+  名称：免费珍珠
+  分页/分组：基础 / 珍珠配置
+  类型：switch
+  默认值：false
+  说明：自动看视频领取免费珍珠
+
+basic.pearl.autoHire
+  名称：雇佣劳工
+  分页/分组：基础 / 珍珠配置
+  类型：switch
+  默认值：false
+  说明：自动雇佣劳工
+
+basic.pearl.maxHireLevel
+  名称：等级限制
+  分页/分组：基础 / 珍珠配置
+  类型：number
+  默认值：0
+  说明：超过该等级后不再执行对应操作，0 表示不限制。
+
+basic.pearl.maxHireTicketUsage
+  名称：雇佣券上限
+  分页/分组：基础 / 珍珠配置
+  类型：number
+  默认值：0
+  说明：限制自动雇佣可使用的雇佣券数量，0 表示不限制。
+
+basic.pearl.open
+  名称：自动开珍珠
+  分页/分组：基础 / 珍珠配置
+  类型：switch
+  默认值：false
+  说明：自动开珍珠
+
+basic.pearl.protectEnabled
+  名称：开启防身
+  分页/分组：基础 / 珍珠配置
+  类型：switch
+  默认值：false
+  说明：开启后会保留玩家用元宝开启的防身状态
+
+basic.pearl.buyHireBook
+  名称：买雇佣书
+  分页/分组：基础 / 珍珠配置
+  类型：switch
+  默认值：false
+  说明：自动购买雇佣书
+
+basic.pearl.maxSpendDmd
+  名称：元宝上限
+  分页/分组：基础 / 珍珠配置
+  类型：number
+  默认值：25
+  说明：限制本功能最多消耗的元宝数量，0 表示不消耗。
+
+basic.shop.videoGift
+  名称：视频礼包
+  分页/分组：基础 / 商城购买
+  类型：switch
+  默认值：false
+  说明：自动领取视频礼包
+
+basic.shop.cultivateShop.autoBuy
+  名称：材料商店
+  分页/分组：基础 / 商城购买
+  类型：switch
+  默认值：false
+  说明：自动购买材料商店道具
+
+basic.shop.cultivateShop.maxSpendGold
+  名称：金币上限
+  分页/分组：基础 / 商城购买
+  类型：number
+  默认值：0
+  说明：限制本功能最多消耗的金币数量，0 表示不限制。
+
+basic.shop.vipShop.autoBuy
+  名称：vip商店
+  分页/分组：基础 / 商城购买
+  类型：switch
+  默认值：false
+  说明：自动购买VIP商店道具
+
+basic.shop.vipShop.maxSpendDmd
+  名称：元宝上限
+  分页/分组：基础 / 商城购买
+  类型：number
+  默认值：0
+  说明：限制本功能最多消耗的元宝数量，0 表示不消耗。
+
+basic.shop.vipShop.maxSpendFloralCoin
+  名称：花坊币上限
+  分页/分组：基础 / 商城购买
+  类型：number
+  默认值：0
+  说明：限制本功能最多消耗的花坊币数量，0 表示不限制。
+
+basic.randomEvent.enabled
+  名称：自动处理
+  分页/分组：基础 / 随机事件
+  类型：switch
+  默认值：false
+  说明：自动处理随机事件
+
+basic.cat.enabled
+  名称：总开关
+  分页/分组：基础 / 喂猫撸猫
+  类型：switch
+  默认值：false
+  说明：总开关
+
+basic.cat.autoRecall
+  名称：自动召回
+  分页/分组：基础 / 喂猫撸猫
+  类型：switch
+  默认值：false
+  说明：开启后自动召回外出的猫。
+
+basic.cat.autoBuyFood
+  名称：自动购买猫粮
+  分页/分组：基础 / 喂猫撸猫
+  类型：switch
+  默认值：false
+  说明：猫粮不足时自动购买。
+
+basic.cat.autoFeed
+  名称：自动喂猫
+  分页/分组：基础 / 喂猫撸猫
+  类型：switch
+  默认值：false
+  说明：开启后自动完成喂猫。
+
+basic.cat.autoStroke
+  名称：自动撸猫
+  分页/分组：基础 / 喂猫撸猫
+  类型：switch
+  默认值：false
+  说明：开启后自动完成撸猫互动。
+
+plant.cultivate.enabled
+  名称：自动培育
+  分页/分组：种植 / 培育配置
+  类型：switch
+  默认值：false
+  说明：自动培育可培育花种
+
+plant.cultivate.videoSpeedup
+  名称：视频加速
+  分页/分组：种植 / 培育配置
+  类型：switch
+  默认值：false
+  说明：自动观看视频加速培育正在培育的花种，培育时间减半
+
+plant.cultivate.upgrade
+  名称：鲜花升级
+  分页/分组：种植 / 培育配置
+  类型：switch
+  默认值：false
+  说明：自动花费金币进行鲜花升级
+
+plant.cultivate.targetLevel
+  名称：目标等级
+  分页/分组：种植 / 培育配置
+  类型：number
+  默认值：20
+  说明：自动培育或升级时使用的目标等级
+
+plant.water.enabled
+  名称：水车水滴
+  分页/分组：种植 / 水滴配置
+  类型：switch
+  默认值：false
+  说明：3分钟领取一次水滴，这样才能最大化暴击，所以领取会略慢。
+
+plant.water.timedEnabled
+  名称：限时水滴
+  分页/分组：种植 / 水滴配置
+  类型：switch
+  默认值：false
+  说明：开启后领取限时水滴。
+
+plant.water.threshold
+  名称：水滴阈值
+  分页/分组：种植 / 水滴配置
+  类型：number
+  默认值：0
+  说明：水滴低于阈值时停止消耗，避免影响后续任务
+
+plant.water.forceCollectEnabled
+  名称：无视阈值直接领
+  分页/分组：种植 / 水滴配置
+  类型：switch
+  默认值：false
+  说明：无视水滴阈值直接领取或消耗水滴
+
+plant.water.forceCollectTime
+  名称：领取时间
+  分页/分组：种植 / 水滴配置
+  类型：text
+  默认值：空字符串
+  说明：强制领取水滴的时间配置，按第三方脚本支持格式填写。
+
+plant.flower.unlockLand
+  名称：解锁土地
+  分页/分组：种植 / 种花配置
+  类型：switch
+  默认值：false
+  说明：自动花费金币解锁可解锁的土地
+
+plant.flower.harvestEnabled
+  名称：自动收获
+  分页/分组：种植 / 种花配置
+  类型：switch
+  默认值：false
+  说明：自动完成土地收获
+
+plant.flower.plantEnabled
+  名称：自动种植
+  分页/分组：种植 / 种花配置
+  类型：switch
+  默认值：false
+  说明：自动完成土地浇水，加速，种植
+
+plant.flower.videoSpeedup
+  名称：视频加速
+  分页/分组：种植 / 种花配置
+  类型：switch
+  默认值：false
+  说明：自动观看视频加速培育正在培育的花种，培育时间减半
+
+plant.flower.useSpeedCard
+  名称：使用加速
+  分页/分组：种植 / 种花配置
+  类型：switch
+  默认值：false
+  说明：开启后种植过程允许使用加速卡。
+
+plant.flower.speedCardLimit
+  名称：加速上限
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：20
+  说明：限制本次功能最多使用的加速卡数量。
+
+plant.flower.waterThreshold
+  名称：保留水滴
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：0
+  说明：水滴低于该值时停止消耗。
+
+plant.flower.taskMode
+  名称：任务优先
+  分页/分组：种植 / 种花配置
+  类型：switch
+  默认值：true
+  说明：开启后按下方任务优先级执行种花任务。
+
+plant.flower.taskLogEnabled
+  名称：任务日志
+  分页/分组：种植 / 种花配置
+  类型：switch
+  默认值：false
+  说明：记录种植、收获和任务缺口等执行日志
+
+plant.flower.taskPriority.customerOrder
+  名称：顾客订单
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：1
+  说明：数字越小优先级越高，按原版配置项填写。
+
+plant.flower.taskPriority.residentOrder
+  名称：居民订单
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：2
+  说明：数字越小优先级越高，按原版配置项填写。
+
+plant.flower.taskPriority.artSell
+  名称：花艺售卖
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：6
+  说明：数字越小优先级越高，按原版配置项填写。
+
+plant.flower.taskPriority.flowerNews
+  名称：莳花纪闻
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：3
+  说明：数字越小优先级越高，按原版配置项填写。
+
+plant.flower.taskPriority.palaceOrder
+  名称：宫廷订单
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：4
+  说明：数字越小优先级越高，按原版配置项填写。
+
+plant.flower.taskPriority.unionRace
+  名称：公会竞赛
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：3
+  说明：数字越小优先级越高，按原版配置项填写。
+
+plant.flower.plantingMode
+  名称：种植模式
+  分页/分组：种植 / 种花配置
+  类型：radio
+  默认值：quality
+  说明：选择自动种植使用的匹配策略。
+  可选值：指定品质 / 指定种类 / 指定花朵 / 库存模式 / 64块地模式
+
+plant.flower.flowerQuality
+  名称：选择品质
+  分页/分组：种植 / 种花配置
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：选择允许参与该功能的花朵品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+plant.flower.minFlowerLevel
+  名称：限制花朵等级
+  分页/分组：种植 / 种花配置
+  类型：number
+  默认值：0
+  说明：花朵等级超过该值后不参与，0 表示不限制。
+
+plant.friendSteal.enabled
+  名称：自动偷花
+  分页/分组：种植 / 好友偷花
+  类型：switch
+  默认值：false
+  说明：默认不会偷取花灵，但在好友种植花灵时会偷取花朵，需要在偷花模式里设置排除花朵，排除花灵主花
+
+plant.friendSteal.includeElf
+  名称：偷取花灵
+  分页/分组：种植 / 好友偷花
+  类型：switch
+  默认值：false
+  说明：好友偷花时包含花灵相关地块。
+
+plant.friendSteal.stealMode
+  名称：偷花模式
+  分页/分组：种植 / 好友偷花
+  类型：radio
+  默认值：quality
+  说明：选择好友偷花的目标匹配方式。
+  可选值：指定品质 / 指定种类 / 指定花朵
+
+plant.friendSteal.qualities
+  名称：品质限定
+  分页/分组：种植 / 好友偷花
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：只处理选中的品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+plant.friendSteal.buyCount
+  名称：购买偷取次数
+  分页/分组：种植 / 好友偷花
+  类型：switch
+  默认值：false
+  说明：偷花次数不足时自动购买次数
+
+plant.friendSteal.buyStealCount
+  名称：购买次数上限
+  分页/分组：种植 / 好友偷花
+  类型：number
+  默认值：0
+  说明：限制自动购买偷花次数的数量。
+
+plant.elves.plant
+  名称：自动种花灵
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：优先种植指定花灵，否则选择当期双倍加成花灵种植（8朵主花+其余辅花），需要打开种植系统自动收获和自动种植，每日花灵达到收获上限后恢复到原有种植模式
+
+plant.elves.selectedIds
+  名称：指定花灵
+  分页/分组：种植 / 花灵
+  类型：text
+  默认值：空字符串
+  说明：填写需要自动种植的花灵标识，多个值按第三方脚本支持格式分隔。
+
+plant.elves.applyAid
+  名称：自动申请协助
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：自动申请协助
+
+plant.elves.recvAid
+  名称：自动领取协助加成
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：当协助人数达到5人时自动领取协助加成
+
+plant.elves.helpFriend
+  名称：自动协助好友
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：自动协助好友
+
+plant.elves.dispatch
+  名称：自动派遣花灵
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：自动将背包中的花灵派遣到空闲位置
+
+plant.elves.speedupDispatch
+  名称：自动加速派遣
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：花费元宝加速派遣中的花灵
+
+plant.elves.recvDispatchReward
+  名称：自动领取派遣奖励
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：派遣完成后自动领取星辰币奖励
+
+plant.elves.recvPass
+  名称：领取通行证
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：自动领取通行证奖励。
+
+plant.elves.recvPassTask
+  名称：通行证任务
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：自动处理通行证任务奖励。
+
+plant.elves.recvFlowerPass
+  名称：领取花灵通行证
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：自动领取花灵通行证奖励。
+
+plant.elves.recvFlowerPassTask
+  名称：花灵通行证任务
+  分页/分组：种植 / 花灵
+  类型：switch
+  默认值：false
+  说明：自动处理花灵通行证任务奖励。
+
+plant.art.unlockShelf
+  名称：自动解锁花架
+  分页/分组：种植 / 花艺上架
+  类型：switch
+  默认值：false
+  说明：自动解锁花架
+
+plant.art.autoPut
+  名称：自动上架
+  分页/分组：种植 / 花艺上架
+  类型：switch
+  默认值：false
+  说明：自动上架花艺，自动领取金币收益
+
+plant.art.sellMode
+  名称：花艺售卖模式
+  分页/分组：种植 / 花艺上架
+  类型：radio
+  默认值：specified
+  说明：选择花艺上架售卖策略。
+  可选值：指定花瓶 / 库存模式
+
+plant.art.specifiedArts
+  名称：指定花艺
+  分页/分组：种植 / 花艺上架
+  类型：text
+  默认值：空字符串
+  说明：填写指定花艺配置，多个值按第三方脚本支持格式分隔。
+
+plant.art.flowerArtPerRack
+  名称：每架数量
+  分页/分组：种植 / 花艺上架
+  类型：number
+  默认值：12
+  说明：每个货架上架的花艺数量。
+
+plant.art.exp
+  名称：花艺经验
+  分页/分组：种植 / 花艺上架
+  类型：switch
+  默认值：false
+  说明：自动领取花艺制作经验
+
+plant.art.bookReward
+  名称：图鉴奖励
+  分页/分组：种植 / 花艺上架
+  类型：switch
+  默认值：false
+  说明：自动领取鲜花收藏，花瓶收藏，花艺收藏奖励
+
+plant.market.unlockShelf
+  名称：解锁货架
+  分页/分组：种植 / 花贸市场
+  类型：switch
+  默认值：false
+  说明：自动花费元宝解锁花贸市场货架
+
+plant.market.autoPut
+  名称：自动上架
+  分页/分组：种植 / 花贸市场
+  类型：switch
+  默认值：false
+  说明：自动领取花贸市场收益并上架花朵，注意上架会消耗元宝，请谨慎开启！
+
+plant.market.putMode
+  名称：上架模式
+  分页/分组：种植 / 花贸市场
+  类型：radio
+  默认值：quality
+  说明：选择花贸市场自动上架策略。
+  可选值：指定品质 / 指定种类 / 指定花朵 / 库存模式
+
+plant.market.qualities
+  名称：品质限定
+  分页/分组：种植 / 花贸市场
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：只处理选中的品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+plant.market.priceIndex
+  名称：价格档位
+  分页/分组：种植 / 花贸市场
+  类型：number
+  默认值：0
+  说明：花贸市场上架价格档位，按第三方脚本支持值填写。
+
+plant.market.maxSell
+  名称：售卖上限
+  分页/分组：种植 / 花贸市场
+  类型：number
+  默认值：25
+  说明：限制花贸市场本次最多上架数量。
+
+plant.market.putPassword
+  名称：上架口令
+  分页/分组：种植 / 花贸市场
+  类型：text
+  默认值：空字符串
+  说明：需要口令时填写，不需要可留空。
+
+plant.market.autoBuyPutCount
+  名称：自动购买上架次数
+  分页/分组：种植 / 花贸市场
+  类型：switch
+  默认值：false
+  说明：次数不足时自动购买花贸市场上架次数。
+
+plant.market.buyPutCount
+  名称：购买上架次数上限
+  分页/分组：种植 / 花贸市场
+  类型：number
+  默认值：0
+  说明：限制自动购买上架次数的数量。
+
+plant.market.autoBuyFromFriend
+  名称：好友摊位扫货
+  分页/分组：种植 / 花贸市场
+  类型：switch
+  默认值：false
+  说明：自动购买好友货架的花朵
+
+plant.market.buyMode
+  名称：购买模式
+  分页/分组：种植 / 花贸市场
+  类型：radio
+  默认值：quality
+  说明：选择从好友市场购买时的目标匹配方式。
+  可选值：指定品质 / 指定花朵
+
+plant.market.minPutTimeDiff
+  名称：最小上架间隔
+  分页/分组：种植 / 花贸市场
+  类型：number
+  默认值：0
+  说明：只购买达到该上架时间间隔的商品。
+
+order.resident.normal
+  名称：居民订单
+  分页/分组：订单 / 居民订单
+  类型：switch
+  默认值：false
+  说明：自动提交居民订单，不包括建材和绸缎订单，如果花库存不足，需要配合种植开启任务优先使用
+
+order.resident.normalMaxNum
+  名称：居民订单上限
+  分页/分组：订单 / 居民订单
+  类型：number
+  默认值：1200
+  说明：居民订单自动完成数量上限。
+
+order.resident.satin
+  名称：绸缎订单
+  分页/分组：订单 / 居民订单
+  类型：switch
+  默认值：false
+  说明：自动提交绸缎订单，如果花库存不足，需要配合种植开启任务优先使用
+
+order.resident.satinMaxNum
+  名称：绸缎订单上限
+  分页/分组：订单 / 居民订单
+  类型：number
+  默认值：120
+  说明：绸缎订单自动完成数量上限。
+
+order.resident.building
+  名称：建材订单
+  分页/分组：订单 / 居民订单
+  类型：switch
+  默认值：false
+  说明：自动提交建材订单，如果花库存不足，需要配合种植开启任务优先使用
+
+order.resident.buildingMaxNum
+  名称：建材订单上限
+  分页/分组：订单 / 居民订单
+  类型：number
+  默认值：120
+  说明：建材订单自动完成数量上限。
+
+order.resident.qualities
+  名称：品质限定
+  分页/分组：订单 / 居民订单
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：只处理选中的品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+order.customer.enabled
+  名称：自动完成
+  分页/分组：订单 / 顾客订单
+  类型：switch
+  默认值：false
+  说明：自动完成顾客订单
+
+order.customer.rejectEnabled
+  名称：自动拒绝
+  分页/分组：订单 / 顾客订单
+  类型：switch
+  默认值：false
+  说明：顾客订单不满足条件时自动拒绝。
+
+order.palace.enabled
+  名称：自动完成
+  分页/分组：订单 / 宫廷订单
+  类型：switch
+  默认值：false
+  说明：自动完成
+
+order.palace.qualities
+  名称：品质限定
+  分页/分组：订单 / 宫廷订单
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：只处理选中的品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+order.palace.ignoreQuality
+  名称：不论品质
+  分页/分组：订单 / 宫廷订单
+  类型：switch
+  默认值：false
+  说明：开启后宫廷订单不按品质过滤。
+
+order.group.enabled
+  名称：自动完成
+  分页/分组：订单 / 组团订单
+  类型：switch
+  默认值：false
+  说明：自动完成团单
+
+order.group.oneMore
+  名称：再来一单
+  分页/分组：订单 / 组团订单
+  类型：switch
+  默认值：false
+  说明：组队订单完成后继续接取下一单。
+
+order.group.submitOnlyCultivatedFlowers
+  名称：仅已培育
+  分页/分组：订单 / 组团订单
+  类型：switch
+  默认值：false
+  说明：组队订单只提交已培育花朵。
+
+order.group.qualities
+  名称：品质限定
+  分页/分组：订单 / 组团订单
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：只处理选中的品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+union.land.harvest
+  名称：自动收获
+  分页/分组：公会 / 公会土地
+  类型：switch
+  默认值：false
+  说明：自动收获
+
+union.land.plant
+  名称：自动种植
+  分页/分组：公会 / 公会土地
+  类型：switch
+  默认值：false
+  说明：自动种植空闲土地，自动将不符合限定条件的已种土地替换为目标花朵
+
+union.land.plantMode
+  名称：种植策略
+  分页/分组：公会 / 公会土地
+  类型：radio
+  默认值：quality
+  说明：选择公会土地自动种植策略。
+  可选值：指定品质 / 指定花朵 / 库存模式
+
+union.land.flowers
+  名称：选择品质
+  分页/分组：公会 / 公会土地
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：选择允许参与该功能的花朵品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+union.land.maxFlowerLevel
+  名称：最高等级限制
+  分页/分组：公会 / 公会土地
+  类型：number
+  默认值：0
+  说明：超过该等级的花朵不参与，0 表示不限制。
+
+union.build.video
+  名称：视频建设
+  分页/分组：公会 / 公会建设
+  类型：switch
+  默认值：false
+  说明：自动观看视频进行公会建设
+
+union.build.coin
+  名称：金币建设
+  分页/分组：公会 / 公会建设
+  类型：switch
+  默认值：false
+  说明：自动花费金币进行公会建设
+
+union.build.dmd
+  名称：元宝建设
+  分页/分组：公会 / 公会建设
+  类型：switch
+  默认值：false
+  说明：自动花费元宝进行公会建设
+
+union.flower.share
+  名称：自动分享
+  分页/分组：公会 / 公会分享
+  类型：switch
+  默认值：false
+  说明：自动分享花到公会分享栏
+
+union.flower.shareMode
+  名称：分享模式
+  分页/分组：公会 / 公会分享
+  类型：radio
+  默认值：quality
+  说明：选择公会自动分享花朵的匹配方式。
+  可选值：指定品质 / 指定花朵
+
+union.flower.shareQualities
+  名称：品质限定
+  分页/分组：公会 / 公会分享
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：只处理选中的品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+union.flower.touch
+  名称：自动摸花
+  分页/分组：公会 / 公会摸花
+  类型：switch
+  默认值：false
+  说明：自动摸取别人分享的花
+
+union.flower.touchMode
+  名称：摸花模式
+  分页/分组：公会 / 公会摸花
+  类型：radio
+  默认值：quality
+  说明：选择公会自动摸花的匹配方式。
+  可选值：指定品质 / 指定花朵
+
+union.flower.touchQualities
+  名称：品质限定
+  分页/分组：公会 / 公会摸花
+  类型：multiSelect
+  默认值：["green","blue","purple","gold","red"]
+  说明：只处理选中的品质。
+  可选值：绿 / 蓝 / 紫 / 金 / 红
+
+union.fmlRace.enabled
+  名称：自动完成
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：自动领取，完成公会竞赛任务
+
+union.fmlRace.autoEnableModules
+  名称：自动启用模块
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：根据任务类型自动启用相关模块，任务完成后自动恢复原始配置
+
+union.fmlRace.useSpeedCard
+  名称：种植任务用加速卡
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：公会竞赛种植任务期间临时开启加速卡，忽略加速卡上限（任务结束后自动恢复原始配置）
+
+union.fmlRace.minScore
+  名称：限制分数-未升级
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：25
+  说明：接分数不低于此值的普通任务，0 表示不限制。
+
+union.fmlRace.upgradedMinScore
+  名称：限制分数-升级后
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：50
+  说明：接分数不低于此值的玩家升级后任务/原金任务（双倍分数），0 表示不限制，举例：「限制分数-未升级」设置20，「限制分数-升级后」设置50，则接20分以上普通任务，50分以上升级后任务。注意！若要开启【放弃低分任务】+【自动升级任务】，需要设置「限制分数-未升级」的值乘以2大于等于「限制分数-升级后」的值。否则会出现元宝升级后把这个任务放弃的情况
+
+union.fmlRace.dropLowScore
+  名称：放弃低分任务
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：根据「限制分数-未升级」「限制分数-升级后」的设置来判断，例：未升级设置了25，升级后设置了50，则任务列表里有小于等于25的未升级会放弃，有小于等于50的已升级会放弃。开启此项又开启了【自动升级任务】的话，必须要按照「限制分数-未升级」乘以2大于等于「限制分数-升级后」这个规则来设置，否则会出现元宝升级后把这个任务放弃的情况。
+
+union.fmlRace.onlyUpgradeTask
+  名称：只接已升级任务
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：比如设置了限制27分，开启后就只会接大于等于54分的任务，会使公会任务做的非常慢，慎重开启（系统/玩家升级好的双倍任务比较少，捡漏的可能是比较小的哦）
+
+union.fmlRace.excludeOtherUpgradeTask
+  名称：排除他人升级任务
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：true
+  说明：基于礼貌的开关，开启后，公会其他玩家用元宝升级的任务就不会去接了
+
+union.fmlRace.taskTypePriority
+  名称：任务优先级
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：公会竞赛任务类型优先级，按第三方脚本支持值填写。
+
+union.fmlRace.autoUpgradeTask
+  名称：自动升级任务
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：领取任务后花费元宝自动升级，开启此项又开启了【放弃低分任务】的话，必须要按照「限制分数-未升级」的值乘以2大于等于「限制分数-升级后」的值，这个规则来设置，否则会出现元宝升级后把这个任务放弃的情况。
+
+union.fmlRace.deleteLowScoreTask
+  名称：删除低分任务
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：会长/副会长专属：自动删除低于指定分数的任务
+
+union.fmlRace.deleteTaskMaxScore
+  名称：删除分数上限
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：低于或等于该分数的任务可被删除，0 表示不删除。
+
+union.fmlRace.keepSystemUpgrade
+  名称：保留原金
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：删除低分任务时保留系统原有金色升级任务。
+
+union.fmlRace.keepPlayerUpgrade
+  名称：保留已升级
+  分页/分组：公会 / 公会竞赛
+  类型：switch
+  默认值：false
+  说明：删除低分任务时保留玩家已升级任务。
+
+union.exchange.autoRecv
+  名称：自动领取
+  分页/分组：公会 / 公会竞赛积分兑换
+  类型：switch
+  默认值：false
+  说明：开启后会自动领取公会竞赛奖励，并且兑换材料，不想自动领取的勿开
+
+union.energyForest.collect
+  名称：自动收集能量
+  分页/分组：公会 / 能量森林
+  类型：switch
+  默认值：false
+  说明：自动收集能量
+
+activity.flowerLetter.enabled
+  名称：自动完成
+  分页/分组：活动 / 花笺集芳
+  类型：switch
+  默认值：false
+  说明：自动完成花笺集芳任务，自动领取阶段宝箱奖励
+
+activity.flowerLetter.unlockSlot
+  名称：解锁槽位
+  分页/分组：活动 / 花笺集芳
+  类型：switch
+  默认值：false
+  说明：活动中自动解锁可用槽位。
+
+activity.flowerLetter.autoEnableModules
+  名称：自动启用模块
+  分页/分组：活动 / 花笺集芳
+  类型：switch
+  默认值：false
+  说明：活动开启后自动启用相关模块。
+
+activity.flowerNews.enabled
+  名称：自动完成
+  分页/分组：活动 / 莳花纪闻
+  类型：switch
+  默认值：false
+  说明：自动完成莳花纪闻订单任务，如果花库存不足，需要配合种植开启任务优先使用
+
+activity.flowerNews.refreshEnabled
+  名称：元宝刷新
+  分页/分组：活动 / 莳花纪闻
+  类型：switch
+  默认值：false
+  说明：允许活动中使用元宝刷新。
+
+activity.flowerNews.maxFinishCountPerBatch
+  名称：完成分数
+  分页/分组：活动 / 莳花纪闻
+  类型：number
+  默认值：0
+  说明：限制每批次完成数量或分数，0 表示不限制。
+
+activity.fishDry.enabled
+  名称：自动参与
+  分页/分组：活动 / 丰仓鱼干
+  类型：switch
+  默认值：false
+  说明：自动参与
+
+activity.fishDry.showResult
+  名称：显示结果
+  分页/分组：活动 / 丰仓鱼干
+  类型：switch
+  默认值：false
+  说明：活动完成后显示结果信息。
+
+activity.fishDry.autoRestart
+  名称：自动重开
+  分页/分组：活动 / 丰仓鱼干
+  类型：switch
+  默认值：false
+  说明：活动结束后自动重新开始。
+
+activity.bubble.enabled
+  名称：自动参与
+  分页/分组：活动 / 奇妙泡泡
+  类型：switch
+  默认值：false
+  说明：自动参与
+
+activity.fishFun.enabled
+  名称：自动参与
+  分页/分组：活动 / 鱼乐无穷
+  类型：switch
+  默认值：false
+  说明：自动参与
+
+activity.fishFun.autoClaimEnergy
+  名称：自动领取体力
+  分页/分组：活动 / 鱼乐无穷
+  类型：switch
+  默认值：false
+  说明：自动领取活动体力。
+
+activity.fishFun.speed
+  名称：速度
+  分页/分组：活动 / 鱼乐无穷
+  类型：radio
+  默认值：normal
+  说明：选择活动执行速度。
+  可选值：慢速 / 普通 / 快速
+
+activity.fishFun.showResult
+  名称：显示结果
+  分页/分组：活动 / 鱼乐无穷
+  类型：switch
+  默认值：false
+  说明：活动完成后显示结果信息。
+
+activity.fishFun.autoRestart
+  名称：自动重开
+  分页/分组：活动 / 鱼乐无穷
+  类型：switch
+  默认值：false
+  说明：活动结束后自动重新开始。
+
+activity.flowerStory.enabled
+  名称：自动参与
+  分页/分组：活动 / 花漾物语
+  类型：switch
+  默认值：false
+  说明：自动参与
+
+activity.flowerStory.autoClaimEnergy
+  名称：自动领取体力
+  分页/分组：活动 / 花漾物语
+  类型：switch
+  默认值：false
+  说明：自动领取活动体力。
+
+activity.flowerStory.speed
+  名称：速度
+  分页/分组：活动 / 花漾物语
+  类型：radio
+  默认值：normal
+  说明：选择活动执行速度。
+  可选值：慢速 / 普通 / 快速
+
+activity.redPacket.enabled
+  名称：自动参与
+  分页/分组：活动 / 红包雨
+  类型：switch
+  默认值：false
+  说明：自动抢红包
+
+activity.recvLuck.enabled
+  名称：自动领取
+  分页/分组：活动 / 迎新接福
+  类型：switch
+  默认值：false
+  说明：自动领取福袋
+
+activity.call.enabled
+  名称：自动打call
+  分页/分组：活动 / 杨紫打call
+  类型：switch
+  默认值：false
+  说明：自动为杨紫打call活动
+
+activity.familyHelp.enabled
+  名称：自动助力
+  分页/分组：活动 / 为家业助力
+  类型：switch
+  默认值：false
+  说明：自动为家业助力
+
+activity.familyHelp.recvBoxes
+  名称：领取宝箱
+  分页/分组：活动 / 为家业助力
+  类型：switch
+  默认值：false
+  说明：自动领取活动宝箱。
+
+activity.moneyTree.enabled
+  名称：自动摇钱
+  分页/分组：活动 / 摇钱树
+  类型：switch
+  默认值：false
+  说明：自动摇钱
+
+activity.zooGameElim.enabled
+  名称：自动参与
+  分页/分组：活动 / 花香满园
+  类型：switch
+  默认值：false
+  说明：自动进行花香满园消消乐活动
+
+activity.lantern.enabled
+  名称：自动答题
+  分页/分组：活动 / 元宵灯谜
+  类型：switch
+  默认值：false
+  说明：自动完成元宵灯谜答题并领取奖励
+
+activity.cake.enabled
+  名称：自动投放
+  分页/分组：活动 / 香卉甜糕
+  类型：switch
+  默认值：false
+  说明：自动投放
+
+activity.cake.autoClaimEnergy
+  名称：自动领取体力
+  分页/分组：活动 / 香卉甜糕
+  类型：switch
+  默认值：false
+  说明：自动领取活动体力。
+
+activity.cake.useItems
+  名称：使用道具
+  分页/分组：活动 / 香卉甜糕
+  类型：switch
+  默认值：false
+  说明：活动中允许自动使用道具。
+
+activity.cake.speed
+  名称：速度
+  分页/分组：活动 / 香卉甜糕
+  类型：radio
+  默认值：normal
+  说明：选择活动执行速度。
+  可选值：慢速 / 普通 / 快速
+
+activity.merge.enabled
+  名称：自动合并
+  分页/分组：活动 / 田园奇趣
+  类型：switch
+  默认值：false
+  说明：自动合并
+
+activity.merge.autoClaimEnergy
+  名称：自动领取体力
+  分页/分组：活动 / 田园奇趣
+  类型：switch
+  默认值：false
+  说明：自动领取活动体力。
+
+activity.merge.speed
+  名称：速度
+  分页/分组：活动 / 田园奇趣
+  类型：radio
+  默认值：normal
+  说明：选择活动执行速度。
+  可选值：慢速 / 普通 / 快速
+
+activity.spool.enabled
+  名称：自动玩
+  分页/分组：活动 / 梳丝引线
+  类型：switch
+  默认值：false
+  说明：自动玩
+
+activity.spool.autoClaimReward
+  名称：自动领取奖励
+  分页/分组：活动 / 梳丝引线
+  类型：switch
+  默认值：false
+  说明：自动领取活动奖励。
+
+activity.spool.openBox
+  名称：开箱
+  分页/分组：活动 / 梳丝引线
+  类型：switch
+  默认值：false
+  说明：自动打开活动宝箱。
+
+activity.spool.autoRestart
+  名称：自动重开
+  分页/分组：活动 / 梳丝引线
+  类型：switch
+  默认值：false
+  说明：活动结束后自动重新开始。
+
+activity.spool.speed
+  名称：速度
+  分页/分组：活动 / 梳丝引线
+  类型：radio
+  默认值：normal
+  说明：选择活动执行速度。
+  可选值：慢速 / 普通 / 快速
+
+activity.dragonBoat.enabled
+  名称：参赛
+  分页/分组：活动 / 龙舟竞渡
+  类型：switch
+  默认值：false
+  说明：开启后会玩龙舟
+
+activity.dragonBoat.autoSign
+  名称：自动签到
+  分页/分组：活动 / 龙舟竞渡
+  类型：switch
+  默认值：false
+  说明：活动中自动签到。
+
+activity.dragonBoat.autoOpenBox
+  名称：自动开箱
+  分页/分组：活动 / 龙舟竞渡
+  类型：switch
+  默认值：false
+  说明：活动中自动打开宝箱。
+
+activity.dragonBoat.giftBuy
+  名称：礼包购买
+  分页/分组：活动 / 龙舟竞渡
+  类型：switch
+  默认值：false
+  说明：允许活动中自动购买礼包。
+
+activity.honey.reward
+  名称：领奖励
+  分页/分组：活动 / 百花成蜜
+  类型：switch
+  默认值：false
+  说明：只会领奖励，不会做指定任务
+
+activity.card.reward
+  名称：领取奖励
+  分页/分组：活动 / 卡册
+  类型：switch
+  默认值：false
+  说明：会领取福利卡包，开启卡包
+
+activity.card.smoke
+  名称：凝烟成炱
+  分页/分组：活动 / 卡册
+  类型：switch
+  默认值：false
+  说明：会领取灯芯草并且按顺序凝烟
+
+九、错误处理约定
+
+第三方无法启动、账号密码错误、游戏登录失败、运行中发生不可恢复错误时，应返回 error，并提供真实 message。不要返回 started 伪装成功。
+
+如需机器校验字段结构，可参考同目录 third-party-game-config.schema.json。
