@@ -417,6 +417,8 @@
                 "taskPriority",
                 "plantingMode",
                 "flowerQuality",
+                "categoryCount",
+                "specificFlowers",
                 "minFlowerLevel"
               ],
               "properties": {
@@ -511,6 +513,27 @@
                     "red"
                   ]
                 },
+                "categoryCount": {
+                  "type": "string",
+                  "enum": [
+                    "1",
+                    "2",
+                    "3",
+                    "4"
+                  ],
+                  "default": "4",
+                  "description": "指定种类模式下选择的数量"
+                },
+                "specificFlowers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "23001"
+                  ],
+                  "description": "指定花朵模式使用的鲜花 ID，ID 来自第三方提供的鲜花表"
+                },
                 "minFlowerLevel": {
                   "type": "number",
                   "default": 0
@@ -525,6 +548,8 @@
                 "includeElf",
                 "stealMode",
                 "qualities",
+                "specificFlowers",
+                "excludeFlowers",
                 "buyCount",
                 "buyStealCount"
               ],
@@ -553,6 +578,24 @@
                     "gold",
                     "red"
                   ]
+                },
+                "specificFlowers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "23001"
+                  ],
+                  "description": "指定花朵偷花时使用的鲜花 ID"
+                },
+                "excludeFlowers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [],
+                  "description": "排除花朵模式使用的鲜花 ID"
                 },
                 "buyCount": {
                   "type": "boolean",
@@ -639,6 +682,7 @@
                 "unlockShelf",
                 "autoPut",
                 "sellMode",
+                "specifiedVases",
                 "specifiedArts",
                 "flowerArtPerRack",
                 "exp",
@@ -657,9 +701,23 @@
                   "type": "string",
                   "default": "specified"
                 },
+                "specifiedVases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "3001"
+                  ],
+                  "description": "指定花瓶模式使用的花瓶 ID，ID 来自第三方提供的花瓶表"
+                },
                 "specifiedArts": {
-                  "type": "string",
-                  "default": ""
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [],
+                  "description": "指定花艺模式使用的花艺 ID，ID 来自第三方提供的花艺表"
                 },
                 "flowerArtPerRack": {
                   "type": "number",
@@ -682,7 +740,7 @@
                 "unlockShelf",
                 "autoPut",
                 "putMode",
-                "qualities",
+                "specificFlowers",
                 "priceIndex",
                 "maxSell",
                 "putPassword",
@@ -690,6 +748,7 @@
                 "buyPutCount",
                 "autoBuyFromFriend",
                 "buyMode",
+                "buyFlowers",
                 "minPutTimeDiff"
               ],
               "properties": {
@@ -703,24 +762,32 @@
                 },
                 "putMode": {
                   "type": "string",
-                  "default": "quality"
+                  "enum": [
+                    "inventory",
+                    "flower"
+                  ],
+                  "default": "inventory",
+                  "description": "花贸市场上架策略：inventory=库存最多，flower=指定花朵"
                 },
-                "qualities": {
+                "specificFlowers": {
                   "type": "array",
                   "items": {
                     "type": "string"
                   },
                   "default": [
-                    "green",
-                    "blue",
-                    "purple",
-                    "gold",
-                    "red"
-                  ]
+                    "23001"
+                  ],
+                  "description": "花贸市场指定花朵上架使用的鲜花 ID"
                 },
                 "priceIndex": {
-                  "type": "number",
-                  "default": 0
+                  "type": "string",
+                  "enum": [
+                    "0",
+                    "1",
+                    "2"
+                  ],
+                  "default": "0",
+                  "description": "花贸市场上架价格档位：0=最低，1=中等，2=最高"
                 },
                 "maxSell": {
                   "type": "number",
@@ -745,6 +812,16 @@
                 "buyMode": {
                   "type": "string",
                   "default": "quality"
+                },
+                "buyFlowers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "23001"
+                  ],
+                  "description": "好友摊位扫货指定花朵购买使用的鲜花 ID"
                 },
                 "minPutTimeDiff": {
                   "type": "number",
@@ -925,6 +1002,7 @@
                 "plant",
                 "plantMode",
                 "flowers",
+                "specificFlowers",
                 "maxFlowerLevel"
               ],
               "properties": {
@@ -952,6 +1030,16 @@
                     "gold",
                     "red"
                   ]
+                },
+                "specificFlowers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "23001"
+                  ],
+                  "description": "公会土地指定花朵种植使用的鲜花 ID"
                 },
                 "maxFlowerLevel": {
                   "type": "number",
@@ -989,9 +1077,11 @@
                 "share",
                 "shareMode",
                 "shareQualities",
+                "shareFlowers",
                 "touch",
                 "touchMode",
-                "touchQualities"
+                "touchQualities",
+                "touchFlowers"
               ],
               "properties": {
                 "share": {
@@ -1015,6 +1105,16 @@
                     "red"
                   ]
                 },
+                "shareFlowers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "23001"
+                  ],
+                  "description": "公会分享指定花朵使用的鲜花 ID"
+                },
                 "touch": {
                   "type": "boolean",
                   "default": false
@@ -1035,6 +1135,16 @@
                     "gold",
                     "red"
                   ]
+                },
+                "touchFlowers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "23001"
+                  ],
+                  "description": "公会摸花指定花朵使用的鲜花 ID"
                 }
               }
             },
@@ -1091,8 +1201,78 @@
                   "default": true
                 },
                 "taskTypePriority": {
-                  "type": "number",
-                  "default": 0
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "vipShop",
+                    "residentOrder",
+                    "customerOrder",
+                    "materialShop",
+                    "palaceOrder",
+                    "pearlHire",
+                    "friendSteal",
+                    "artSell",
+                    "artCraft",
+                    "flowerUpgrade",
+                    "plantHarvest",
+                    "flowerCultivate",
+                    "animalInteract"
+                  ],
+                  "properties": {
+                    "vipShop": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "residentOrder": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "customerOrder": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "materialShop": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "palaceOrder": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "pearlHire": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "friendSteal": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "artSell": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "artCraft": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "flowerUpgrade": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "plantHarvest": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "flowerCultivate": {
+                      "type": "number",
+                      "default": 0
+                    },
+                    "animalInteract": {
+                      "type": "number",
+                      "default": 0
+                    }
+                  },
+                  "description": "公会竞赛任务类型优先级，数字越小优先级越高"
                 },
                 "autoUpgradeTask": {
                   "type": "boolean",

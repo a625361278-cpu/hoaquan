@@ -92,15 +92,44 @@
                   <text>{{ t(option.labelKey) }}</text>
                 </label>
               </radio-group>
-              <view v-else-if="entry.type === 'multiSelect'" class="multi-select-control">
-                <button
-                  v-for="option in entry.options"
-                  :key="option.value"
-                  :class="['multi-select-chip', isMultiSelected(entry.path, option.value) ? 'selected' : '']"
-                  @click="toggleMultiSelect(entry.path, option.value)"
+              <view v-else-if="entry.type === 'multiSelect'" class="select-control">
+                <view
+                  :class="['select-box', isDropdownOpen(entry.path) ? 'open' : '']"
+                  @click.stop="toggleDropdown(entry.path)"
                 >
-                  {{ t(option.labelKey) }}
-                </button>
+                  <view class="selected-tags">
+                    <view v-for="option in selectedOptions(entry)" :key="option.value" class="selected-tag">
+                      <text class="selected-tag-text">{{ optionText(entry, option.value) }}</text>
+                      <text class="selected-tag-close" @click.stop="toggleMultiSelect(entry.path, option.value)">×</text>
+                    </view>
+                    <input
+                      v-if="isDropdownOpen(entry.path) || selectedOptions(entry).length === 0"
+                      class="select-search"
+                      type="text"
+                      :value="searchKeyword(entry.path)"
+                      :placeholder="selectedOptions(entry).length === 0 ? t('client.config.select.placeholder') : ''"
+                      @click.stop="openDropdown(entry.path)"
+                      @input="setSearchKeyword(entry.path, $event.detail.value)"
+                    />
+                  </view>
+                  <text class="select-arrow">⌄</text>
+                </view>
+                <view v-if="isDropdownOpen(entry.path)" class="select-dropdown">
+                  <scroll-view scroll-y class="select-options">
+                    <view
+                      v-for="option in filteredOptions(entry)"
+                      :key="option.value"
+                      :class="['select-option', isMultiSelected(entry.path, option.value) ? 'selected' : '']"
+                      @click.stop="toggleMultiSelect(entry.path, option.value)"
+                    >
+                      <text class="select-option-text">{{ optionText(entry, option.value) }}</text>
+                      <text v-if="isMultiSelected(entry.path, option.value)" class="select-check">✓</text>
+                    </view>
+                    <view v-if="filteredOptions(entry).length === 0" class="select-empty">
+                      {{ t('client.config.select.empty') }}
+                    </view>
+                  </scroll-view>
+                </view>
               </view>
               <view v-else-if="entry.type === 'priorityGroup'" class="priority-control">
                 <view v-for="priorityEntry in entry.entries" :key="priorityEntry.key" class="priority-row">
@@ -155,6 +184,9 @@ const localeReady = ref(false);
 const saving = ref(false);
 const activeHelpPath = ref('');
 const configFlowVisible = ref(false);
+const activeDropdownPath = ref('');
+const selectSearch = reactive({});
+const currentLocale = ref(getLocale());
 
 const activeGroups = computed(() => {
   const tab = CONFIG_SCHEMA.find((item) => item.key === activeTab.value);
@@ -165,7 +197,8 @@ onLoad(async (query = {}) => {
   if (requireLogin()) {
     accountId.value = Number(query.id || 0);
     try {
-      await loadLocaleMessages(getLocale());
+      currentLocale.value = getLocale();
+      await loadLocaleMessages(currentLocale.value);
       localeReady.value = true;
       configFlowVisible.value = true;
       await loadConfig();
@@ -264,9 +297,62 @@ function toggleMultiSelect(path, value) {
   setConfigValue(config, path, next);
 }
 
+function openDropdown(path) {
+  activeDropdownPath.value = path;
+}
+
+function toggleDropdown(path) {
+  activeDropdownPath.value = activeDropdownPath.value === path ? '' : path;
+}
+
+function isDropdownOpen(path) {
+  return activeDropdownPath.value === path;
+}
+
+function searchKeyword(path) {
+  return selectSearch[path] || '';
+}
+
+function setSearchKeyword(path, value) {
+  selectSearch[path] = value || '';
+  activeDropdownPath.value = path;
+}
+
+function selectedOptions(entry) {
+  const selected = getConfigValue(config, entry.path);
+  if (!Array.isArray(selected)) {
+    return [];
+  }
+  return selected
+    .map((value) => (entry.options || []).find((option) => option.value === value) || { value, labelZh: value, labelVi: value })
+    .filter(Boolean);
+}
+
+function filteredOptions(entry) {
+  const keyword = searchKeyword(entry.path).trim().toLowerCase();
+  const options = entry.options || [];
+  if (!keyword) {
+    return options;
+  }
+  return options.filter((option) => {
+    const label = optionText(entry, option.value).toLowerCase();
+    const labelVi = String(option.labelVi || '').toLowerCase();
+    return label.includes(keyword) || labelVi.includes(keyword) || String(option.value).includes(keyword);
+  });
+}
+
 function optionText(entry, value) {
   const match = (entry.options || []).find((option) => option.value === value);
-  return match ? t(match.labelKey) : value;
+  if (!match) {
+    return value;
+  }
+  if (match.labelKey) {
+    return t(match.labelKey);
+  }
+  if (currentLocale.value === 'vi') {
+    return match.labelVi || match.labelZh || value;
+  }
+  return match.labelZh || match.labelVi || value;
 }
 
 function openHelp(path) {
@@ -631,36 +717,134 @@ function cloneConfig(value) {
   font-size: 14px;
 }
 
-.multi-select-control {
+.select-control {
+  position: relative;
+  width: 260px;
+  min-height: 34px;
+}
+
+.select-box {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  width: 240px;
-  min-height: 32px;
-  padding: 4px;
+  align-items: center;
+  min-height: 34px;
+  padding: 3px 30px 3px 6px;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
   box-sizing: border-box;
-  background: #fff;
+  background: #ffffff;
 }
 
-.multi-select-chip {
-  min-width: 40px;
-  height: 26px;
-  line-height: 24px;
-  margin: 0;
-  padding: 0 8px;
-  border: 1px solid #e5e7eb;
+.select-box.open {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15);
+}
+
+.selected-tags {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.selected-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 210px;
+  height: 24px;
+  padding: 0 6px;
   border-radius: 4px;
-  background: #f8fafc;
-  color: #111827;
+  box-sizing: border-box;
+  background: #f3f4f6;
+  color: #374151;
   font-size: 13px;
 }
 
-.multi-select-chip.selected {
-  border-color: #1677ff;
-  background: #e7f0ff;
+.selected-tag-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-tag-close {
+  flex: none;
+  margin-left: 4px;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.select-search {
+  flex: 1;
+  min-width: 68px;
+  height: 24px;
+  line-height: 24px;
+  border: 0;
+  color: #111827;
+  font-size: 14px;
+}
+
+.select-arrow {
+  position: absolute;
+  top: 7px;
+  right: 10px;
+  color: #6b7280;
+  font-size: 18px;
+}
+
+.select-dropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+}
+
+.select-options {
+  height: 260px;
+  max-height: 260px;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  color: #111827;
+  font-size: 14px;
+}
+
+.select-option.selected {
+  background: #e6f4ff;
   color: #1677ff;
+  font-weight: 600;
+}
+
+.select-option-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-check {
+  flex: none;
+  margin-left: 10px;
+  color: #1677ff;
+  font-size: 16px;
+}
+
+.select-empty {
+  padding: 14px 10px;
+  color: #9ca3af;
+  font-size: 14px;
+  text-align: center;
 }
 
 .priority-control {
@@ -851,8 +1035,12 @@ function cloneConfig(value) {
     min-width: 130px;
   }
 
-  .multi-select-control {
+  .select-control {
     width: 150px;
+  }
+
+  .selected-tag {
+    max-width: 112px;
   }
 
   .priority-control {

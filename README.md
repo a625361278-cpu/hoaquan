@@ -115,6 +115,7 @@ bash deploy/server_update.sh
 - 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端写入停止任务，把本地状态改为 `stopped`，并清空当前账号运行日志。
 - 第三方读取游戏配置：`GET /api/third-party/game-accounts/{id}/config`。
 - 第三方 WebSocket start/stop/started/log/status/error/stopped 协议、完整配置 JSON 示例和字段说明见 [docs/third-party-game-config.md](docs/third-party-game-config.md)。同一连接可承载多个账号，所以所有账号相关消息都必须带 `account_id`；JSON Schema 见 [docs/third-party-game-config.schema.json](docs/third-party-game-config.schema.json)，它是可选机器校验文件，不是实际传输数据。
+- 配置页里的“指定花朵 / 指定花瓶 / 指定花艺”显示中越双语名称，但保存和第三方协议只传第三方提供的资产 ID；当前资产来源是 `VN鲜花(1).txt`、`VN花瓶.txt`、`VN花艺.txt` 整理后的前端选项表。
 - 第三方主动写日志：`POST /api/third-party/game-accounts/{id}/logs`，body 为 `{"logs":["..."]}` 或 `{"lines":["..."]}`。
 - 第三方接口需要先在 `ga_system_settings` 配置 `third_party_enabled=1` 和 `third_party_sign_secret`。
 - 请求头必须包含：

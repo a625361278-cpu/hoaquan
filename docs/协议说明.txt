@@ -117,6 +117,10 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
           "gold",
           "red"
         ],
+        "categoryCount": "4",
+        "specificFlowers": [
+          "23001"
+        ],
         "minFlowerLevel": 0
       },
       "friendSteal": {
@@ -130,6 +134,10 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
           "gold",
           "red"
         ],
+        "specificFlowers": [
+          "23001"
+        ],
+        "excludeFlowers": [],
         "buyCount": false,
         "buyStealCount": 0
       },
@@ -151,7 +159,10 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
         "unlockShelf": false,
         "autoPut": false,
         "sellMode": "specified",
-        "specifiedArts": "",
+        "specifiedVases": [
+          "3001"
+        ],
+        "specifiedArts": [],
         "flowerArtPerRack": 12,
         "exp": false,
         "bookReward": false
@@ -159,21 +170,20 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
       "market": {
         "unlockShelf": false,
         "autoPut": false,
-        "putMode": "quality",
-        "qualities": [
-          "green",
-          "blue",
-          "purple",
-          "gold",
-          "red"
+        "putMode": "inventory",
+        "specificFlowers": [
+          "23001"
         ],
-        "priceIndex": 0,
+        "priceIndex": "0",
         "maxSell": 25,
         "putPassword": "",
         "autoBuyPutCount": false,
         "buyPutCount": 0,
         "autoBuyFromFriend": false,
         "buyMode": "quality",
+        "buyFlowers": [
+          "23001"
+        ],
         "minPutTimeDiff": 0
       }
     },
@@ -233,6 +243,9 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
           "gold",
           "red"
         ],
+        "specificFlowers": [
+          "23001"
+        ],
         "maxFlowerLevel": 0
       },
       "build": {
@@ -250,6 +263,9 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
           "gold",
           "red"
         ],
+        "shareFlowers": [
+          "23001"
+        ],
         "touch": false,
         "touchMode": "quality",
         "touchQualities": [
@@ -258,6 +274,9 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
           "purple",
           "gold",
           "red"
+        ],
+        "touchFlowers": [
+          "23001"
         ]
       },
       "fmlRace": {
@@ -269,7 +288,21 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
         "dropLowScore": false,
         "onlyUpgradeTask": false,
         "excludeOtherUpgradeTask": true,
-        "taskTypePriority": 0,
+        "taskTypePriority": {
+          "vipShop": 0,
+          "residentOrder": 0,
+          "customerOrder": 0,
+          "materialShop": 0,
+          "palaceOrder": 0,
+          "pearlHire": 0,
+          "friendSteal": 0,
+          "artSell": 0,
+          "artCraft": 0,
+          "flowerUpgrade": 0,
+          "plantHarvest": 0,
+          "flowerCultivate": 0,
+          "animalInteract": 0
+        },
         "autoUpgradeTask": false,
         "deleteLowScoreTask": false,
         "deleteTaskMaxScore": 0,
@@ -876,6 +909,21 @@ plant.flower.flowerQuality
   说明：选择允许参与该功能的花朵品质。
   可选值：绿 / 蓝 / 紫 / 金 / 红
 
+plant.flower.categoryCount
+  名称：选择数量
+  分页/分组：种植 / 种花配置
+  类型：radio
+  默认值："4"
+  说明：种植模式为“指定种类”时使用。
+  可选值：1 / 2 / 3 / 4
+
+plant.flower.specificFlowers
+  名称：选择花朵
+  分页/分组：种植 / 种花配置
+  类型：multiSelect
+  默认值：["23001"]
+  说明：种植模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
+
 plant.flower.minFlowerLevel
   名称：限制花朵等级
   分页/分组：种植 / 种花配置
@@ -903,7 +951,7 @@ plant.friendSteal.stealMode
   类型：radio
   默认值：quality
   说明：选择好友偷花的目标匹配方式。
-  可选值：指定品质 / 指定种类 / 指定花朵
+  可选值：指定品质 / 指定花朵 / 排除花朵
 
 plant.friendSteal.qualities
   名称：品质限定
@@ -912,6 +960,20 @@ plant.friendSteal.qualities
   默认值：["green","blue","purple","gold","red"]
   说明：只处理选中的品质。
   可选值：绿 / 蓝 / 紫 / 金 / 红
+
+plant.friendSteal.specificFlowers
+  名称：选择花朵
+  分页/分组：种植 / 好友偷花
+  类型：multiSelect
+  默认值：["23001"]
+  说明：偷花模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
+
+plant.friendSteal.excludeFlowers
+  名称：排除花朵
+  分页/分组：种植 / 好友偷花
+  类型：multiSelect
+  默认值：[]
+  说明：偷花模式为“排除花朵”时使用。数组内为需要排除的鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
 
 plant.friendSteal.buyCount
   名称：购买偷取次数
@@ -1031,14 +1093,21 @@ plant.art.sellMode
   类型：radio
   默认值：specified
   说明：选择花艺上架售卖策略。
-  可选值：指定花瓶 / 库存模式
+  可选值：指定花瓶 / 指定花艺 / 库存模式
+
+plant.art.specifiedVases
+  名称：指定花瓶
+  分页/分组：种植 / 花艺上架
+  类型：multiSelect
+  默认值：["3001"]
+  说明：花艺售卖模式为“指定花瓶”时使用。数组内为花瓶 ID，ID 以第三方提供的 VN花瓶 表为准，不传显示名。
 
 plant.art.specifiedArts
   名称：指定花艺
   分页/分组：种植 / 花艺上架
-  类型：text
-  默认值：空字符串
-  说明：填写指定花艺配置，多个值按第三方脚本支持格式分隔。
+  类型：multiSelect
+  默认值：[]
+  说明：花艺售卖模式为“指定花艺”时使用。数组内为花艺 ID，ID 以第三方提供的 VN花艺 表为准，不传显示名。
 
 plant.art.flowerArtPerRack
   名称：每架数量
@@ -1079,24 +1148,24 @@ plant.market.putMode
   名称：上架模式
   分页/分组：种植 / 花贸市场
   类型：radio
-  默认值：quality
+  默认值：inventory
   说明：选择花贸市场自动上架策略。
-  可选值：指定品质 / 指定种类 / 指定花朵 / 库存模式
+  可选值：库存最多 / 指定花朵
 
-plant.market.qualities
-  名称：品质限定
+plant.market.specificFlowers
+  名称：选择花朵
   分页/分组：种植 / 花贸市场
   类型：multiSelect
-  默认值：["green","blue","purple","gold","red"]
-  说明：只处理选中的品质。
-  可选值：绿 / 蓝 / 紫 / 金 / 红
+  默认值：["23001"]
+  说明：上架模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
 
 plant.market.priceIndex
   名称：价格档位
   分页/分组：种植 / 花贸市场
-  类型：number
-  默认值：0
-  说明：花贸市场上架价格档位，按第三方脚本支持值填写。
+  类型：radio
+  默认值："0"
+  说明：花贸市场上架价格档位。
+  可选值：最低 / 中等 / 最高
 
 plant.market.maxSell
   名称：售卖上限
@@ -1140,6 +1209,13 @@ plant.market.buyMode
   默认值：quality
   说明：选择从好友市场购买时的目标匹配方式。
   可选值：指定品质 / 指定花朵
+
+plant.market.buyFlowers
+  名称：选择花朵
+  分页/分组：种植 / 花贸市场
+  类型：multiSelect
+  默认值：["23001"]
+  说明：购买模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
 
 plant.market.minPutTimeDiff
   名称：最小上架间隔
@@ -1293,6 +1369,13 @@ union.land.flowers
   说明：选择允许参与该功能的花朵品质。
   可选值：绿 / 蓝 / 紫 / 金 / 红
 
+union.land.specificFlowers
+  名称：选择花朵
+  分页/分组：公会 / 公会土地
+  类型：multiSelect
+  默认值：["23001"]
+  说明：种植策略为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
+
 union.land.maxFlowerLevel
   名称：最高等级限制
   分页/分组：公会 / 公会土地
@@ -1344,6 +1427,13 @@ union.flower.shareQualities
   说明：只处理选中的品质。
   可选值：绿 / 蓝 / 紫 / 金 / 红
 
+union.flower.shareFlowers
+  名称：选择花朵
+  分页/分组：公会 / 公会分享
+  类型：multiSelect
+  默认值：["23001"]
+  说明：分享模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
+
 union.flower.touch
   名称：自动摸花
   分页/分组：公会 / 公会摸花
@@ -1366,6 +1456,13 @@ union.flower.touchQualities
   默认值：["green","blue","purple","gold","red"]
   说明：只处理选中的品质。
   可选值：绿 / 蓝 / 紫 / 金 / 红
+
+union.flower.touchFlowers
+  名称：选择花朵
+  分页/分组：公会 / 公会摸花
+  类型：multiSelect
+  默认值：["23001"]
+  说明：摸花模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
 
 union.fmlRace.enabled
   名称：自动完成
@@ -1423,12 +1520,96 @@ union.fmlRace.excludeOtherUpgradeTask
   默认值：true
   说明：基于礼貌的开关，开启后，公会其他玩家用元宝升级的任务就不会去接了
 
-union.fmlRace.taskTypePriority
-  名称：任务优先级
+union.fmlRace.taskTypePriority.vipShop
+  名称：任务优先级 / vip商店购买
   分页/分组：公会 / 公会竞赛
   类型：number
   默认值：0
-  说明：公会竞赛任务类型优先级，按第三方脚本支持值填写。
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.residentOrder
+  名称：任务优先级 / 居民订单
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.customerOrder
+  名称：任务优先级 / 顾客订单
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.materialShop
+  名称：任务优先级 / 材料商店购买
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.palaceOrder
+  名称：任务优先级 / 宫廷订单
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.pearlHire
+  名称：任务优先级 / 珍珠采集雇佣
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.friendSteal
+  名称：任务优先级 / 好友偷花
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.artSell
+  名称：任务优先级 / 花艺售卖
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.artCraft
+  名称：任务优先级 / 花艺制作
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.flowerUpgrade
+  名称：任务优先级 / 鲜花升级
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.plantHarvest
+  名称：任务优先级 / 种植收获
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.flowerCultivate
+  名称：任务优先级 / 花种培育
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
+
+union.fmlRace.taskTypePriority.animalInteract
+  名称：任务优先级 / 动物互动
+  分页/分组：公会 / 公会竞赛
+  类型：number
+  默认值：0
+  说明：数字越小优先级越高。
 
 union.fmlRace.autoUpgradeTask
   名称：自动升级任务

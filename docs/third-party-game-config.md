@@ -114,6 +114,10 @@
           "gold",
           "red"
         ],
+        "categoryCount": "4",
+        "specificFlowers": [
+          "23001"
+        ],
         "minFlowerLevel": 0
       },
       "friendSteal": {
@@ -127,6 +131,10 @@
           "gold",
           "red"
         ],
+        "specificFlowers": [
+          "23001"
+        ],
+        "excludeFlowers": [],
         "buyCount": false,
         "buyStealCount": 0
       },
@@ -148,7 +156,10 @@
         "unlockShelf": false,
         "autoPut": false,
         "sellMode": "specified",
-        "specifiedArts": "",
+        "specifiedVases": [
+          "3001"
+        ],
+        "specifiedArts": [],
         "flowerArtPerRack": 12,
         "exp": false,
         "bookReward": false
@@ -156,21 +167,20 @@
       "market": {
         "unlockShelf": false,
         "autoPut": false,
-        "putMode": "quality",
-        "qualities": [
-          "green",
-          "blue",
-          "purple",
-          "gold",
-          "red"
+        "putMode": "inventory",
+        "specificFlowers": [
+          "23001"
         ],
-        "priceIndex": 0,
+        "priceIndex": "0",
         "maxSell": 25,
         "putPassword": "",
         "autoBuyPutCount": false,
         "buyPutCount": 0,
         "autoBuyFromFriend": false,
         "buyMode": "quality",
+        "buyFlowers": [
+          "23001"
+        ],
         "minPutTimeDiff": 0
       }
     },
@@ -230,6 +240,9 @@
           "gold",
           "red"
         ],
+        "specificFlowers": [
+          "23001"
+        ],
         "maxFlowerLevel": 0
       },
       "build": {
@@ -247,6 +260,9 @@
           "gold",
           "red"
         ],
+        "shareFlowers": [
+          "23001"
+        ],
         "touch": false,
         "touchMode": "quality",
         "touchQualities": [
@@ -255,6 +271,9 @@
           "purple",
           "gold",
           "red"
+        ],
+        "touchFlowers": [
+          "23001"
         ]
       },
       "fmlRace": {
@@ -266,7 +285,21 @@
         "dropLowScore": false,
         "onlyUpgradeTask": false,
         "excludeOtherUpgradeTask": true,
-        "taskTypePriority": 0,
+        "taskTypePriority": {
+          "vipShop": 0,
+          "residentOrder": 0,
+          "customerOrder": 0,
+          "materialShop": 0,
+          "palaceOrder": 0,
+          "pearlHire": 0,
+          "friendSteal": 0,
+          "artSell": 0,
+          "artCraft": 0,
+          "flowerUpgrade": 0,
+          "plantHarvest": 0,
+          "flowerCultivate": 0,
+          "animalInteract": 0
+        },
         "autoUpgradeTask": false,
         "deleteLowScoreTask": false,
         "deleteTaskMaxScore": 0,
@@ -495,11 +528,15 @@
 | 种植 | 种花配置 | `plant.flower.taskPriority.unionRace` | number | `3` | 数字越小优先级越高，按原版配置项填写。 | - |
 | 种植 | 种花配置 | `plant.flower.plantingMode` | radio | `quality` | 选择自动种植使用的匹配策略。 | 指定品质 / 指定种类 / 指定花朵 / 库存模式 / 64块地模式 |
 | 种植 | 种花配置 | `plant.flower.flowerQuality` | multiSelect | `["green","blue","purple","gold","red"]` | 选择允许参与该功能的花朵品质。 | 绿 / 蓝 / 紫 / 金 / 红 |
+| 种植 | 种花配置 | `plant.flower.categoryCount` | radio | `"4"` | 指定种类模式下选择种类数量。 | 1 / 2 / 3 / 4 |
+| 种植 | 种花配置 | `plant.flower.specificFlowers` | multiSelect | `["23001"]` | 指定花朵模式下选择鲜花 ID，ID 以第三方提供的鲜花表为准。 | 鲜花 ID |
 | 种植 | 种花配置 | `plant.flower.minFlowerLevel` | number | `0` | 花朵等级超过该值后不参与，0 表示不限制。 | - |
 | 种植 | 好友偷花 | `plant.friendSteal.enabled` | switch | `false` | 默认不会偷取花灵，但在好友种植花灵时会偷取花朵，需要在偷花模式里设置排除花朵，排除花灵主花 | - |
 | 种植 | 好友偷花 | `plant.friendSteal.includeElf` | switch | `false` | 好友偷花时包含花灵相关地块。 | - |
-| 种植 | 好友偷花 | `plant.friendSteal.stealMode` | radio | `quality` | 选择好友偷花的目标匹配方式。 | 指定品质 / 指定种类 / 指定花朵 |
+| 种植 | 好友偷花 | `plant.friendSteal.stealMode` | radio | `quality` | 选择好友偷花的目标匹配方式。 | 指定品质 / 指定花朵 / 排除花朵 |
 | 种植 | 好友偷花 | `plant.friendSteal.qualities` | multiSelect | `["green","blue","purple","gold","red"]` | 只处理选中的品质。 | 绿 / 蓝 / 紫 / 金 / 红 |
+| 种植 | 好友偷花 | `plant.friendSteal.specificFlowers` | multiSelect | `["23001"]` | 指定花朵偷花时选择鲜花 ID，ID 以第三方提供的鲜花表为准。 | 鲜花 ID |
+| 种植 | 好友偷花 | `plant.friendSteal.excludeFlowers` | multiSelect | `[]` | 排除花朵模式下选择不偷取的鲜花 ID，ID 以第三方提供的鲜花表为准。 | 鲜花 ID |
 | 种植 | 好友偷花 | `plant.friendSteal.buyCount` | switch | `false` | 偷花次数不足时自动购买次数 | - |
 | 种植 | 好友偷花 | `plant.friendSteal.buyStealCount` | number | `0` | 限制自动购买偷花次数的数量。 | - |
 | 种植 | 花灵 | `plant.elves.plant` | switch | `false` | 优先种植指定花灵，否则选择当期双倍加成花灵种植（8朵主花+其余辅花），需要打开种植系统自动收获和自动种植，每日花灵达到收获上限后恢复到原有种植模式 | - |
@@ -516,22 +553,24 @@
 | 种植 | 花灵 | `plant.elves.recvFlowerPassTask` | switch | `false` | 自动处理花灵通行证任务奖励。 | - |
 | 种植 | 花艺上架 | `plant.art.unlockShelf` | switch | `false` | 自动解锁花架 | - |
 | 种植 | 花艺上架 | `plant.art.autoPut` | switch | `false` | 自动上架花艺，自动领取金币收益 | - |
-| 种植 | 花艺上架 | `plant.art.sellMode` | radio | `specified` | 选择花艺上架售卖策略。 | 指定花瓶 / 库存模式 |
-| 种植 | 花艺上架 | `plant.art.specifiedArts` | text | `空字符串` | 填写指定花艺配置，多个值按第三方脚本支持格式分隔。 | - |
+| 种植 | 花艺上架 | `plant.art.sellMode` | radio | `specified` | 选择花艺上架售卖策略。 | 指定花瓶 / 指定花艺 / 库存模式 |
+| 种植 | 花艺上架 | `plant.art.specifiedVases` | multiSelect | `["3001"]` | 指定花瓶模式下选择花瓶 ID，ID 以第三方提供的花瓶表为准。 | 花瓶 ID |
+| 种植 | 花艺上架 | `plant.art.specifiedArts` | multiSelect | `[]` | 指定花艺模式下选择花艺 ID，ID 以第三方提供的花艺表为准。 | 花艺 ID |
 | 种植 | 花艺上架 | `plant.art.flowerArtPerRack` | number | `12` | 每个货架上架的花艺数量。 | - |
 | 种植 | 花艺上架 | `plant.art.exp` | switch | `false` | 自动领取花艺制作经验 | - |
 | 种植 | 花艺上架 | `plant.art.bookReward` | switch | `false` | 自动领取鲜花收藏，花瓶收藏，花艺收藏奖励 | - |
 | 种植 | 花贸市场 | `plant.market.unlockShelf` | switch | `false` | 自动花费元宝解锁花贸市场货架 | - |
 | 种植 | 花贸市场 | `plant.market.autoPut` | switch | `false` | 自动领取花贸市场收益并上架花朵，注意上架会消耗元宝，请谨慎开启！ | - |
-| 种植 | 花贸市场 | `plant.market.putMode` | radio | `quality` | 选择花贸市场自动上架策略。 | 指定品质 / 指定种类 / 指定花朵 / 库存模式 |
-| 种植 | 花贸市场 | `plant.market.qualities` | multiSelect | `["green","blue","purple","gold","red"]` | 只处理选中的品质。 | 绿 / 蓝 / 紫 / 金 / 红 |
-| 种植 | 花贸市场 | `plant.market.priceIndex` | number | `0` | 花贸市场上架价格档位，按第三方脚本支持值填写。 | - |
+| 种植 | 花贸市场 | `plant.market.putMode` | radio | `inventory` | 选择花贸市场自动上架策略。 | 库存最多 / 指定花朵 |
+| 种植 | 花贸市场 | `plant.market.specificFlowers` | multiSelect | `["23001"]` | 指定花朵上架时选择鲜花 ID，ID 以第三方提供的鲜花表为准。 | 鲜花 ID |
+| 种植 | 花贸市场 | `plant.market.priceIndex` | radio | `"0"` | 花贸市场上架价格档位。 | 最低 / 中等 / 最高 |
 | 种植 | 花贸市场 | `plant.market.maxSell` | number | `25` | 限制花贸市场本次最多上架数量。 | - |
 | 种植 | 花贸市场 | `plant.market.putPassword` | text | `空字符串` | 需要口令时填写，不需要可留空。 | - |
 | 种植 | 花贸市场 | `plant.market.autoBuyPutCount` | switch | `false` | 次数不足时自动购买花贸市场上架次数。 | - |
 | 种植 | 花贸市场 | `plant.market.buyPutCount` | number | `0` | 限制自动购买上架次数的数量。 | - |
 | 种植 | 花贸市场 | `plant.market.autoBuyFromFriend` | switch | `false` | 自动购买好友货架的花朵 | - |
 | 种植 | 花贸市场 | `plant.market.buyMode` | radio | `quality` | 选择从好友市场购买时的目标匹配方式。 | 指定品质 / 指定花朵 |
+| 种植 | 花贸市场 | `plant.market.buyFlowers` | multiSelect | `["23001"]` | 好友摊位扫货指定花朵时选择鲜花 ID，ID 以第三方提供的鲜花表为准。 | 鲜花 ID |
 | 种植 | 花贸市场 | `plant.market.minPutTimeDiff` | number | `0` | 只购买达到该上架时间间隔的商品。 | - |
 | 订单 | 居民订单 | `order.resident.normal` | switch | `false` | 自动提交居民订单，不包括建材和绸缎订单，如果花库存不足，需要配合种植开启任务优先使用 | - |
 | 订单 | 居民订单 | `order.resident.normalMaxNum` | number | `1200` | 居民订单自动完成数量上限。 | - |
@@ -553,6 +592,7 @@
 | 公会 | 公会土地 | `union.land.plant` | switch | `false` | 自动种植空闲土地，自动将不符合限定条件的已种土地替换为目标花朵 | - |
 | 公会 | 公会土地 | `union.land.plantMode` | radio | `quality` | 选择公会土地自动种植策略。 | 指定品质 / 指定花朵 / 库存模式 |
 | 公会 | 公会土地 | `union.land.flowers` | multiSelect | `["green","blue","purple","gold","red"]` | 选择允许参与该功能的花朵品质。 | 绿 / 蓝 / 紫 / 金 / 红 |
+| 公会 | 公会土地 | `union.land.specificFlowers` | multiSelect | `["23001"]` | 公会土地指定花朵种植时选择鲜花 ID，ID 以第三方提供的鲜花表为准。 | 鲜花 ID |
 | 公会 | 公会土地 | `union.land.maxFlowerLevel` | number | `0` | 超过该等级的花朵不参与，0 表示不限制。 | - |
 | 公会 | 公会建设 | `union.build.video` | switch | `false` | 自动观看视频进行公会建设 | - |
 | 公会 | 公会建设 | `union.build.coin` | switch | `false` | 自动花费金币进行公会建设 | - |
@@ -560,9 +600,11 @@
 | 公会 | 公会分享 | `union.flower.share` | switch | `false` | 自动分享花到公会分享栏 | - |
 | 公会 | 公会分享 | `union.flower.shareMode` | radio | `quality` | 选择公会自动分享花朵的匹配方式。 | 指定品质 / 指定花朵 |
 | 公会 | 公会分享 | `union.flower.shareQualities` | multiSelect | `["green","blue","purple","gold","red"]` | 只处理选中的品质。 | 绿 / 蓝 / 紫 / 金 / 红 |
+| 公会 | 公会分享 | `union.flower.shareFlowers` | multiSelect | `["23001"]` | 公会分享指定花朵时选择鲜花 ID，ID 以第三方提供的鲜花表为准。 | 鲜花 ID |
 | 公会 | 公会摸花 | `union.flower.touch` | switch | `false` | 自动摸取别人分享的花 | - |
 | 公会 | 公会摸花 | `union.flower.touchMode` | radio | `quality` | 选择公会自动摸花的匹配方式。 | 指定品质 / 指定花朵 |
 | 公会 | 公会摸花 | `union.flower.touchQualities` | multiSelect | `["green","blue","purple","gold","red"]` | 只处理选中的品质。 | 绿 / 蓝 / 紫 / 金 / 红 |
+| 公会 | 公会摸花 | `union.flower.touchFlowers` | multiSelect | `["23001"]` | 公会摸花指定花朵时选择鲜花 ID，ID 以第三方提供的鲜花表为准。 | 鲜花 ID |
 | 公会 | 公会竞赛 | `union.fmlRace.enabled` | switch | `false` | 自动领取，完成公会竞赛任务 | - |
 | 公会 | 公会竞赛 | `union.fmlRace.autoEnableModules` | switch | `false` | 根据任务类型自动启用相关模块，任务完成后自动恢复原始配置 | - |
 | 公会 | 公会竞赛 | `union.fmlRace.useSpeedCard` | switch | `false` | 公会竞赛种植任务期间临时开启加速卡，忽略加速卡上限（任务结束后自动恢复原始配置） | - |
@@ -571,7 +613,19 @@
 | 公会 | 公会竞赛 | `union.fmlRace.dropLowScore` | switch | `false` | 根据「限制分数-未升级」「限制分数-升级后」的设置来判断，例：未升级设置了25，升级后设置了50，则任务列表里有小于等于25的未升级会放弃，有小于等于50的已升级会放弃。开启此项又开启了【自动升级任务】的话，必须要按照「限制分数-未升级」乘以2大于等于「限制分数-升级后」这个规则来设置，否则会出现元宝升级后把这个任务放弃的情况。 | - |
 | 公会 | 公会竞赛 | `union.fmlRace.onlyUpgradeTask` | switch | `false` | 比如设置了限制27分，开启后就只会接大于等于54分的任务，会使公会任务做的非常慢，慎重开启（系统/玩家升级好的双倍任务比较少，捡漏的可能是比较小的哦） | - |
 | 公会 | 公会竞赛 | `union.fmlRace.excludeOtherUpgradeTask` | switch | `true` | 基于礼貌的开关，开启后，公会其他玩家用元宝升级的任务就不会去接了 | - |
-| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority` | number | `0` | 公会竞赛任务类型优先级，按第三方脚本支持值填写。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.vipShop` | number | `0` | 公会竞赛任务类型优先级：vip商店购买，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.residentOrder` | number | `0` | 公会竞赛任务类型优先级：居民订单，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.customerOrder` | number | `0` | 公会竞赛任务类型优先级：顾客订单，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.materialShop` | number | `0` | 公会竞赛任务类型优先级：材料商店购买，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.palaceOrder` | number | `0` | 公会竞赛任务类型优先级：宫廷订单，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.pearlHire` | number | `0` | 公会竞赛任务类型优先级：珍珠采集雇佣，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.friendSteal` | number | `0` | 公会竞赛任务类型优先级：好友偷花，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.artSell` | number | `0` | 公会竞赛任务类型优先级：花艺售卖，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.artCraft` | number | `0` | 公会竞赛任务类型优先级：花艺制作，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.flowerUpgrade` | number | `0` | 公会竞赛任务类型优先级：鲜花升级，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.plantHarvest` | number | `0` | 公会竞赛任务类型优先级：种植收获，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.flowerCultivate` | number | `0` | 公会竞赛任务类型优先级：花种培育，数字越小优先级越高。 | - |
+| 公会 | 公会竞赛 | `union.fmlRace.taskTypePriority.animalInteract` | number | `0` | 公会竞赛任务类型优先级：动物互动，数字越小优先级越高。 | - |
 | 公会 | 公会竞赛 | `union.fmlRace.autoUpgradeTask` | switch | `false` | 领取任务后花费元宝自动升级，开启此项又开启了【放弃低分任务】的话，必须要按照「限制分数-未升级」的值乘以2大于等于「限制分数-升级后」的值，这个规则来设置，否则会出现元宝升级后把这个任务放弃的情况。 | - |
 | 公会 | 公会竞赛 | `union.fmlRace.deleteLowScoreTask` | switch | `false` | 会长/副会长专属：自动删除低于指定分数的任务 | - |
 | 公会 | 公会竞赛 | `union.fmlRace.deleteTaskMaxScore` | number | `0` | 低于或等于该分数的任务可被删除，0 表示不删除。 | - |

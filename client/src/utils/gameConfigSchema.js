@@ -1,3 +1,5 @@
+import { FLOWER_ART_OPTIONS, FLOWER_OPTIONS, VASE_OPTIONS } from './gameAssetOptions';
+
 export const PREVIEW_CHANNEL = {
   code: 'official_app',
   titleKey: 'client.add.channel.official_app',
@@ -31,6 +33,12 @@ const FLOWER_MODE_OPTIONS = [
   option('flower', 'client.config.option.mode_flower'),
 ];
 
+const STEAL_MODE_OPTIONS = [
+  option('quality', 'client.config.option.mode_quality'),
+  option('flower', 'client.config.option.mode_flower'),
+  option('exclude', 'client.config.option.mode_exclude_flower'),
+];
+
 const SHARE_MODE_OPTIONS = [
   option('quality', 'client.config.option.mode_quality'),
   option('flower', 'client.config.option.mode_flower'),
@@ -49,6 +57,40 @@ const PRIORITY_OPTIONS = [
   option('flowerNews', 'client.config.item.flower_news'),
   option('palaceOrder', 'client.config.item.palace_order'),
   option('unionRace', 'client.config.item.union_race'),
+];
+
+const CATEGORY_COUNT_OPTIONS = [
+  option('1', 'client.config.option.count_1'),
+  option('2', 'client.config.option.count_2'),
+  option('3', 'client.config.option.count_3'),
+  option('4', 'client.config.option.count_4'),
+];
+
+const MARKET_PRICE_OPTIONS = [
+  option('0', 'client.config.option.price_low'),
+  option('1', 'client.config.option.price_middle'),
+  option('2', 'client.config.option.price_high'),
+];
+
+const MARKET_PUT_MODE_OPTIONS = [
+  option('inventory', 'client.config.option.mode_inventory_most'),
+  option('flower', 'client.config.option.mode_flower'),
+];
+
+const UNION_RACE_TASK_OPTIONS = [
+  option('vipShop', 'client.config.item.vip_shop_buy'),
+  option('residentOrder', 'client.config.item.resident_order'),
+  option('customerOrder', 'client.config.item.customer_order'),
+  option('materialShop', 'client.config.item.material_shop_buy'),
+  option('palaceOrder', 'client.config.item.palace_order'),
+  option('pearlHire', 'client.config.item.pearl_hire'),
+  option('friendSteal', 'client.config.item.friend_steal'),
+  option('artSell', 'client.config.item.flower_art_sell'),
+  option('artCraft', 'client.config.item.flower_art_craft'),
+  option('flowerUpgrade', 'client.config.item.flower_upgrade'),
+  option('plantHarvest', 'client.config.item.plant_harvest'),
+  option('flowerCultivate', 'client.config.item.flower_cultivate'),
+  option('animalInteract', 'client.config.item.animal_interact'),
 ];
 
 export const CONFIG_SCHEMA = [
@@ -246,6 +288,12 @@ export const CONFIG_SCHEMA = [
           multiSelectItem('plant.flower.flowerQuality', 'client.config.item.select_quality', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.select_quality', {
             visibleWhen: { path: 'plant.flower.plantingMode', equals: 'quality' },
           }),
+          radioItem('plant.flower.categoryCount', 'client.config.item.select_count', '4', CATEGORY_COUNT_OPTIONS, 'client.config.help.select_count', {
+            visibleWhen: { path: 'plant.flower.plantingMode', equals: 'category' },
+          }),
+          multiSelectItem('plant.flower.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+            visibleWhen: { path: 'plant.flower.plantingMode', equals: 'flower' },
+          }),
           numberItem('plant.flower.minFlowerLevel', 'client.config.item.limit_flower_level', 0, '', 'client.config.help.limit_flower_level', {
             visibleWhen: { path: 'plant.flower.plantEnabled', equals: true },
           }),
@@ -259,11 +307,17 @@ export const CONFIG_SCHEMA = [
           item('plant.friendSteal.includeElf', 'client.config.item.steal_elf', false, 'client.config.help.steal_elf', {
             visibleWhen: { path: 'plant.friendSteal.enabled', equals: true },
           }),
-          radioItem('plant.friendSteal.stealMode', 'client.config.item.steal_mode', 'quality', PLANTING_MODE_OPTIONS.slice(0, 3), 'client.config.help.steal_mode', {
+          radioItem('plant.friendSteal.stealMode', 'client.config.item.steal_mode', 'quality', STEAL_MODE_OPTIONS, 'client.config.help.steal_mode', {
             visibleWhen: { path: 'plant.friendSteal.enabled', equals: true },
           }),
           multiSelectItem('plant.friendSteal.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
             visibleWhen: { path: 'plant.friendSteal.stealMode', equals: 'quality' },
+          }),
+          multiSelectItem('plant.friendSteal.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+            visibleWhen: { path: 'plant.friendSteal.stealMode', equals: 'flower' },
+          }),
+          multiSelectItem('plant.friendSteal.excludeFlowers', 'client.config.item.exclude_flower', [], FLOWER_OPTIONS, 'client.config.help.exclude_flower', {
+            visibleWhen: { path: 'plant.friendSteal.stealMode', equals: 'exclude' },
           }),
           item('plant.friendSteal.buyCount', 'client.config.item.buy_steal_count', false, 'client.config.help.buy_steal_count', {
             visibleWhen: { path: 'plant.friendSteal.enabled', equals: true },
@@ -301,12 +355,16 @@ export const CONFIG_SCHEMA = [
           item('plant.art.autoPut', 'client.config.item.art_auto_put', false, 'client.config.help.art_auto_put'),
           radioItem('plant.art.sellMode', 'client.config.item.art_sell_mode', 'specified', [
             option('specified', 'client.config.option.mode_specified_vase'),
+            option('full', 'client.config.option.mode_specified_art'),
             option('stock', 'client.config.option.mode_stock'),
           ], 'client.config.help.art_sell_mode', {
             visibleWhen: { path: 'plant.art.autoPut', equals: true },
           }),
-          textItem('plant.art.specifiedArts', 'client.config.item.specified_art', '', 'client.config.help.specified_art', {
+          multiSelectItem('plant.art.specifiedVases', 'client.config.item.specified_vase', ['3001'], VASE_OPTIONS, 'client.config.help.specified_vase', {
             visibleWhen: { path: 'plant.art.sellMode', equals: 'specified' },
+          }),
+          multiSelectItem('plant.art.specifiedArts', 'client.config.item.specified_art', [], FLOWER_ART_OPTIONS, 'client.config.help.specified_art', {
+            visibleWhen: { path: 'plant.art.sellMode', equals: 'full' },
           }),
           numberItem('plant.art.flowerArtPerRack', 'client.config.item.art_per_rack', 12, '', 'client.config.help.art_per_rack', {
             visibleWhen: { path: 'plant.art.autoPut', equals: true },
@@ -321,13 +379,13 @@ export const CONFIG_SCHEMA = [
         items: [
           item('plant.market.unlockShelf', 'client.config.item.market_unlock_shelf', false, 'client.config.help.market_unlock_shelf'),
           item('plant.market.autoPut', 'client.config.item.market_auto_put', false, 'client.config.help.market_auto_put'),
-          radioItem('plant.market.putMode', 'client.config.item.market_put_mode', 'quality', PLANTING_MODE_OPTIONS.slice(0, 4), 'client.config.help.market_put_mode', {
+          radioItem('plant.market.putMode', 'client.config.item.market_put_mode', 'inventory', MARKET_PUT_MODE_OPTIONS, 'client.config.help.market_put_mode', {
             visibleWhen: { path: 'plant.market.autoPut', equals: true },
           }),
-          multiSelectItem('plant.market.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
-            visibleWhen: { path: 'plant.market.putMode', equals: 'quality' },
+          multiSelectItem('plant.market.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+            visibleWhen: { path: 'plant.market.putMode', equals: 'flower' },
           }),
-          numberItem('plant.market.priceIndex', 'client.config.item.price_index', 0, '', 'client.config.help.price_index', {
+          radioItem('plant.market.priceIndex', 'client.config.item.price_index', '0', MARKET_PRICE_OPTIONS, 'client.config.help.price_index', {
             visibleWhen: { path: 'plant.market.autoPut', equals: true },
           }),
           numberItem('plant.market.maxSell', 'client.config.item.market_sell_limit', 25, '', 'client.config.help.market_sell_limit', {
@@ -345,6 +403,9 @@ export const CONFIG_SCHEMA = [
           item('plant.market.autoBuyFromFriend', 'client.config.item.friend_market_buy', false, 'client.config.help.friend_market_buy'),
           radioItem('plant.market.buyMode', 'client.config.item.market_buy_mode', 'quality', FLOWER_MODE_OPTIONS, 'client.config.help.market_buy_mode', {
             visibleWhen: { path: 'plant.market.autoBuyFromFriend', equals: true },
+          }),
+          multiSelectItem('plant.market.buyFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+            visibleWhen: { path: 'plant.market.buyMode', equals: 'flower' },
           }),
           numberItem('plant.market.minPutTimeDiff', 'client.config.item.min_put_time_diff', 0, 'client.config.unit.minute', 'client.config.help.min_put_time_diff', {
             visibleWhen: { path: 'plant.market.autoBuyFromFriend', equals: true },
@@ -445,6 +506,9 @@ export const CONFIG_SCHEMA = [
           multiSelectItem('union.land.flowers', 'client.config.item.select_quality', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.select_quality', {
             visibleWhen: { path: 'union.land.plantMode', equals: 'quality' },
           }),
+          multiSelectItem('union.land.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+            visibleWhen: { path: 'union.land.plantMode', equals: 'flower' },
+          }),
           numberItem('union.land.maxFlowerLevel', 'client.config.item.max_flower_level', 0, '', 'client.config.help.max_flower_level', {
             visibleWhen: { path: 'union.land.plant', equals: true },
           }),
@@ -470,6 +534,9 @@ export const CONFIG_SCHEMA = [
           multiSelectItem('union.flower.shareQualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
             visibleWhen: { path: 'union.flower.shareMode', equals: 'quality' },
           }),
+          multiSelectItem('union.flower.shareFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+            visibleWhen: { path: 'union.flower.shareMode', equals: 'flower' },
+          }),
         ],
       },
       {
@@ -482,6 +549,9 @@ export const CONFIG_SCHEMA = [
           }),
           multiSelectItem('union.flower.touchQualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
             visibleWhen: { path: 'union.flower.touchMode', equals: 'quality' },
+          }),
+          multiSelectItem('union.flower.touchFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+            visibleWhen: { path: 'union.flower.touchMode', equals: 'flower' },
           }),
         ],
       },
@@ -497,7 +567,21 @@ export const CONFIG_SCHEMA = [
           item('union.fmlRace.dropLowScore', 'client.config.item.union_drop_low_score', false, 'client.config.help.union_drop_low_score'),
           item('union.fmlRace.onlyUpgradeTask', 'client.config.item.union_only_upgraded', false, 'client.config.help.union_only_upgraded'),
           item('union.fmlRace.excludeOtherUpgradeTask', 'client.config.item.union_exclude_other_upgrade', true, 'client.config.help.union_exclude_other_upgrade'),
-          numberItem('union.fmlRace.taskTypePriority', 'client.config.item.task_priority', 0, '', 'client.config.help.union_task_type_priority'),
+          priorityGroupItem('union.fmlRace.taskTypePriority', 'client.config.item.task_priority', [
+            { key: 'vipShop', defaultValue: 0 },
+            { key: 'residentOrder', defaultValue: 0 },
+            { key: 'customerOrder', defaultValue: 0 },
+            { key: 'materialShop', defaultValue: 0 },
+            { key: 'palaceOrder', defaultValue: 0 },
+            { key: 'pearlHire', defaultValue: 0 },
+            { key: 'friendSteal', defaultValue: 0 },
+            { key: 'artSell', defaultValue: 0 },
+            { key: 'artCraft', defaultValue: 0 },
+            { key: 'flowerUpgrade', defaultValue: 0 },
+            { key: 'plantHarvest', defaultValue: 0 },
+            { key: 'flowerCultivate', defaultValue: 0 },
+            { key: 'animalInteract', defaultValue: 0 },
+          ], UNION_RACE_TASK_OPTIONS, 'client.config.help.union_task_type_priority'),
           item('union.fmlRace.autoUpgradeTask', 'client.config.item.union_auto_upgrade_task', false, 'client.config.help.union_auto_upgrade_task'),
           item('union.fmlRace.deleteLowScoreTask', 'client.config.item.union_delete_low_score', false, 'client.config.help.union_delete_low_score'),
           numberItem('union.fmlRace.deleteTaskMaxScore', 'client.config.item.delete_score_limit', 0, '', 'client.config.help.delete_score_limit', {
