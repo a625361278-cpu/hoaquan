@@ -111,6 +111,7 @@ class RuleController extends Crud
             'plugin\\admin\\app\\controller\\AccountController' => 'admin.menu.profile',
             'plugin\\admin\\app\\controller\\UploadController' => 'admin.menu.attachment',
             'plugin\\admin\\app\\controller\\DictController' => 'admin.menu.dict',
+            'plugin\\admin\\app\\controller\\GameAssistThirdPartyConfigController' => 'admin.menu.third_party_config',
             'plugin\\admin\\app\\controller\\GameAssistThirdPartyConnectionController' => 'admin.menu.third_party_connection',
             'plugin\\admin\\app\\controller\\ConfigController' => 'admin.menu.system',
             'plugin\\admin\\app\\controller\\PluginController' => 'admin.menu.app_plugin',

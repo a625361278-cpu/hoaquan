@@ -23,6 +23,9 @@
             <button class="pear-btn pear-btn-md" lay-event="refresh">
                 <i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.refresh')?>
             </button>
+            <button class="pear-btn pear-btn-md" lay-event="config" permission="app.admin.game-assist-third-party-config.index">
+                <i class="layui-icon layui-icon-set"></i><?=admin_t('admin.third_party_config.title')?>
+            </button>
         </script>
 
         <script type="text/html" id="table-bar">
@@ -121,6 +124,9 @@
                     }
                     if (obj.event === "refresh") {
                         refreshTable();
+                    }
+                    if (obj.event === "config") {
+                        window.location.href = "/app/admin/game-assist-third-party-config/index";
                     }
                 });
 

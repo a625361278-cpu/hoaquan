@@ -88,7 +88,7 @@ bash deploy/server_update.sh
 - 后台仪表盘的今日注册、7日注册、30日注册和总用户数均统计 `ga_users.created_at`，不使用后台用户表。
 - GameAssist 用户后台只允许查看、启用/禁用和重置密码；余额 `balance` 与到期日 `expire_at` 只读展示，不能通过普通用户管理表单修改。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
-- 后台“第三方连接”读取 `third_party_ws_urls` 连接池配置，可查看每条 WebSocket 槽位的连接状态、承载账号和最近错误，并支持单条/全部启动或强制关闭。强制关闭会先停止该连接上的账号，再断开连接。
+- 后台“第三方配置”负责编辑 `third_party_ws_urls` 连接池地址、单连接账号容量和第三方启用状态；签名密钥为选填，仅用于第三方 HTTP 接口签名校验，WebSocket 长连接可为空。后台“第三方连接”读取该配置，可查看每条 WebSocket 槽位的连接状态、承载账号和最近错误，并支持单条/全部启动或强制关闭。强制关闭会先停止该连接上的账号，再断开连接。
 
 ## 邀请与个人中心
 
@@ -117,7 +117,7 @@ bash deploy/server_update.sh
 - 第三方 WebSocket start/stop/started/log/status/error/stopped 协议、完整配置 JSON 示例和字段说明见 [docs/third-party-game-config.md](docs/third-party-game-config.md)。同一连接可承载多个账号，所以所有账号相关消息都必须带 `account_id`；JSON Schema 见 [docs/third-party-game-config.schema.json](docs/third-party-game-config.schema.json)，它是可选机器校验文件，不是实际传输数据。
 - 配置页里的“指定花朵 / 指定花瓶 / 指定花艺”显示中越双语名称，但保存和第三方协议只传第三方提供的资产 ID；当前资产来源是 `VN鲜花(1).txt`、`VN花瓶.txt`、`VN花艺.txt` 整理后的前端选项表，源文件里的每个 ID 都必须保留进下拉，名称为空或待定的条目会继续显示 ID/待定名并记录在 `ASSET_OPTION_ISSUES`。
 - 第三方主动写日志：`POST /api/third-party/game-accounts/{id}/logs`，body 为 `{"logs":["..."]}` 或 `{"lines":["..."]}`。
-- 第三方接口需要先在 `ga_system_settings` 配置 `third_party_enabled=1` 和 `third_party_sign_secret`。
+- 第三方接口需要先在后台“第三方配置”或 `ga_system_settings` 配置 `third_party_enabled=1` 和 `third_party_ws_urls`。`third_party_sign_secret` 可为空；为空时不影响 WebSocket 长连接，只会导致需要 HTTP 签名校验的第三方 HTTP 接口不可用。
 - 请求头必须包含：
   - `X-Timestamp`：当前 Unix 时间戳，5 分钟内有效。
   - `X-Signature`：`hash_hmac('sha256', "{METHOD}\n{PATH}\n{timestamp}", third_party_sign_secret)`。

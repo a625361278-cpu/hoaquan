@@ -99,6 +99,13 @@ return [
                 'weight' => 550,
             ],
             [
+                'title' => '第三方配置',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistThirdPartyConfigController',
+                'href' => '/app/admin/game-assist-third-party-config/index',
+                'type' => 1,
+                'weight' => 545,
+            ],
+            [
                 'title' => '第三方连接',
                 'key' => 'plugin\\admin\\app\\controller\\GameAssistThirdPartyConnectionController',
                 'href' => '/app/admin/game-assist-third-party-connection/index',

@@ -825,5 +825,18 @@
   "admin.third_party_connection.updated_at": "Thoi gian cap nhat",
   "admin.third_party_connection.url": "Dia chi WebSocket",
   "admin.third_party_connection.websocket_unconfigured": "Chua cau hinh dia chi WebSocket ben thu ba",
-  "admin.menu.third_party_connection": "Ket noi ben thu ba"
+  "admin.third_party_config.capacity": "Dung luong tai khoan moi ket noi",
+  "admin.third_party_config.capacity_help": "So tai khoan game toi da tren moi ket noi WebSocket, mac dinh 10.",
+  "admin.third_party_config.capacity_invalid": "Dung luong tai khoan moi ket noi phai lon hon 0",
+  "admin.third_party_config.connection_link": "Quan ly ket noi",
+  "admin.third_party_config.enabled": "Bat giao dien ben thu ba",
+  "admin.third_party_config.save": "Luu cau hinh",
+  "admin.third_party_config.sign_secret": "Khoa ky",
+  "admin.third_party_config.sign_secret_help": "Khong bat buoc, chi dung de kiem tra chu ky HTTP cua ben thu ba; ket noi WebSocket co the de trong.",
+  "admin.third_party_config.title": "Cau hinh ben thu ba",
+  "admin.third_party_config.websocket_required": "Chua cau hinh dia chi WebSocket ben thu ba",
+  "admin.third_party_config.ws_urls": "Dia chi WebSocket",
+  "admin.third_party_config.ws_urls_help": "Moi dong la mot slot ket noi WebSocket ben thu ba. Dia chi co the gom tham so token do ben thu ba cung cap.",
+  "admin.menu.third_party_connection": "Ket noi ben thu ba",
+  "admin.menu.third_party_config": "Cau hinh ben thu ba"
 }

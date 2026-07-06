@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="<?=admin_html_lang()?>">
+    <head>
+        <meta charset="utf-8">
+        <title><?=admin_t('admin.third_party_config.title')?></title>
+        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+        <style>
+            .config-card {
+                max-width: 880px;
+            }
+            .form-help {
+                margin-top: 6px;
+                color: #6b7280;
+                font-size: 12px;
+                line-height: 1.5;
+            }
+            .ws-textarea {
+                min-height: 160px;
+                resize: vertical;
+            }
+        </style>
+    </head>
+    <body class="pear-container">
+        <div class="layui-card config-card">
+            <div class="layui-card-body">
+                <form class="layui-form" lay-filter="third-party-config-form">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.enabled')?></label>
+                        <div class="layui-input-block">
+                            <input type="checkbox" name="third_party_enabled" value="1" lay-skin="switch" lay-text="ON|OFF">
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.ws_urls')?></label>
+                        <div class="layui-input-block">
+                            <textarea name="third_party_ws_urls" class="layui-textarea ws-textarea"></textarea>
+                            <div class="form-help"><?=admin_t('admin.third_party_config.ws_urls_help')?></div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.capacity')?></label>
+                        <div class="layui-input-inline">
+                            <input type="number" min="1" step="1" name="third_party_ws_connection_capacity" class="layui-input">
+                        </div>
+                        <div class="layui-form-mid layui-word-aux"><?=admin_t('admin.third_party_config.capacity_help')?></div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.sign_secret')?></label>
+                        <div class="layui-input-block">
+                            <input type="text" name="third_party_sign_secret" autocomplete="off" class="layui-input">
+                            <div class="form-help"><?=admin_t('admin.third_party_config.sign_secret_help')?></div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <div class="layui-input-block">
+                            <button class="pear-btn pear-btn-primary" lay-submit lay-filter="save-config">
+                                <i class="layui-icon layui-icon-ok"></i><?=admin_t('admin.third_party_config.save')?>
+                            </button>
+                            <a class="pear-btn" href="/app/admin/game-assist-third-party-connection/index">
+                                <i class="layui-icon layui-icon-link"></i><?=admin_t('admin.third_party_config.connection_link')?>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/pear/pear.js"></script>
+        <script src="/app/admin/admin/js/permission.js"></script>
+        <script src="/app/admin/admin/js/common.js"></script>
+        <script>
+            const GET_API = "/app/admin/game-assist-third-party-config/get";
+            const SAVE_API = "/app/admin/game-assist-third-party-config/save";
+
+            layui.use(["form", "popup"], function() {
+                let form = layui.form;
+                let $ = layui.$;
+
+                $.get(GET_API, function(res) {
+                    if (res.code) return layui.popup.failure(res.msg);
+                    form.val("third-party-config-form", {
+                        third_party_enabled: res.data.enabled ? "1" : "",
+                        third_party_ws_urls: res.data.ws_urls_text || "",
+                        third_party_ws_connection_capacity: res.data.ws_connection_capacity || 10,
+                        third_party_sign_secret: res.data.sign_secret || ""
+                    });
+                    form.render();
+                });
+
+                form.on("submit(save-config)", function(data) {
+                    $.post(SAVE_API, data.field, function(res) {
+                        if (res.code) return layui.popup.failure(res.msg);
+                        layui.popup.success("<?=admin_t('admin.common.operation_success')?>");
+                    });
+                    return false;
+                });
+            });
+        </script>
+    </body>
+</html>

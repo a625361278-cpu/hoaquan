@@ -6,6 +6,16 @@ use support\Db;
 
 class SystemSettingService
 {
+    public const THIRD_PARTY_SETTING_NAMES = [
+        'third_party_enabled',
+        'third_party_base_url',
+        'third_party_ws_url',
+        'third_party_ws_urls',
+        'third_party_ws_connection_capacity',
+        'third_party_transport',
+        'third_party_sign_secret',
+    ];
+
     public const SMTP_SETTING_NAMES = [
         'smtp_enabled',
         'smtp_host',
@@ -20,16 +30,7 @@ class SystemSettingService
     public function thirdPartyConfig(): array
     {
         $rows = Db::table('ga_system_settings')
-            ->whereIn('name', [
-                'third_party_enabled',
-                'third_party_base_url',
-                'third_party_ws_url',
-                'third_party_ws_urls',
-                'third_party_ws_connection_capacity',
-                'third_party_transport',
-                'third_party_sign_secret',
-                'game_account_credential_key',
-            ])
+            ->whereIn('name', array_merge(self::THIRD_PARTY_SETTING_NAMES, ['game_account_credential_key']))
             ->get();
 
         $settings = [];
@@ -52,6 +53,21 @@ class SystemSettingService
             'sign_secret' => $settings['third_party_sign_secret'] ?? '',
             'credential_key' => $settings['game_account_credential_key'] ?: app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''),
         ];
+    }
+
+    public function thirdPartyRawSettings(): array
+    {
+        return $this->settingsByNames(self::THIRD_PARTY_SETTING_NAMES);
+    }
+
+    public function saveSettings(array $settings): void
+    {
+        foreach ($settings as $name => $value) {
+            Db::table('ga_system_settings')->updateOrInsert(
+                ['name' => $name],
+                ['value' => (string)$value]
+            );
+        }
     }
 
     public function smtpConfig(): array

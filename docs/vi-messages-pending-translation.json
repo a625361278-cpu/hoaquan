@@ -270,5 +270,18 @@
   "admin.third_party_connection.updated_at": "更新时间",
   "admin.third_party_connection.url": "WebSocket地址",
   "admin.third_party_connection.websocket_unconfigured": "第三方WebSocket地址未配置",
-  "admin.menu.third_party_connection": "第三方连接"
+  "admin.third_party_config.capacity": "单连接账号容量",
+  "admin.third_party_config.capacity_help": "每条WebSocket连接最多承载的游戏账号数，默认10。",
+  "admin.third_party_config.capacity_invalid": "单连接账号容量必须大于0",
+  "admin.third_party_config.connection_link": "连接管理",
+  "admin.third_party_config.enabled": "启用第三方接口",
+  "admin.third_party_config.save": "保存配置",
+  "admin.third_party_config.sign_secret": "签名密钥",
+  "admin.third_party_config.sign_secret_help": "选填，仅用于第三方HTTP接口签名校验；WebSocket长连接通信可为空。",
+  "admin.third_party_config.title": "第三方配置",
+  "admin.third_party_config.websocket_required": "第三方WebSocket地址未配置",
+  "admin.third_party_config.ws_urls": "WebSocket地址",
+  "admin.third_party_config.ws_urls_help": "每行一个第三方WebSocket长连接槽位。地址可直接包含第三方提供的token参数。",
+  "admin.menu.third_party_connection": "第三方连接",
+  "admin.menu.third_party_config": "第三方配置"
 }
