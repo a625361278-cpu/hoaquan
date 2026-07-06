@@ -140,7 +140,7 @@
       },
       "elves": {
         "plant": false,
-        "selectedIds": "",
+        "selectedIds": [],
         "applyAid": false,
         "recvAid": false,
         "helpFriend": false,
@@ -466,21 +466,21 @@
 
 > 说明：控件类型用于说明前端配置项的展示方式；数据类型才是第三方实际收到的 JSON 字段格式。`switch` 的真实 JSON 类型为 `boolean`，取值只能是 `true` 或 `false`，不是 `1/0` 或字符串。
 
-### basic（基础）
+### 基础（basic）
 
 #### 基础设置
 
 - `basic.reputation.enabled`：礼仪分监控；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：每10分钟检查礼仪分，低于阈值时自动停止所有任务
 - `basic.reputation.threshold`：礼仪分阈值；控件类型：`number`；数据类型：`number`；默认值：`80`；说明：礼仪分低于此值时停止所有任务
-- `basic.debug`：道具日志；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后记录道具增加和消耗详情
-- `basic.reconnectInterval`：重连间隔；控件类型：`number`；数据类型：`number`；默认值：`5`；说明：网络异常断开后自动重连间隔，默认设置为 5 分钟
+- `basic.debug`：道具日志；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后显示背包道具的增加和消耗详情
+- `basic.reconnectInterval`：重连间隔；控件类型：`number`；数据类型：`number`；默认值：`5`；说明：自动顶号间隔，建议设置为 5 分钟
 
 #### 任务配置
 
 - `basic.task.daily`：每日任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成奖励，阶段宝箱奖励
 - `basic.task.weekly`：每周任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每周任务完成奖励
 - `basic.task.main`：主线任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取主线任务完成奖励
-- `basic.task.story`：主线剧情；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取主线剧情任务奖励
+- `basic.task.story`：主线剧情；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动解锁主线剧情
 - `basic.task.achieve`：花坊悬赏；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花坊悬赏完成奖励
 
 #### 邮件配置
@@ -489,35 +489,35 @@
 
 #### 福利配置
 
-- `basic.benefit.buff`：双倍金币；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取双倍金币福利
+- `basic.benefit.buff`：双倍金币；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：每4小时自动看视频领取双倍金币福利
 - `basic.benefit.box`：福利宝箱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：每1小时自动开启福利宝箱
 - `basic.benefit.shareRwd`：分享奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：当制作了新花艺、培育了新花朵或升级时自动分享，领取分享奖励
 - `basic.benefit.antiFraudBox`：防骗宝箱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：每天自动签到并领取防骗宝箱奖励
 
 #### 每日祈愿
 
-- `basic.sign.daily`：自动祈愿；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动祈愿
-- `basic.sign.patch`：自动补签；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动补签
+- `basic.sign.daily`：自动祈愿；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `basic.sign.patch`：自动补签；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
 #### 珍珠配置
 
 - `basic.pearl.freePearl`：免费珍珠；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动看视频领取免费珍珠
 - `basic.pearl.autoHire`：雇佣劳工；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动雇佣劳工
-- `basic.pearl.maxHireLevel`：等级限制；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：超过该等级后不再执行对应操作，0 表示不限制。
-- `basic.pearl.maxHireTicketUsage`：雇佣券上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制自动雇佣可使用的雇佣券数量，0 表示不限制。
-- `basic.pearl.open`：自动开珍珠；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动开珍珠
-- `basic.pearl.protectEnabled`：开启防身；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后会保留玩家用元宝开启的防身状态
-- `basic.pearl.buyHireBook`：买雇佣书；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动购买雇佣书
-- `basic.pearl.maxSpendDmd`：元宝上限；控件类型：`number`；数据类型：`number`；默认值：`25`；说明：限制本功能最多消耗的元宝数量，0 表示不消耗。
+- `basic.pearl.maxHireLevel`：等级限制；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：只雇佣等级<=此值的用户，0表示不限制
+- `basic.pearl.maxHireTicketUsage`：雇佣券上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：当日最大可以使用的雇佣券数量, 为0则不限制。
+- `basic.pearl.open`：自动开珍珠；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `basic.pearl.protectEnabled`：开启防身；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后别人雇佣自己会消耗防身符
+- `basic.pearl.buyHireBook`：买雇佣书；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：雇佣书不足时自动购买
+- `basic.pearl.maxSpendDmd`：元宝上限；控件类型：`number`；数据类型：`number`；默认值：`25`；说明：购买雇佣书消耗最大元宝
 
 #### 商城购买
 
-- `basic.shop.videoGift`：视频礼包；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取视频礼包
-- `basic.shop.cultivateShop.autoBuy`：材料商店；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动购买材料商店道具
-- `basic.shop.cultivateShop.maxSpendGold`：金币上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制本功能最多消耗的金币数量，0 表示不限制。
-- `basic.shop.vipShop.autoBuy`：vip商店；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动购买VIP商店道具
-- `basic.shop.vipShop.maxSpendDmd`：元宝上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制本功能最多消耗的元宝数量，0 表示不消耗。
-- `basic.shop.vipShop.maxSpendFloralCoin`：花坊币上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制本功能最多消耗的花坊币数量，0 表示不限制。
+- `basic.shop.videoGift`：视频礼包；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动观看视频领取礼包商城免费礼包
+- `basic.shop.cultivateShop.autoBuy`：材料商店；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动买光材料商店所有耗材，自动刷新
+- `basic.shop.cultivateShop.maxSpendGold`：金币上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：材料商店花费金币上限，0则不限制
+- `basic.shop.vipShop.autoBuy`：vip商店；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动购买vip商店物品
+- `basic.shop.vipShop.maxSpendDmd`：元宝上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：vip商店花费元宝上限，0则不限制
+- `basic.shop.vipShop.maxSpendFloralCoin`：花坊币上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：vip商店花费花坊币上限，0则不限制
 
 #### 随机事件
 
@@ -525,86 +525,87 @@
 
 #### 喂猫撸猫
 
-- `basic.cat.enabled`：总开关；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：总开关
-- `basic.cat.autoRecall`：自动召回；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后自动召回外出的猫。
-- `basic.cat.autoBuyFood`：自动购买猫粮；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：猫粮不足时自动购买。
-- `basic.cat.autoFeed`：自动喂猫；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后自动完成喂猫。
-- `basic.cat.autoStroke`：自动撸猫；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后自动完成撸猫互动。
+- `basic.cat.enabled`：总开关；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `basic.cat.autoRecall`：自动召回；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `basic.cat.autoBuyFood`：自动购买猫粮；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `basic.cat.autoFeed`：自动喂猫；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：保持猫粮盆满
+- `basic.cat.autoStroke`：自动撸猫；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
-### plant（种植）
+### 种植（plant）
 
 #### 培育配置
 
 - `plant.cultivate.enabled`：自动培育；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动培育可培育花种
 - `plant.cultivate.videoSpeedup`：视频加速；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动观看视频加速培育正在培育的花种，培育时间减半
 - `plant.cultivate.upgrade`：鲜花升级；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动花费金币进行鲜花升级
-- `plant.cultivate.targetLevel`：目标等级；控件类型：`number`；数据类型：`number`；默认值：`20`；说明：自动培育或升级时使用的目标等级
+- `plant.cultivate.targetLevel`：目标等级；控件类型：`number`；数据类型：`number`；默认值：`20`；说明：鲜花升级到目标等级
 
 #### 水滴配置
 
 - `plant.water.enabled`：水车水滴；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：3分钟领取一次水滴，这样才能最大化暴击，所以领取会略慢。
-- `plant.water.timedEnabled`：限时水滴；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后领取限时水滴。
-- `plant.water.threshold`：水滴阈值；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：水滴低于阈值时停止消耗，避免影响后续任务
-- `plant.water.forceCollectEnabled`：无视阈值直接领；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无视水滴阈值直接领取或消耗水滴
-- `plant.water.forceCollectTime`：领取时间；控件类型：`text`；数据类型：`string`；默认值：`空字符串`；说明：强制领取水滴的时间配置，按第三方脚本支持格式填写。
+- `plant.water.timedEnabled`：限时水滴；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取限时水滴
+- `plant.water.threshold`：水滴阈值；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：若设置100，你的水滴低于100点才会领取，0代表不限制，设置0才会及时领水哦，不理解的建议无脑设置0
+- `plant.water.forceCollectEnabled`：无视阈值直接领；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：会根据设置好的时间段，到时间点后就无视水滴阈值且每次领水不等待3分钟直接领取
+- `plant.water.forceCollectTime`：领取时间；控件类型：`text`；数据类型：`string`；默认值：`""`；说明：到该时间点后将无视水滴阈值并直接领取，时只能设置 16-23
 
 #### 种花配置
 
 - `plant.flower.unlockLand`：解锁土地；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动花费金币解锁可解锁的土地
 - `plant.flower.harvestEnabled`：自动收获；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成土地收获
 - `plant.flower.plantEnabled`：自动种植；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成土地浇水，加速，种植
-- `plant.flower.videoSpeedup`：视频加速；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动观看视频加速培育正在培育的花种，培育时间减半
-- `plant.flower.useSpeedCard`：使用加速；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后种植过程允许使用加速卡。
-- `plant.flower.speedCardLimit`：加速上限；控件类型：`number`；数据类型：`number`；默认值：`20`；说明：限制本次功能最多使用的加速卡数量。
-- `plant.flower.waterThreshold`：保留水滴；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：水滴低于该值时停止消耗。
-- `plant.flower.taskMode`：任务优先；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：开启后按下方任务优先级执行种花任务。
-- `plant.flower.taskLogEnabled`：任务日志；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：记录种植、收获和任务缺口等执行日志
-- `plant.flower.taskPriority.customerOrder`：顾客订单；控件类型：`number`；数据类型：`number`；默认值：`1`；说明：数字越小优先级越高，按原版配置项填写。
-- `plant.flower.taskPriority.residentOrder`：居民订单；控件类型：`number`；数据类型：`number`；默认值：`2`；说明：数字越小优先级越高，按原版配置项填写。
-- `plant.flower.taskPriority.artSell`：花艺售卖；控件类型：`number`；数据类型：`number`；默认值：`6`；说明：数字越小优先级越高，按原版配置项填写。
-- `plant.flower.taskPriority.flowerNews`：莳花纪闻；控件类型：`number`；数据类型：`number`；默认值：`3`；说明：数字越小优先级越高，按原版配置项填写。
-- `plant.flower.taskPriority.palaceOrder`：宫廷订单；控件类型：`number`；数据类型：`number`；默认值：`4`；说明：数字越小优先级越高，按原版配置项填写。
-- `plant.flower.taskPriority.unionRace`：公会竞赛；控件类型：`number`；数据类型：`number`；默认值：`3`；说明：数字越小优先级越高，按原版配置项填写。
-- `plant.flower.plantingMode`：种植模式；控件类型：`radio`；数据类型：`string`；默认值：`quality`；说明：选择自动种植使用的匹配策略。；可选值：指定品质 / 指定种类 / 指定花朵 / 库存模式 / 64块地模式
-- `plant.flower.flowerQuality`：选择品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：选择允许参与该功能的花朵品质。；可选值：绿 / 蓝 / 紫 / 金 / 红
-- `plant.flower.categoryCount`：选择数量；控件类型：`radio`；数据类型：`string`；默认值：`"4"`；说明：种植模式为“指定种类”时使用。；可选值：1 / 2 / 3 / 4
-- `plant.flower.specificFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：种植模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
-- `plant.flower.minFlowerLevel`：限制花朵等级；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：花朵等级超过该值后不参与，0 表示不限制。
+- `plant.flower.videoSpeedup`：视频加速；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动观看视频加速收获，当所有土地种了花且可加速才会使用，避免浪费视频加速次数
+- `plant.flower.useSpeedCard`：使用加速；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：使用加速券加速收获
+- `plant.flower.speedCardLimit`：加速上限；控件类型：`number`；数据类型：`number`；默认值：`20`；说明：若设置100，则今日使用到100张就不使用了
+- `plant.flower.waterThreshold`：保留水滴；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：保留多少水滴不用于浇花
+- `plant.flower.taskMode`：任务优先；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：开启后：如果订单里缺花，系统会先种订单需要的花；发现有空地时，会直接插队用来种这些花；花种完以后，会自动恢复到原来设置的模式（指定品质 / 指定种类 / 指定花朵）
+- `plant.flower.taskLogEnabled`：任务日志；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：是否显示种植任务队列日志
+- `plant.flower.taskPriority`：任务优先级；控件类型：`priorityGroup`；数据类型：`object`；默认值：`{"customerOrder":1,"residentOrder":2,"artSell":6,"flowerNews":3,"palaceOrder":4,"unionRace":3}`；说明：配置订单任务的优先级，数字越小优先级越高，0是不做此任务，可以几个任务设置一样的数字，就会一起做这几个任务。有些玩家说居民订单不做，花艺不做，莳花不做，都跟您设置的数字有关，数字最大就会把任务排到最后，让您产生不做的错觉；对象键：customerOrder / residentOrder / artSell / flowerNews / palaceOrder / unionRace；可选值：顾客订单 / 居民订单 / 花艺售卖 / 莳花纪闻 / 宫廷订单 / 公会竞赛
+- `plant.flower.plantingMode`：种植模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择种植模式，只能启用一种模式。需要保持种植整洁的玩家请自行清空所有土地；可选值：指定品质 / 指定种类 / 指定花朵 / 库存模式 / 64块地模式
+- `plant.flower.flowerQuality`：选择品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：选择要种植的花朵品质，可多选，库存少的优先种植。
+- `plant.flower.categoryCount`：选择数量；控件类型：`select`；数据类型：`string`；默认值：`"4"`；说明：选择要种植几种花，库存少的优先种植。；可选值：1 / 2 / 4 / 8 / 16
+- `plant.flower.specificFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要种植的花朵，可多选，库存少的优先种植。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
+- `plant.flower.minFlowerLevel`：限制花朵等级；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制种植的最低花朵等级，0则不限制，此项的设置只针对补库存，做订单和公会竞赛之类的不受此设置影响
 
 #### 好友偷花
 
 - `plant.friendSteal.enabled`：自动偷花；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：默认不会偷取花灵，但在好友种植花灵时会偷取花朵，需要在偷花模式里设置排除花朵，排除花灵主花
-- `plant.friendSteal.includeElf`：偷取花灵；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：好友偷花时包含花灵相关地块。
-- `plant.friendSteal.stealMode`：偷花模式；控件类型：`radio`；数据类型：`string`；默认值：`quality`；说明：选择好友偷花的目标匹配方式。；可选值：指定品质 / 指定花朵 / 排除花朵
-- `plant.friendSteal.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只处理选中的品质。；可选值：绿 / 蓝 / 紫 / 金 / 红
-- `plant.friendSteal.specificFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：偷花模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
-- `plant.friendSteal.excludeFlowers`：排除花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：偷花模式为“排除花朵”时使用。数组内为需要排除的鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
-- `plant.friendSteal.buyCount`：购买偷取次数；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：偷花次数不足时自动购买次数
-- `plant.friendSteal.buyStealCount`：购买次数上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制自动购买偷花次数的数量。
+- `plant.friendSteal.includeElf`：偷取花灵；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后偷取有花灵的地块，关闭则跳过有花灵的地块
+- `plant.friendSteal.stealMode`：偷花模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择偷花过滤模式：指定品质或指定花朵或排除花朵；可选值：指定品质 / 指定花朵 / 排除花朵
+- `plant.friendSteal.qualities`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只偷取指定品质的花朵
+- `plant.friendSteal.specificFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：只偷取指定的花朵。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
+- `plant.friendSteal.excludeFlowers`：排除花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：不偷取指定的花朵，不想影响好友种植花灵的话，建议把所有花灵主花设置上，排除掉。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
+- `plant.friendSteal.buyCount`：购买偷取次数；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：花费好友币购买偷取次数
+- `plant.friendSteal.buyStealCount`：购买次数；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：每个好友购买多少次偷取次数
 
 #### 花灵
 
 - `plant.elves.plant`：自动种花灵；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：优先种植指定花灵，否则选择当期双倍加成花灵种植（8朵主花+其余辅花），需要打开种植系统自动收获和自动种植，每日花灵达到收获上限后恢复到原有种植模式
-- `plant.elves.selectedIds`：指定花灵；控件类型：`text`；数据类型：`string`；默认值：`空字符串`；说明：填写需要自动种植的花灵标识，多个值按第三方脚本支持格式分隔。
-- `plant.elves.applyAid`：自动申请协助；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动申请协助
+- `plant.elves.selectedIds`：指定花灵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：数组内为花灵 ID，ID 来自原站当前花灵选项，不传显示名。
+- `plant.elves.applyAid`：自动申请协助；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `plant.elves.recvAid`：自动领取协助加成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：当协助人数达到5人时自动领取协助加成
-- `plant.elves.helpFriend`：自动协助好友；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动协助好友
+- `plant.elves.helpFriend`：自动协助好友；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `plant.elves.dispatch`：自动派遣花灵；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动将背包中的花灵派遣到空闲位置
 - `plant.elves.speedupDispatch`：自动加速派遣；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：花费元宝加速派遣中的花灵
 - `plant.elves.recvDispatchReward`：自动领取派遣奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：派遣完成后自动领取星辰币奖励
-- `plant.elves.recvPass`：领取通行证；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取通行证奖励。
-- `plant.elves.recvPassTask`：通行证任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动处理通行证任务奖励。
-- `plant.elves.recvFlowerPass`：领取花灵通行证；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花灵通行证奖励。
-- `plant.elves.recvFlowerPassTask`：花灵通行证任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动处理花灵通行证任务奖励。
+
+#### 花灵密令
+
+- `plant.elves.recvPass`：等级奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花灵密令等级奖励，不会做针对性做花灵密令任务哦，日常做其他任务会有顺带做到花灵密令的部分任务，做完了就会顺便领取
+- `plant.elves.recvPassTask`：任务奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花灵密令任务奖励，不会做针对性做花灵密令任务哦，日常做其他任务会有顺带做到花灵密令的部分任务，做完了就会顺便领取
+
+#### 花之密令
+
+- `plant.elves.recvFlowerPass`：等级奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花之密令等级奖励
+- `plant.elves.recvFlowerPassTask`：任务奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花之密令任务奖励
 
 #### 花艺上架
 
 - `plant.art.unlockShelf`：自动解锁花架；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动解锁花架
 - `plant.art.autoPut`：自动上架；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动上架花艺，自动领取金币收益
-- `plant.art.sellMode`：花艺售卖模式；控件类型：`radio`；数据类型：`string`；默认值：`specified`；说明：选择花艺上架售卖策略。；可选值：指定花瓶 / 指定花艺 / 库存模式
-- `plant.art.specifiedVases`：指定花瓶；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["3001"]`；说明：花艺售卖模式为“指定花瓶”时使用。数组内为花瓶 ID，ID 以第三方提供的 VN花瓶 表为准，不传显示名。
-- `plant.art.specifiedArts`：指定花艺；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：花艺售卖模式为“指定花艺”时使用。数组内为花艺 ID，ID 以第三方提供的 VN花艺 表为准，不传显示名。
-- `plant.art.flowerArtPerRack`：每架数量；控件类型：`number`；数据类型：`number`；默认值：`12`；说明：每个货架上架的花艺数量。
+- `plant.art.sellMode`：上架模式；控件类型：`radio`；数据类型：`string`；默认值：`"specified"`；说明：无；可选值：指定花瓶 / 指定花艺 / 库存模式
+- `plant.art.specifiedVases`：指定花瓶；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["3001"]`；说明：指定花瓶，优先选择有库存的上架，否则进行制作，如果花朵库存不足需要配合种植开启任务优先进行使用。数组内为花瓶 ID，ID 来自第三方提供的花瓶表，不传显示名。
+- `plant.art.specifiedArts`：指定花艺；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：指定花艺，优先选择有库存的上架，否则进行制作，如果花朵库存不足需要配合种植开启任务优先进行使用。数组内为花艺 ID，ID 来自第三方提供的花艺表，不传显示名。
+- `plant.art.flowerArtPerRack`：上架数量；控件类型：`number`；数据类型：`number`；默认值：`12`；说明：每个花架上架多少花艺
 - `plant.art.exp`：花艺经验；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花艺制作经验
 - `plant.art.bookReward`：图鉴奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取鲜花收藏，花瓶收藏，花艺收藏奖励
 
@@ -612,58 +613,58 @@
 
 - `plant.market.unlockShelf`：解锁货架；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动花费元宝解锁花贸市场货架
 - `plant.market.autoPut`：自动上架；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花贸市场收益并上架花朵，注意上架会消耗元宝，请谨慎开启！
-- `plant.market.putMode`：上架模式；控件类型：`radio`；数据类型：`string`；默认值：`inventory`；说明：选择花贸市场自动上架策略。；可选值：库存最多 / 指定花朵
-- `plant.market.specificFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：上架模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
-- `plant.market.priceIndex`：价格档位；控件类型：`radio`；数据类型：`string`；默认值：`"0"`；说明：花贸市场上架价格档位。；可选值：最低 / 中等 / 最高
-- `plant.market.maxSell`：售卖上限；控件类型：`number`；数据类型：`number`；默认值：`25`；说明：限制花贸市场本次最多上架数量。
-- `plant.market.putPassword`：上架口令；控件类型：`text`；数据类型：`string`；默认值：`空字符串`；说明：需要口令时填写，不需要可留空。
-- `plant.market.autoBuyPutCount`：自动购买上架次数；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：次数不足时自动购买花贸市场上架次数。
-- `plant.market.buyPutCount`：购买上架次数上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制自动购买上架次数的数量。
+- `plant.market.putMode`：上架策略；控件类型：`radio`；数据类型：`string`；默认值：`"inventory"`；说明：无；可选值：库存最多 / 指定花朵
+- `plant.market.specificFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要上架的花朵，可多选，库存多的优先上架。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
+- `plant.market.priceIndex`：上架价格；控件类型：`radio`；数据类型：`string`；默认值：`"0"`；说明：无；可选值：最低 / 中等 / 最高
+- `plant.market.maxSell`：上架数量；控件类型：`number`；数据类型：`number`；默认值：`25`；说明：无
+- `plant.market.putPassword`：上架密码；控件类型：`text`；数据类型：`string`；默认值：`""`；说明：保护自己上架的花朵，防止被他人购买（4位数字）
+- `plant.market.autoBuyPutCount`：购买上架次数；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：当免费上架次数用完时，自动花费元宝购买上架次数
+- `plant.market.buyPutCount`：购买次数；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：购买多少上架次数
 - `plant.market.autoBuyFromFriend`：好友摊位扫货；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动购买好友货架的花朵
-- `plant.market.buyMode`：购买模式；控件类型：`radio`；数据类型：`string`；默认值：`quality`；说明：选择从好友市场购买时的目标匹配方式。；可选值：指定品质 / 指定花朵
-- `plant.market.buyFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：购买模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
-- `plant.market.minPutTimeDiff`：最小上架间隔；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：只购买达到该上架时间间隔的商品。
+- `plant.market.buyMode`：扫货策略；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：无；可选值：指定品质 / 指定花朵
+- `plant.market.buyFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：只购买指定的花朵。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
+- `plant.market.minPutTimeDiff`：最小上架时长；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：只购买上架时间超过此时长的花朵，0表示不限制。单位：秒
 
-### order（订单）
+### 订单（order）
 
 #### 居民订单
 
 - `order.resident.normal`：居民订单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动提交居民订单，不包括建材和绸缎订单，如果花库存不足，需要配合种植开启任务优先使用
-- `order.resident.normalMaxNum`：居民订单上限；控件类型：`number`；数据类型：`number`；默认值：`1200`；说明：居民订单自动完成数量上限。
+- `order.resident.normalMaxNum`：居民订单上限；控件类型：`number`；数据类型：`number`；默认值：`1200`；说明：居民订单单日最大完成次数
 - `order.resident.satin`：绸缎订单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动提交绸缎订单，如果花库存不足，需要配合种植开启任务优先使用
-- `order.resident.satinMaxNum`：绸缎订单上限；控件类型：`number`；数据类型：`number`；默认值：`120`；说明：绸缎订单自动完成数量上限。
+- `order.resident.satinMaxNum`：绸缎订单上限；控件类型：`number`；数据类型：`number`；默认值：`120`；说明：绸缎订单单日最大完成次数
 - `order.resident.building`：建材订单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动提交建材订单，如果花库存不足，需要配合种植开启任务优先使用
-- `order.resident.buildingMaxNum`：建材订单上限；控件类型：`number`；数据类型：`number`；默认值：`120`；说明：建材订单自动完成数量上限。
-- `order.resident.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只处理选中的品质。；可选值：绿 / 蓝 / 紫 / 金 / 红
+- `order.resident.buildingMaxNum`：建材订单上限；控件类型：`number`；数据类型：`number`；默认值：`120`；说明：建材订单单日最大完成次数
+- `order.resident.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅提交指定品质的花朵到居民订单
 
 #### 顾客订单
 
 - `order.customer.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成顾客订单
-- `order.customer.rejectEnabled`：自动拒绝；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：顾客订单不满足条件时自动拒绝。
+- `order.customer.rejectEnabled`：自动拒绝；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动拒绝无法培育且库存不足的订单
 
 #### 宫廷订单
 
-- `order.palace.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成
-- `order.palace.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只处理选中的品质。；可选值：绿 / 蓝 / 紫 / 金 / 红
-- `order.palace.ignoreQuality`：不论品质；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后宫廷订单不按品质过滤。
+- `order.palace.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `order.palace.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅接受指定品质的宫廷订单，不符合时自动免费刷新一次（每天限1次），刷新后仍不符合则跳过
+- `order.palace.ignoreQuality`：不论品质；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后，若没有用户设置的品质，且没有免费刷新了，则会无视品质做完这个宫廷订单
 
 #### 组团订单
 
 - `order.group.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成团单
-- `order.group.oneMore`：再来一单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：组队订单完成后继续接取下一单。
-- `order.group.submitOnlyCultivatedFlowers`：仅已培育；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：组队订单只提交已培育花朵。
-- `order.group.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只处理选中的品质。；可选值：绿 / 蓝 / 紫 / 金 / 红
+- `order.group.oneMore`：再来一单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：花费元宝再来一单
+- `order.group.submitOnlyCultivatedFlowers`：仅已培育；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：仅提交已培育的花朵
+- `order.group.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅提交指定品质的花朵到团单
 
-### union（公会）
+### 公会（union）
 
 #### 公会土地
 
-- `union.land.harvest`：自动收获；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动收获
+- `union.land.harvest`：自动收获；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `union.land.plant`：自动种植；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动种植空闲土地，自动将不符合限定条件的已种土地替换为目标花朵
-- `union.land.plantMode`：种植策略；控件类型：`radio`；数据类型：`string`；默认值：`quality`；说明：选择公会土地自动种植策略。；可选值：指定品质 / 指定花朵 / 库存模式
-- `union.land.flowers`：选择品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：选择允许参与该功能的花朵品质。；可选值：绿 / 蓝 / 紫 / 金 / 红
-- `union.land.specificFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：种植策略为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
-- `union.land.maxFlowerLevel`：最高等级限制；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：超过该等级的花朵不参与，0 表示不限制。
+- `union.land.plantMode`：种植策略；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：三种模式均为低等级优先；可选值：指定品质 / 指定花朵 / 库存模式
+- `union.land.flowers`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：留空则不限制品质
+- `union.land.specificFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：留空则不限定花朵。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
+- `union.land.maxFlowerLevel`：最高等级限制；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：花朵等级高于该值的不种，0表示不限制，比如设置了13，就会种植低于13级且为你所有花里最低等级的花
 
 #### 公会建设
 
@@ -674,16 +675,16 @@
 #### 公会分享
 
 - `union.flower.share`：自动分享；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动分享花到公会分享栏
-- `union.flower.shareMode`：分享模式；控件类型：`radio`；数据类型：`string`；默认值：`quality`；说明：选择公会自动分享花朵的匹配方式。；可选值：指定品质 / 指定花朵
-- `union.flower.shareQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只处理选中的品质。；可选值：绿 / 蓝 / 紫 / 金 / 红
-- `union.flower.shareFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：分享模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
+- `union.flower.shareMode`：分享模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择分享模式：品质模式或指定花模式；可选值：指定品质 / 指定花朵
+- `union.flower.shareQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：限定要分享到公会的花朵品质
+- `union.flower.shareFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要分享到公会的具体花朵
 
 #### 公会摸花
 
 - `union.flower.touch`：自动摸花；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动摸取别人分享的花
-- `union.flower.touchMode`：摸花模式；控件类型：`radio`；数据类型：`string`；默认值：`quality`；说明：选择公会自动摸花的匹配方式。；可选值：指定品质 / 指定花朵
-- `union.flower.touchQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只处理选中的品质。；可选值：绿 / 蓝 / 紫 / 金 / 红
-- `union.flower.touchFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：摸花模式为“指定花朵”时使用。数组内为鲜花 ID，ID 以第三方提供的 VN鲜花 表为准，不传显示名。
+- `union.flower.touchMode`：摸花模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择摸花模式：品质模式或指定花模式；可选值：指定品质 / 指定花朵
+- `union.flower.touchQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：限定要从公会拿取的花朵品质
+- `union.flower.touchFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要从公会摸取的具体花朵
 
 #### 公会竞赛
 
@@ -695,24 +696,12 @@
 - `union.fmlRace.dropLowScore`：放弃低分任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：根据「限制分数-未升级」「限制分数-升级后」的设置来判断，例：未升级设置了25，升级后设置了50，则任务列表里有小于等于25的未升级会放弃，有小于等于50的已升级会放弃。开启此项又开启了【自动升级任务】的话，必须要按照「限制分数-未升级」乘以2大于等于「限制分数-升级后」这个规则来设置，否则会出现元宝升级后把这个任务放弃的情况。
 - `union.fmlRace.onlyUpgradeTask`：只接已升级任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：比如设置了限制27分，开启后就只会接大于等于54分的任务，会使公会任务做的非常慢，慎重开启（系统/玩家升级好的双倍任务比较少，捡漏的可能是比较小的哦）
 - `union.fmlRace.excludeOtherUpgradeTask`：排除他人升级任务；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：基于礼貌的开关，开启后，公会其他玩家用元宝升级的任务就不会去接了
-- `union.fmlRace.taskTypePriority.vipShop`：任务优先级 / vip商店购买；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.residentOrder`：任务优先级 / 居民订单；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.customerOrder`：任务优先级 / 顾客订单；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.materialShop`：任务优先级 / 材料商店购买；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.palaceOrder`：任务优先级 / 宫廷订单；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.pearlHire`：任务优先级 / 珍珠采集雇佣；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.friendSteal`：任务优先级 / 好友偷花；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.artSell`：任务优先级 / 花艺售卖；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.artCraft`：任务优先级 / 花艺制作；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.flowerUpgrade`：任务优先级 / 鲜花升级；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.plantHarvest`：任务优先级 / 种植收获；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.flowerCultivate`：任务优先级 / 花种培育；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
-- `union.fmlRace.taskTypePriority.animalInteract`：任务优先级 / 动物互动；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：数字越小优先级越高。
+- `union.fmlRace.taskTypePriority`：任务优先级；控件类型：`priorityGroup`；数据类型：`object`；默认值：`{"vipShop":0,"residentOrder":0,"customerOrder":0,"materialShop":0,"palaceOrder":0,"pearlHire":0,"friendSteal":0,"artSell":0,"artCraft":0,"flowerUpgrade":0,"plantHarvest":0,"flowerCultivate":0,"animalInteract":0}`；说明：设置每种任务类型的接取优先级。数字越小越优先；填 0 表示不接此类任务。优先级相同时分数高优先。；对象键：vipShop / residentOrder / customerOrder / materialShop / palaceOrder / pearlHire / friendSteal / artSell / artCraft / flowerUpgrade / plantHarvest / flowerCultivate / animalInteract；可选值：vip商店购买 / 居民订单 / 顾客订单 / 材料商店购买 / 宫廷订单 / 珍珠采集雇佣 / 自动偷花 / 花艺售卖 / 花艺制作 / 鲜花升级 / 种植收获 / 花种培育 / 动物互动
 - `union.fmlRace.autoUpgradeTask`：自动升级任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：领取任务后花费元宝自动升级，开启此项又开启了【放弃低分任务】的话，必须要按照「限制分数-未升级」的值乘以2大于等于「限制分数-升级后」的值，这个规则来设置，否则会出现元宝升级后把这个任务放弃的情况。
 - `union.fmlRace.deleteLowScoreTask`：删除低分任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：会长/副会长专属：自动删除低于指定分数的任务
-- `union.fmlRace.deleteTaskMaxScore`：删除分数上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：低于或等于该分数的任务可被删除，0 表示不删除。
-- `union.fmlRace.keepSystemUpgrade`：保留原金；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：删除低分任务时保留系统原有金色升级任务。
-- `union.fmlRace.keepPlayerUpgrade`：保留已升级；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：删除低分任务时保留玩家已升级任务。
+- `union.fmlRace.deleteTaskMaxScore`：删除分数上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：低于此分数的未领取任务将被自动删除
+- `union.fmlRace.keepSystemUpgrade`：保留原金；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后会保留系统自动出的原金任务，不判断分数
+- `union.fmlRace.keepPlayerUpgrade`：保留已升级；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后会保留玩家用元宝升级过的任务，不判断分数
 
 #### 公会竞赛积分兑换
 
@@ -720,45 +709,45 @@
 
 #### 能量森林
 
-- `union.energyForest.collect`：自动收集能量；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动收集能量
+- `union.energyForest.collect`：自动收集能量；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
-### activity（活动）
+### 活动（activity）
 
 #### 花笺集芳
 
 - `activity.flowerLetter.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成花笺集芳任务，自动领取阶段宝箱奖励
-- `activity.flowerLetter.unlockSlot`：解锁槽位；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动中自动解锁可用槽位。
-- `activity.flowerLetter.autoEnableModules`：自动启用模块；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动开启后自动启用相关模块。
+- `activity.flowerLetter.unlockSlot`：解锁槽位；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动花费元宝解锁任务槽位
+- `activity.flowerLetter.autoEnableModules`：自动开启模块；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：根据任务自动启用对应功能模块（种植、花艺售卖、居民订单、顾客订单、珍珠雇佣等），任务完成后自动恢复到您开始的设置
 
 #### 莳花纪闻
 
 - `activity.flowerNews.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成莳花纪闻订单任务，如果花库存不足，需要配合种植开启任务优先使用
-- `activity.flowerNews.refreshEnabled`：元宝刷新；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：允许活动中使用元宝刷新。
-- `activity.flowerNews.maxFinishCountPerBatch`：完成分数；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制每批次完成数量或分数，0 表示不限制。
+- `activity.flowerNews.refreshEnabled`：元宝刷新；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：花费元宝立即刷新莳花纪闻订单任务
+- `activity.flowerNews.maxFinishCountPerBatch`：完成分数；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：每期活动最多完成多少分，即获得花史残页数量，0则不限制
 
 #### 丰仓鱼干
 
-- `activity.fishDry.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动参与
-- `activity.fishDry.showResult`：显示结果；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动完成后显示结果信息。
-- `activity.fishDry.autoRestart`：自动重开；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动结束后自动重新开始。
+- `activity.fishDry.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.fishDry.showResult`：显示结果；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.fishDry.autoRestart`：失败重启；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
 #### 奇妙泡泡
 
-- `activity.bubble.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动参与
+- `activity.bubble.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
 #### 鱼乐无穷
 
-- `activity.fishFun.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动参与
-- `activity.fishFun.autoClaimEnergy`：自动领取体力；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取活动体力。
-- `activity.fishFun.speed`：速度；控件类型：`radio`；数据类型：`string`；默认值：`normal`；说明：选择活动执行速度。；可选值：慢速 / 普通 / 快速
-- `activity.fishFun.showResult`：显示结果；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动完成后显示结果信息。
-- `activity.fishFun.autoRestart`：自动重开；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动结束后自动重新开始。
+- `activity.fishFun.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.fishFun.autoClaimEnergy`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
+- `activity.fishFun.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次移动消耗体力越多；可选值：慢速 / 普通 / 快速
+- `activity.fishFun.showResult`：显示结果；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.fishFun.autoRestart`：失败重启；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
 #### 花漾物语
 
-- `activity.flowerStory.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动参与
-- `activity.flowerStory.autoClaimEnergy`：自动领取体力；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取活动体力。
-- `activity.flowerStory.speed`：速度；控件类型：`radio`；数据类型：`string`；默认值：`normal`；说明：选择活动执行速度。；可选值：慢速 / 普通 / 快速
+- `activity.flowerStory.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.flowerStory.autoClaimEnergy`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
+- `activity.flowerStory.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次移动消耗体力越多；可选值：慢速 / 普通 / 快速
 
 #### 红包雨
 
@@ -775,11 +764,11 @@
 #### 为家业助力
 
 - `activity.familyHelp.enabled`：自动助力；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动为家业助力
-- `activity.familyHelp.recvBoxes`：领取宝箱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取活动宝箱。
+- `activity.familyHelp.recvBoxes`：领取助力奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取家业助力的奖励
 
 #### 摇钱树
 
-- `activity.moneyTree.enabled`：自动摇钱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动摇钱
+- `activity.moneyTree.enabled`：自动摇钱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
 #### 花香满园
 
@@ -791,31 +780,31 @@
 
 #### 香卉甜糕
 
-- `activity.cake.enabled`：自动投放；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动投放
-- `activity.cake.autoClaimEnergy`：自动领取体力；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取活动体力。
-- `activity.cake.useItems`：使用道具；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动中允许自动使用道具。
-- `activity.cake.speed`：速度；控件类型：`radio`；数据类型：`string`；默认值：`normal`；说明：选择活动执行速度。；可选值：慢速 / 普通 / 快速
+- `activity.cake.enabled`：自动投放；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.cake.autoClaimEnergy`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
+- `activity.cake.useItems`：使用道具；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.cake.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要解锁足够积分才能使用高倍速；可选值：慢速 / 普通 / 快速
 
 #### 田园奇趣
 
-- `activity.merge.enabled`：自动合并；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动合并
-- `activity.merge.autoClaimEnergy`：自动领取体力；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取活动体力。
-- `activity.merge.speed`：速度；控件类型：`radio`；数据类型：`string`；默认值：`normal`；说明：选择活动执行速度。；可选值：慢速 / 普通 / 快速
+- `activity.merge.enabled`：自动合并；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.merge.autoClaimEnergy`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
+- `activity.merge.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要消耗足够体力才能使用高倍速；可选值：慢速 / 普通 / 快速
 
 #### 梳丝引线
 
-- `activity.spool.enabled`：自动玩；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动玩
-- `activity.spool.autoClaimReward`：自动领取奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取活动奖励。
-- `activity.spool.openBox`：开箱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动打开活动宝箱。
-- `activity.spool.autoRestart`：自动重开；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动结束后自动重新开始。
-- `activity.spool.speed`：速度；控件类型：`radio`；数据类型：`string`；默认值：`normal`；说明：选择活动执行速度。；可选值：慢速 / 普通 / 快速
+- `activity.spool.enabled`：自动玩；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `activity.spool.autoClaimReward`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
+- `activity.spool.openBox`：开启宝箱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动开启宝箱
+- `activity.spool.autoRestart`：自动重开；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后，死了就会重新开始继续玩
+- `activity.spool.speed`：游戏倍数；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要消耗足够体力才能使用高倍速；可选值：慢速 / 普通 / 快速
 
 #### 龙舟竞渡
 
 - `activity.dragonBoat.enabled`：参赛；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后会玩龙舟
-- `activity.dragonBoat.autoSign`：自动签到；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动中自动签到。
-- `activity.dragonBoat.autoOpenBox`：自动开箱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：活动中自动打开宝箱。
-- `activity.dragonBoat.giftBuy`：礼包购买；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：允许活动中自动购买礼包。
+- `activity.dragonBoat.autoSign`：签到；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后会签到
+- `activity.dragonBoat.autoOpenBox`：开宝箱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后会开宝箱
+- `activity.dragonBoat.giftBuy`：购买元宝道具；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：慎重开启，开启后会总共花费900元宝购买5次龙舟鼓
 
 #### 百花成蜜
 

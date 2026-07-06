@@ -92,6 +92,20 @@
                   <text>{{ t(option.labelKey) }}</text>
                 </label>
               </radio-group>
+              <view v-else-if="entry.type === 'select'" class="single-select-control">
+                <picker
+                  mode="selector"
+                  :range="singleSelectOptions(entry)"
+                  range-key="label"
+                  :value="singleSelectIndex(entry)"
+                  @change="selectSingleOption(entry, $event)"
+                >
+                  <view class="single-select-box">
+                    <text>{{ selectedSingleOptionLabel(entry) }}</text>
+                    <text class="single-select-arrow">⌄</text>
+                  </view>
+                </picker>
+              </view>
               <view v-else-if="entry.type === 'multiSelect'" class="select-control">
                 <view
                   :class="['select-box', isDropdownOpen(entry.path) ? 'open' : '']"
@@ -427,6 +441,34 @@ function selectedOptions(entry) {
   return selected
     .map((value) => (entry.options || []).find((option) => option.value === value) || { value, labelZh: value, labelVi: value })
     .filter(Boolean);
+}
+
+function singleSelectOptions(entry) {
+  return (entry.options || []).map((option) => ({
+    ...option,
+    label: optionText(entry, option.value),
+  }));
+}
+
+function singleSelectIndex(entry) {
+  const value = String(getConfigValue(config, entry.path) ?? entry.defaultValue);
+  const index = (entry.options || []).findIndex((option) => option.value === value);
+  return index >= 0 ? index : 0;
+}
+
+function selectedSingleOptionLabel(entry) {
+  const value = String(getConfigValue(config, entry.path) ?? entry.defaultValue);
+  const match = (entry.options || []).find((option) => option.value === value);
+  return match ? optionText(entry, match.value) : value;
+}
+
+function selectSingleOption(entry, event) {
+  const index = Number(event.detail.value);
+  const option = (entry.options || [])[index];
+  if (!option) {
+    return;
+  }
+  setConfigValue(config, entry.path, option.value);
 }
 
 function filteredOptions(entry) {
@@ -821,6 +863,29 @@ function cloneConfig(value) {
   gap: 8px;
   min-height: 24px;
   color: #111827;
+  font-size: 14px;
+}
+
+.single-select-control {
+  width: 190px;
+}
+
+.single-select-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  box-sizing: border-box;
+  background: #fff;
+  color: #111827;
+  font-size: 14px;
+}
+
+.single-select-arrow {
+  color: #9ca3af;
   font-size: 14px;
 }
 

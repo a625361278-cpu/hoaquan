@@ -1,4 +1,5 @@
 import { FLOWER_ART_OPTIONS, FLOWER_OPTIONS, VASE_OPTIONS } from './gameAssetOptions';
+import { ELF_OPTIONS } from './gameElfOptions';
 
 export const PREVIEW_CHANNEL = {
   code: 'official_app',
@@ -62,8 +63,9 @@ const PRIORITY_OPTIONS = [
 const CATEGORY_COUNT_OPTIONS = [
   option('1', 'client.config.option.count_1'),
   option('2', 'client.config.option.count_2'),
-  option('3', 'client.config.option.count_3'),
   option('4', 'client.config.option.count_4'),
+  option('8', 'client.config.option.count_8'),
+  option('16', 'client.config.option.count_16'),
 ];
 
 const MARKET_PRICE_OPTIONS = [
@@ -161,7 +163,7 @@ export const CONFIG_SCHEMA = [
           item('basic.pearl.open', 'client.config.item.auto_open_pearl'),
           item('basic.pearl.protectEnabled', 'client.config.item.protect_enabled', false, 'client.config.help.protect_enabled'),
           item('basic.pearl.buyHireBook', 'client.config.item.buy_hire_book', false, 'client.config.help.buy_hire_book'),
-          numberItem('basic.pearl.maxSpendDmd', 'client.config.item.diamond_limit', 25, '', 'client.config.help.diamond_limit', {
+          numberItem('basic.pearl.maxSpendDmd', 'client.config.item.diamond_limit', 25, '', 'client.config.help.pearl_diamond_limit', {
             visibleWhen: { path: 'basic.pearl.buyHireBook', equals: true },
           }),
         ],
@@ -172,14 +174,14 @@ export const CONFIG_SCHEMA = [
         items: [
           item('basic.shop.videoGift', 'client.config.item.video_gift', false, 'client.config.help.video_gift'),
           item('basic.shop.cultivateShop.autoBuy', 'client.config.item.material_shop', false, 'client.config.help.material_shop'),
-          numberItem('basic.shop.cultivateShop.maxSpendGold', 'client.config.item.gold_limit', 0, '', 'client.config.help.gold_limit', {
+          numberItem('basic.shop.cultivateShop.maxSpendGold', 'client.config.item.gold_limit', 0, '', 'client.config.help.material_gold_limit', {
             visibleWhen: { path: 'basic.shop.cultivateShop.autoBuy', equals: true },
           }),
           item('basic.shop.vipShop.autoBuy', 'client.config.item.vip_shop', false, 'client.config.help.vip_shop'),
-          numberItem('basic.shop.vipShop.maxSpendDmd', 'client.config.item.diamond_limit', 0, '', 'client.config.help.diamond_limit', {
+          numberItem('basic.shop.vipShop.maxSpendDmd', 'client.config.item.diamond_limit', 0, '', 'client.config.help.vip_diamond_limit', {
             visibleWhen: { path: 'basic.shop.vipShop.autoBuy', equals: true },
           }),
-          numberItem('basic.shop.vipShop.maxSpendFloralCoin', 'client.config.item.flower_coin_limit', 0, '', 'client.config.help.flower_coin_limit', {
+          numberItem('basic.shop.vipShop.maxSpendFloralCoin', 'client.config.item.flower_coin_limit', 0, '', 'client.config.help.vip_flower_coin_limit', {
             visibleWhen: { path: 'basic.shop.vipShop.autoBuy', equals: true },
           }),
         ],
@@ -196,16 +198,16 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.cat',
         items: [
           item('basic.cat.enabled', 'client.config.item.cat_switch'),
-          item('basic.cat.autoRecall', 'client.config.item.auto_recall', false, 'client.config.help.auto_recall', {
+          item('basic.cat.autoRecall', 'client.config.item.auto_recall', false, '', {
             visibleWhen: { path: 'basic.cat.enabled', equals: true },
           }),
-          item('basic.cat.autoBuyFood', 'client.config.item.auto_buy_cat_food', false, 'client.config.help.auto_buy_cat_food', {
+          item('basic.cat.autoBuyFood', 'client.config.item.auto_buy_cat_food', false, '', {
             visibleWhen: { path: 'basic.cat.enabled', equals: true },
           }),
           item('basic.cat.autoFeed', 'client.config.item.auto_feed_cat', false, 'client.config.help.auto_feed_cat', {
             visibleWhen: { path: 'basic.cat.enabled', equals: true },
           }),
-          item('basic.cat.autoStroke', 'client.config.item.auto_stroke_cat', false, 'client.config.help.auto_stroke_cat', {
+          item('basic.cat.autoStroke', 'client.config.item.auto_stroke_cat', false, '', {
             visibleWhen: { path: 'basic.cat.enabled', equals: true },
           }),
         ],
@@ -254,16 +256,16 @@ export const CONFIG_SCHEMA = [
           item('plant.flower.unlockLand', 'client.config.item.unlock_land', false, 'client.config.help.unlock_land'),
           item('plant.flower.harvestEnabled', 'client.config.item.auto_harvest', false, 'client.config.help.auto_harvest'),
           item('plant.flower.plantEnabled', 'client.config.item.auto_plant', false, 'client.config.help.auto_plant'),
-          item('plant.flower.videoSpeedup', 'client.config.item.video_speedup', false, 'client.config.help.video_speedup', {
+          item('plant.flower.videoSpeedup', 'client.config.item.video_speedup', false, 'client.config.help.flower_video_speedup', {
             visibleWhen: { path: 'plant.flower.plantEnabled', equals: true },
           }),
-          item('plant.flower.useSpeedCard', 'client.config.item.use_speed_card', false, 'client.config.help.use_speed_card', {
+          item('plant.flower.useSpeedCard', 'client.config.item.use_speed_card', false, 'client.config.help.flower_use_speed_card', {
             visibleWhen: { path: 'plant.flower.plantEnabled', equals: true },
           }),
-          numberItem('plant.flower.speedCardLimit', 'client.config.item.speed_card_limit', 20, '', 'client.config.help.speed_card_limit', {
+          numberItem('plant.flower.speedCardLimit', 'client.config.item.speed_card_limit', 20, '', 'client.config.help.flower_speed_card_limit', {
             visibleWhen: { path: 'plant.flower.useSpeedCard', equals: true },
           }),
-          numberItem('plant.flower.waterThreshold', 'client.config.item.keep_water', 0, '', 'client.config.help.keep_water', {
+          numberItem('plant.flower.waterThreshold', 'client.config.item.keep_water', 0, '', 'client.config.help.flower_keep_water', {
             visibleWhen: { path: 'plant.flower.plantEnabled', equals: true },
           }),
           item('plant.flower.taskMode', 'client.config.item.task_priority_mode', true, 'client.config.help.task_priority_mode', {
@@ -288,10 +290,10 @@ export const CONFIG_SCHEMA = [
           multiSelectItem('plant.flower.flowerQuality', 'client.config.item.select_quality', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.select_quality', {
             visibleWhen: { path: 'plant.flower.plantingMode', equals: 'quality' },
           }),
-          radioItem('plant.flower.categoryCount', 'client.config.item.select_count', '4', CATEGORY_COUNT_OPTIONS, 'client.config.help.select_count', {
+          selectItem('plant.flower.categoryCount', 'client.config.item.select_count', '4', CATEGORY_COUNT_OPTIONS, 'client.config.help.select_count', {
             visibleWhen: { path: 'plant.flower.plantingMode', equals: 'category' },
           }),
-          multiSelectItem('plant.flower.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+          multiSelectItem('plant.flower.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.flower_select_flower', {
             visibleWhen: { path: 'plant.flower.plantingMode', equals: 'flower' },
           }),
           numberItem('plant.flower.minFlowerLevel', 'client.config.item.limit_flower_level', 0, '', 'client.config.help.limit_flower_level', {
@@ -310,10 +312,10 @@ export const CONFIG_SCHEMA = [
           radioItem('plant.friendSteal.stealMode', 'client.config.item.steal_mode', 'quality', STEAL_MODE_OPTIONS, 'client.config.help.steal_mode', {
             visibleWhen: { path: 'plant.friendSteal.enabled', equals: true },
           }),
-          multiSelectItem('plant.friendSteal.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
+          multiSelectItem('plant.friendSteal.qualities', 'client.config.item.specified_quality', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.steal_quality', {
             visibleWhen: { path: 'plant.friendSteal.stealMode', equals: 'quality' },
           }),
-          multiSelectItem('plant.friendSteal.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+          multiSelectItem('plant.friendSteal.specificFlowers', 'client.config.item.specified_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.steal_flower', {
             visibleWhen: { path: 'plant.friendSteal.stealMode', equals: 'flower' },
           }),
           multiSelectItem('plant.friendSteal.excludeFlowers', 'client.config.item.exclude_flower', [], FLOWER_OPTIONS, 'client.config.help.exclude_flower', {
@@ -322,7 +324,7 @@ export const CONFIG_SCHEMA = [
           item('plant.friendSteal.buyCount', 'client.config.item.buy_steal_count', false, 'client.config.help.buy_steal_count', {
             visibleWhen: { path: 'plant.friendSteal.enabled', equals: true },
           }),
-          numberItem('plant.friendSteal.buyStealCount', 'client.config.item.buy_steal_count_limit', 0, '', 'client.config.help.buy_steal_count_limit', {
+          numberItem('plant.friendSteal.buyStealCount', 'client.config.item.buy_count', 0, '', 'client.config.help.buy_steal_count_limit', {
             visibleWhen: { path: 'plant.friendSteal.buyCount', equals: true },
           }),
         ],
@@ -332,7 +334,7 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.elf',
         items: [
           item('plant.elves.plant', 'client.config.item.auto_plant_elf', false, 'client.config.help.auto_plant_elf'),
-          textItem('plant.elves.selectedIds', 'client.config.item.specified_elf', '', 'client.config.help.specified_elf', {
+          multiSelectItem('plant.elves.selectedIds', 'client.config.item.specified_elf', [], ELF_OPTIONS, '', {
             visibleWhen: { path: 'plant.elves.plant', equals: true },
           }),
           item('plant.elves.applyAid', 'client.config.item.apply_aid'),
@@ -341,10 +343,22 @@ export const CONFIG_SCHEMA = [
           item('plant.elves.dispatch', 'client.config.item.dispatch_elf', false, 'client.config.help.dispatch_elf'),
           item('plant.elves.speedupDispatch', 'client.config.item.speedup_dispatch', false, 'client.config.help.speedup_dispatch'),
           item('plant.elves.recvDispatchReward', 'client.config.item.recv_dispatch_reward', false, 'client.config.help.recv_dispatch_reward'),
-          item('plant.elves.recvPass', 'client.config.item.recv_pass', false, 'client.config.help.recv_pass'),
-          item('plant.elves.recvPassTask', 'client.config.item.recv_pass_task', false, 'client.config.help.recv_pass_task'),
-          item('plant.elves.recvFlowerPass', 'client.config.item.recv_flower_pass', false, 'client.config.help.recv_flower_pass'),
-          item('plant.elves.recvFlowerPassTask', 'client.config.item.recv_flower_pass_task', false, 'client.config.help.recv_flower_pass_task'),
+        ],
+      },
+      {
+        key: 'elf_pass',
+        titleKey: 'client.config.group.elf_pass',
+        items: [
+          item('plant.elves.recvPass', 'client.config.item.level_reward', false, 'client.config.help.recv_pass'),
+          item('plant.elves.recvPassTask', 'client.config.item.task_reward', false, 'client.config.help.recv_pass_task'),
+        ],
+      },
+      {
+        key: 'flower_pass',
+        titleKey: 'client.config.group.flower_pass',
+        items: [
+          item('plant.elves.recvFlowerPass', 'client.config.item.level_reward', false, 'client.config.help.recv_flower_pass'),
+          item('plant.elves.recvFlowerPassTask', 'client.config.item.task_reward', false, 'client.config.help.recv_flower_pass_task'),
         ],
       },
       {
@@ -353,11 +367,11 @@ export const CONFIG_SCHEMA = [
         items: [
           item('plant.art.unlockShelf', 'client.config.item.unlock_flower_shelf', false, 'client.config.help.unlock_flower_shelf'),
           item('plant.art.autoPut', 'client.config.item.art_auto_put', false, 'client.config.help.art_auto_put'),
-          radioItem('plant.art.sellMode', 'client.config.item.art_sell_mode', 'specified', [
+          radioItem('plant.art.sellMode', 'client.config.item.market_put_mode', 'specified', [
             option('specified', 'client.config.option.mode_specified_vase'),
             option('full', 'client.config.option.mode_specified_art'),
             option('stock', 'client.config.option.mode_stock'),
-          ], 'client.config.help.art_sell_mode', {
+          ], '', {
             visibleWhen: { path: 'plant.art.autoPut', equals: true },
           }),
           multiSelectItem('plant.art.specifiedVases', 'client.config.item.specified_vase', ['3001'], VASE_OPTIONS, 'client.config.help.specified_vase', {
@@ -366,7 +380,7 @@ export const CONFIG_SCHEMA = [
           multiSelectItem('plant.art.specifiedArts', 'client.config.item.specified_art', [], FLOWER_ART_OPTIONS, 'client.config.help.specified_art', {
             visibleWhen: { path: 'plant.art.sellMode', equals: 'full' },
           }),
-          numberItem('plant.art.flowerArtPerRack', 'client.config.item.art_per_rack', 12, '', 'client.config.help.art_per_rack', {
+          numberItem('plant.art.flowerArtPerRack', 'client.config.item.put_count', 12, '', 'client.config.help.art_per_rack', {
             visibleWhen: { path: 'plant.art.autoPut', equals: true },
           }),
           item('plant.art.exp', 'client.config.item.art_exp', false, 'client.config.help.art_exp'),
@@ -379,32 +393,32 @@ export const CONFIG_SCHEMA = [
         items: [
           item('plant.market.unlockShelf', 'client.config.item.market_unlock_shelf', false, 'client.config.help.market_unlock_shelf'),
           item('plant.market.autoPut', 'client.config.item.market_auto_put', false, 'client.config.help.market_auto_put'),
-          radioItem('plant.market.putMode', 'client.config.item.market_put_mode', 'inventory', MARKET_PUT_MODE_OPTIONS, 'client.config.help.market_put_mode', {
+          radioItem('plant.market.putMode', 'client.config.item.market_put_strategy', 'inventory', MARKET_PUT_MODE_OPTIONS, '', {
             visibleWhen: { path: 'plant.market.autoPut', equals: true },
           }),
-          multiSelectItem('plant.market.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+          multiSelectItem('plant.market.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.market_select_flower', {
             visibleWhen: { path: 'plant.market.putMode', equals: 'flower' },
           }),
-          radioItem('plant.market.priceIndex', 'client.config.item.price_index', '0', MARKET_PRICE_OPTIONS, 'client.config.help.price_index', {
+          radioItem('plant.market.priceIndex', 'client.config.item.market_price', '0', MARKET_PRICE_OPTIONS, '', {
             visibleWhen: { path: 'plant.market.autoPut', equals: true },
           }),
-          numberItem('plant.market.maxSell', 'client.config.item.market_sell_limit', 25, '', 'client.config.help.market_sell_limit', {
+          numberItem('plant.market.maxSell', 'client.config.item.put_count', 25, '', '', {
             visibleWhen: { path: 'plant.market.autoPut', equals: true },
           }),
-          textItem('plant.market.putPassword', 'client.config.item.market_password', '', 'client.config.help.market_password', {
+          textItem('plant.market.putPassword', 'client.config.item.put_password', '', 'client.config.help.market_password', {
             visibleWhen: { path: 'plant.market.autoPut', equals: true },
           }),
           item('plant.market.autoBuyPutCount', 'client.config.item.auto_buy_put_count', false, 'client.config.help.auto_buy_put_count', {
             visibleWhen: { path: 'plant.market.autoPut', equals: true },
           }),
-          numberItem('plant.market.buyPutCount', 'client.config.item.buy_put_count_limit', 0, '', 'client.config.help.buy_put_count_limit', {
+          numberItem('plant.market.buyPutCount', 'client.config.item.buy_count', 0, '', 'client.config.help.buy_put_count_limit', {
             visibleWhen: { path: 'plant.market.autoBuyPutCount', equals: true },
           }),
           item('plant.market.autoBuyFromFriend', 'client.config.item.friend_market_buy', false, 'client.config.help.friend_market_buy'),
-          radioItem('plant.market.buyMode', 'client.config.item.market_buy_mode', 'quality', FLOWER_MODE_OPTIONS, 'client.config.help.market_buy_mode', {
+          radioItem('plant.market.buyMode', 'client.config.item.market_sweep_strategy', 'quality', FLOWER_MODE_OPTIONS, '', {
             visibleWhen: { path: 'plant.market.autoBuyFromFriend', equals: true },
           }),
-          multiSelectItem('plant.market.buyFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+          multiSelectItem('plant.market.buyFlowers', 'client.config.item.specified_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.market_buy_flower', {
             visibleWhen: { path: 'plant.market.buyMode', equals: 'flower' },
           }),
           numberItem('plant.market.minPutTimeDiff', 'client.config.item.min_put_time_diff', 0, 'client.config.unit.minute', 'client.config.help.min_put_time_diff', {
@@ -434,7 +448,7 @@ export const CONFIG_SCHEMA = [
           numberItem('order.resident.buildingMaxNum', 'client.config.item.building_order_limit', 120, '', 'client.config.help.building_order_limit', {
             visibleWhen: { path: 'order.resident.building', equals: true },
           }),
-          multiSelectItem('order.resident.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
+          multiSelectItem('order.resident.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.resident_quality_limit', {
             visibleWhen: {
               any: [
                 { path: 'order.resident.normal', equals: true },
@@ -460,7 +474,7 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.order_palace',
         items: [
           item('order.palace.enabled', 'client.config.item.auto_complete'),
-          multiSelectItem('order.palace.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
+          multiSelectItem('order.palace.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.palace_quality_limit', {
             visibleWhen: { path: 'order.palace.enabled', equals: true },
           }),
           item('order.palace.ignoreQuality', 'client.config.item.ignore_quality', false, 'client.config.help.ignore_quality', {
@@ -479,7 +493,7 @@ export const CONFIG_SCHEMA = [
           item('order.group.submitOnlyCultivatedFlowers', 'client.config.item.only_cultivated', false, 'client.config.help.only_cultivated', {
             visibleWhen: { path: 'order.group.enabled', equals: true },
           }),
-          multiSelectItem('order.group.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
+          multiSelectItem('order.group.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.group_quality_limit', {
             visibleWhen: { path: 'order.group.enabled', equals: true },
           }),
         ],
@@ -503,10 +517,10 @@ export const CONFIG_SCHEMA = [
           ], 'client.config.help.union_plant_mode', {
             visibleWhen: { path: 'union.land.plant', equals: true },
           }),
-          multiSelectItem('union.land.flowers', 'client.config.item.select_quality', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.select_quality', {
+          multiSelectItem('union.land.flowers', 'client.config.item.specified_quality', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.union_land_quality', {
             visibleWhen: { path: 'union.land.plantMode', equals: 'quality' },
           }),
-          multiSelectItem('union.land.specificFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+          multiSelectItem('union.land.specificFlowers', 'client.config.item.specified_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.union_land_flower', {
             visibleWhen: { path: 'union.land.plantMode', equals: 'flower' },
           }),
           numberItem('union.land.maxFlowerLevel', 'client.config.item.max_flower_level', 0, '', 'client.config.help.max_flower_level', {
@@ -531,10 +545,10 @@ export const CONFIG_SCHEMA = [
           radioItem('union.flower.shareMode', 'client.config.item.share_mode', 'quality', SHARE_MODE_OPTIONS, 'client.config.help.share_mode', {
             visibleWhen: { path: 'union.flower.share', equals: true },
           }),
-          multiSelectItem('union.flower.shareQualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
+          multiSelectItem('union.flower.shareQualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.share_quality_limit', {
             visibleWhen: { path: 'union.flower.shareMode', equals: 'quality' },
           }),
-          multiSelectItem('union.flower.shareFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+          multiSelectItem('union.flower.shareFlowers', 'client.config.item.specified_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.share_flower', {
             visibleWhen: { path: 'union.flower.shareMode', equals: 'flower' },
           }),
         ],
@@ -547,10 +561,10 @@ export const CONFIG_SCHEMA = [
           radioItem('union.flower.touchMode', 'client.config.item.touch_mode', 'quality', FLOWER_MODE_OPTIONS, 'client.config.help.touch_mode', {
             visibleWhen: { path: 'union.flower.touch', equals: true },
           }),
-          multiSelectItem('union.flower.touchQualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.quality_limit', {
+          multiSelectItem('union.flower.touchQualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.touch_quality_limit', {
             visibleWhen: { path: 'union.flower.touchMode', equals: 'quality' },
           }),
-          multiSelectItem('union.flower.touchFlowers', 'client.config.item.select_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.select_flower', {
+          multiSelectItem('union.flower.touchFlowers', 'client.config.item.specified_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.touch_flower', {
             visibleWhen: { path: 'union.flower.touchMode', equals: 'flower' },
           }),
         ],
@@ -623,7 +637,7 @@ export const CONFIG_SCHEMA = [
           item('activity.flowerLetter.unlockSlot', 'client.config.item.unlock_slot', false, 'client.config.help.unlock_slot', {
             visibleWhen: { path: 'activity.flowerLetter.enabled', equals: true },
           }),
-          item('activity.flowerLetter.autoEnableModules', 'client.config.item.auto_enable_modules', false, 'client.config.help.auto_enable_modules', {
+          item('activity.flowerLetter.autoEnableModules', 'client.config.item.auto_open_modules', false, 'client.config.help.flower_letter_auto_modules', {
             visibleWhen: { path: 'activity.flowerLetter.enabled', equals: true },
           }),
         ],
@@ -646,10 +660,10 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.activity_fish_dry',
         items: [
           item('activity.fishDry.enabled', 'client.config.item.auto_participate'),
-          item('activity.fishDry.showResult', 'client.config.item.show_result', false, 'client.config.help.show_result', {
+          item('activity.fishDry.showResult', 'client.config.item.show_result', false, '', {
             visibleWhen: { path: 'activity.fishDry.enabled', equals: true },
           }),
-          item('activity.fishDry.autoRestart', 'client.config.item.auto_restart', false, 'client.config.help.auto_restart', {
+          item('activity.fishDry.autoRestart', 'client.config.item.restart_on_failure', false, '', {
             visibleWhen: { path: 'activity.fishDry.enabled', equals: true },
           }),
         ],
@@ -666,16 +680,16 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.activity_fish_fun',
         items: [
           item('activity.fishFun.enabled', 'client.config.item.auto_participate'),
-          item('activity.fishFun.autoClaimEnergy', 'client.config.item.auto_claim_energy', false, 'client.config.help.auto_claim_energy', {
+          item('activity.fishFun.autoClaimEnergy', 'client.config.item.energy_reward', false, 'client.config.help.daily_energy_reward', {
             visibleWhen: { path: 'activity.fishFun.enabled', equals: true },
           }),
-          radioItem('activity.fishFun.speed', 'client.config.item.speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.speed', {
+          selectItem('activity.fishFun.speed', 'client.config.item.game_speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.fish_fun_speed', {
             visibleWhen: { path: 'activity.fishFun.enabled', equals: true },
           }),
-          item('activity.fishFun.showResult', 'client.config.item.show_result', false, 'client.config.help.show_result', {
+          item('activity.fishFun.showResult', 'client.config.item.show_result', false, '', {
             visibleWhen: { path: 'activity.fishFun.enabled', equals: true },
           }),
-          item('activity.fishFun.autoRestart', 'client.config.item.auto_restart', false, 'client.config.help.auto_restart', {
+          item('activity.fishFun.autoRestart', 'client.config.item.restart_on_failure', false, '', {
             visibleWhen: { path: 'activity.fishFun.enabled', equals: true },
           }),
         ],
@@ -685,10 +699,10 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.activity_flower_story',
         items: [
           item('activity.flowerStory.enabled', 'client.config.item.auto_participate'),
-          item('activity.flowerStory.autoClaimEnergy', 'client.config.item.auto_claim_energy', false, 'client.config.help.auto_claim_energy', {
+          item('activity.flowerStory.autoClaimEnergy', 'client.config.item.energy_reward', false, 'client.config.help.daily_energy_reward', {
             visibleWhen: { path: 'activity.flowerStory.enabled', equals: true },
           }),
-          radioItem('activity.flowerStory.speed', 'client.config.item.speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.speed', {
+          selectItem('activity.flowerStory.speed', 'client.config.item.game_speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.fish_fun_speed', {
             visibleWhen: { path: 'activity.flowerStory.enabled', equals: true },
           }),
         ],
@@ -719,7 +733,7 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.activity_family_help',
         items: [
           item('activity.familyHelp.enabled', 'client.config.item.auto_help', false, 'client.config.help.family_help'),
-          item('activity.familyHelp.recvBoxes', 'client.config.item.receive_boxes', false, 'client.config.help.receive_boxes', {
+          item('activity.familyHelp.recvBoxes', 'client.config.item.receive_help_reward', false, 'client.config.help.receive_help_reward', {
             visibleWhen: { path: 'activity.familyHelp.enabled', equals: true },
           }),
         ],
@@ -750,13 +764,13 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.activity_cake',
         items: [
           item('activity.cake.enabled', 'client.config.item.auto_put'),
-          item('activity.cake.autoClaimEnergy', 'client.config.item.auto_claim_energy', false, 'client.config.help.auto_claim_energy', {
+          item('activity.cake.autoClaimEnergy', 'client.config.item.energy_reward', false, 'client.config.help.daily_energy_reward', {
             visibleWhen: { path: 'activity.cake.enabled', equals: true },
           }),
-          item('activity.cake.useItems', 'client.config.item.use_items', false, 'client.config.help.use_items', {
+          item('activity.cake.useItems', 'client.config.item.use_items', false, '', {
             visibleWhen: { path: 'activity.cake.enabled', equals: true },
           }),
-          radioItem('activity.cake.speed', 'client.config.item.speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.speed', {
+          selectItem('activity.cake.speed', 'client.config.item.game_speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.dessert_speed', {
             visibleWhen: { path: 'activity.cake.enabled', equals: true },
           }),
         ],
@@ -766,10 +780,10 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.activity_merge',
         items: [
           item('activity.merge.enabled', 'client.config.item.auto_merge'),
-          item('activity.merge.autoClaimEnergy', 'client.config.item.auto_claim_energy', false, 'client.config.help.auto_claim_energy', {
+          item('activity.merge.autoClaimEnergy', 'client.config.item.energy_reward', false, 'client.config.help.daily_energy_reward', {
             visibleWhen: { path: 'activity.merge.enabled', equals: true },
           }),
-          radioItem('activity.merge.speed', 'client.config.item.speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.speed', {
+          selectItem('activity.merge.speed', 'client.config.item.game_speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.merge_speed', {
             visibleWhen: { path: 'activity.merge.enabled', equals: true },
           }),
         ],
@@ -779,16 +793,16 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.activity_spool',
         items: [
           item('activity.spool.enabled', 'client.config.item.auto_play'),
-          item('activity.spool.autoClaimReward', 'client.config.item.auto_claim_reward', false, 'client.config.help.auto_claim_reward', {
+          item('activity.spool.autoClaimReward', 'client.config.item.energy_reward', false, 'client.config.help.daily_energy_reward', {
             visibleWhen: { path: 'activity.spool.enabled', equals: true },
           }),
-          item('activity.spool.openBox', 'client.config.item.open_box', false, 'client.config.help.open_box', {
+          item('activity.spool.openBox', 'client.config.item.open_treasure_box', false, 'client.config.help.open_treasure_box', {
             visibleWhen: { path: 'activity.spool.enabled', equals: true },
           }),
-          item('activity.spool.autoRestart', 'client.config.item.auto_restart', false, 'client.config.help.auto_restart', {
+          item('activity.spool.autoRestart', 'client.config.item.auto_restart', false, 'client.config.help.spool_auto_restart', {
             visibleWhen: { path: 'activity.spool.enabled', equals: true },
           }),
-          radioItem('activity.spool.speed', 'client.config.item.speed', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.speed', {
+          selectItem('activity.spool.speed', 'client.config.item.game_speed_multiplier', 'normal', ACTIVITY_SPEED_OPTIONS, 'client.config.help.spool_speed', {
             visibleWhen: { path: 'activity.spool.enabled', equals: true },
           }),
         ],
@@ -798,13 +812,13 @@ export const CONFIG_SCHEMA = [
         titleKey: 'client.config.group.activity_dragon_boat',
         items: [
           item('activity.dragonBoat.enabled', 'client.config.item.join_race', false, 'client.config.help.dragon_boat'),
-          item('activity.dragonBoat.autoSign', 'client.config.item.auto_sign', false, 'client.config.help.auto_sign', {
+          item('activity.dragonBoat.autoSign', 'client.config.item.sign_in', false, 'client.config.help.dragon_boat_sign', {
             visibleWhen: { path: 'activity.dragonBoat.enabled', equals: true },
           }),
-          item('activity.dragonBoat.autoOpenBox', 'client.config.item.auto_open_box', false, 'client.config.help.auto_open_box', {
+          item('activity.dragonBoat.autoOpenBox', 'client.config.item.open_treasure_box_short', false, 'client.config.help.dragon_boat_open_box', {
             visibleWhen: { path: 'activity.dragonBoat.enabled', equals: true },
           }),
-          item('activity.dragonBoat.giftBuy', 'client.config.item.gift_buy', false, 'client.config.help.gift_buy', {
+          item('activity.dragonBoat.giftBuy', 'client.config.item.buy_diamond_item', false, 'client.config.help.dragon_boat_gift_buy', {
             visibleWhen: { path: 'activity.dragonBoat.enabled', equals: true },
           }),
         ],
@@ -847,7 +861,7 @@ export function createDefaultConfig() {
 }
 
 export function mergeConfig(remoteConfig = {}) {
-  return mergeDeep(createDefaultConfig(), remoteConfig || {});
+  return normalizeConfigValues(mergeDeep(createDefaultConfig(), remoteConfig || {}));
 }
 
 export function getConfigValue(config, path) {
@@ -882,6 +896,10 @@ function radioItem(path, labelKey, defaultValue, optionsList, helpKey = '', opti
   return { path, labelKey, helpKey, type: 'radio', defaultValue, options: optionsList, ...options };
 }
 
+function selectItem(path, labelKey, defaultValue, optionsList, helpKey = '', options = {}) {
+  return { path, labelKey, helpKey, type: 'select', defaultValue, options: optionsList, ...options };
+}
+
 function multiSelectItem(path, labelKey, defaultValue, optionsList, helpKey = '', options = {}) {
   return { path, labelKey, helpKey, type: 'multiSelect', defaultValue, options: optionsList, ...options };
 }
@@ -903,4 +921,33 @@ function mergeDeep(target, source) {
     target[key] = source[key];
   });
   return target;
+}
+
+function normalizeConfigValues(config) {
+  CONFIG_SCHEMA.forEach((tab) => {
+    tab.groups.forEach((group) => {
+      group.items.forEach((entry) => {
+        if (entry.type === 'multiSelect') {
+          normalizeMultiSelectValue(config, entry);
+        }
+      });
+    });
+  });
+  return config;
+}
+
+function normalizeMultiSelectValue(config, entry) {
+  const value = getConfigValue(config, entry.path);
+  if (Array.isArray(value) || value === undefined || value === null) {
+    return;
+  }
+  if (typeof value === 'string') {
+    const next = value
+      .split(/[\s,，]+/)
+      .map((itemValue) => itemValue.trim())
+      .filter(Boolean);
+    setConfigValue(config, entry.path, next);
+    return;
+  }
+  throw new Error(`配置字段 ${entry.path} 应为数组，当前类型为 ${typeof value}`);
 }

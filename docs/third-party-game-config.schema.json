@@ -518,11 +518,12 @@
                   "enum": [
                     "1",
                     "2",
-                    "3",
-                    "4"
+                    "4",
+                    "8",
+                    "16"
                   ],
                   "default": "4",
-                  "description": "指定种类模式下选择的数量"
+                  "description": "选择要种植几种花，库存少的优先种植。"
                 },
                 "specificFlowers": {
                   "type": "array",
@@ -532,7 +533,7 @@
                   "default": [
                     "23001"
                   ],
-                  "description": "指定花朵模式使用的鲜花 ID，ID 来自第三方提供的鲜花表"
+                  "description": "选择要种植的花朵，可多选，库存少的优先种植。数组内为鲜花 ID，ID 来自第三方提供的鲜花表"
                 },
                 "minFlowerLevel": {
                   "type": "number",
@@ -630,8 +631,12 @@
                   "default": false
                 },
                 "selectedIds": {
-                  "type": "string",
-                  "default": ""
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [],
+                  "description": "指定花灵使用的花灵 ID，ID 来自原站当前花灵选项"
                 },
                 "applyAid": {
                   "type": "boolean",
