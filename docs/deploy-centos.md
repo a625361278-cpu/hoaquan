@@ -128,6 +128,8 @@ php scripts/sync_admin.php
 
 这两个脚本用于同步项目业务表结构、后台品牌、webman-admin 原生菜单和管理员权限。后台的 GameAssist 用户管理入口和仪表盘注册统计都以 `ga_users` 为准，不统计后台账号或 `wa_users`。
 
+`sync_database.php` 只会为缺失的 `ga_system_settings` 配置项插入默认值；已有配置项会保留当前 `value`，只更新备注说明。生产环境里的第三方地址、SMTP、认证方式和 `game_account_credential_key` 不应在升级时被脚本覆盖。
+
 默认后台账号：
 
 ```text

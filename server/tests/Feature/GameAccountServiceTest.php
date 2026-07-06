@@ -95,6 +95,23 @@ class GameAccountServiceTest extends TestCase
         ]);
     }
 
+    public function testCreateGameAccountRejectsUnsupportedChannel(): void
+    {
+        $service = new GameAccountService(new ArrayGameAccountRepository([]), [
+            'enabled' => false,
+            'credential_key' => 'test-key',
+        ]);
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('当前只支持 APP 渠道');
+
+        $service->createFromLogin(7, [
+            'channel_code' => 'alipay',
+            'game_username' => 'any-player',
+            'game_password' => 'anything',
+        ]);
+    }
+
     public function testSaveConfigStoresLocalUnsyncedConfig(): void
     {
         $repository = new ArrayGameAccountRepository([

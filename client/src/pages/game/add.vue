@@ -62,8 +62,6 @@ const currentStep = ref(1);
 const submitting = ref(false);
 const channels = [
   { ...PREVIEW_CHANNEL, icon: 'APP' },
-  { code: 'alipay', titleKey: 'client.add.channel.alipay', descKey: 'client.add.channel.alipay_desc', icon: 'Ali' },
-  { code: 'douyin', titleKey: 'client.add.channel.douyin', descKey: 'client.add.channel.douyin_desc', icon: 'DY' },
 ];
 const form = reactive({
   channel_code: PREVIEW_CHANNEL.code,
@@ -221,7 +219,7 @@ function back() {
 
 .channel-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 18rpx;
 }
 

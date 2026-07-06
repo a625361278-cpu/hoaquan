@@ -144,10 +144,19 @@ try {
     ];
 
     foreach ($settings as $name => [$value, $remark]) {
-        Db::table('ga_system_settings')->updateOrInsert(
-            ['name' => $name],
-            ['value' => $value, 'remark' => $remark]
-        );
+        $exists = Db::table('ga_system_settings')->where('name', $name)->exists();
+        if ($exists) {
+            Db::table('ga_system_settings')
+                ->where('name', $name)
+                ->update(['remark' => $remark]);
+            continue;
+        }
+
+        Db::table('ga_system_settings')->insert([
+            'name' => $name,
+            'value' => $value,
+            'remark' => $remark,
+        ]);
     }
 
     echo '业务数据库结构同步完成' . PHP_EOL;

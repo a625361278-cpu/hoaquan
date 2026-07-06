@@ -16,6 +16,7 @@ class GameAccountService
     public const STOPPED_STATUS = 'stopped';
     public const ERROR_STATUS = 'error';
     public const PREVIEW_CHANNEL = 'official_app';
+    private const SUPPORTED_CHANNELS = [self::PREVIEW_CHANNEL];
 
     private array $thirdPartyConfig;
     private string $locale;
@@ -66,11 +67,16 @@ class GameAccountService
             throw new ApiException(I18n::t('api.game.require_game_credentials', [], $this->locale), 422);
         }
 
+        $channelCode = trim((string)($payload['channel_code'] ?? '')) ?: self::PREVIEW_CHANNEL;
+        if (!in_array($channelCode, self::SUPPORTED_CHANNELS, true)) {
+            throw new ApiException(I18n::t('api.game.channel_unsupported', [], $this->locale), 422);
+        }
+
         $encryptedPassword = $this->cipher()->encrypt($gamePassword);
         $serverId = trim((string)($payload['server_id'] ?? ''));
         $serverName = trim((string)($payload['server_name'] ?? ''));
         $account = $this->accounts->createLocalPreview($userId, [
-            'channel_code' => trim((string)($payload['channel_code'] ?? '')) ?: self::PREVIEW_CHANNEL,
+            'channel_code' => $channelCode,
             'game_username' => $gameUsername,
             'game_password_cipher' => $encryptedPassword,
             'server_id' => $serverId,

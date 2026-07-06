@@ -35,6 +35,7 @@
   "api.auth.security_question_invalid": "密保问题无效",
   "api.auth.security_question_not_set": "该账号未设置密保问题，请联系管理员处理",
   "api.game.config_imported": "配置已导入",
+  "api.game.channel_unsupported": "当前只支持 APP 渠道",
   "api.game.import_same_account": "不能从当前游戏账号导入配置",
   "api.game.import_source_empty": "来源账号暂无可导入配置",
   "api.game.import_source_invalid": "来源账号配置数据异常，不能导入",

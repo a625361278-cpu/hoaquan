@@ -379,6 +379,8 @@ php scripts/sync_admin.php
 
 同步完成后，后台菜单包含 GameAssist 用户管理入口；仪表盘注册统计来自 `ga_users`，不是后台账号或 `wa_users`。
 
+`sync_database.php` 只会为缺失的 `ga_system_settings` 配置项插入默认值；已有配置项会保留当前 `value`，只更新备注说明。生产环境里的第三方地址、SMTP、认证方式和 `game_account_credential_key` 不应在升级时被脚本覆盖。
+
 默认后台账号：
 
 ```text
