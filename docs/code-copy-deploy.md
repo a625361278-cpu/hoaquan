@@ -706,11 +706,14 @@ redis-cli -h 127.0.0.1 -p 6379 -n 9 PING
 REDISCLI_AUTH='你的Redis密码' redis-cli -h 127.0.0.1 -p 6379 -n 9 PING
 ```
 
-### 6. 邮箱验证码发送失败
+### 6. 认证方式与邮箱验证码
 
-注册和找回密码验证码依赖数据库里的 SMTP 配置。需要在 `ga_system_settings` 中配置：
+注册和找回密码默认使用密保问题，配置项为 `ga_system_settings.auth_verification_mode=security_question`。只有切换为 `email_code` 时才会使用邮箱验证码。
+
+如果已切换到 `email_code`，注册和找回密码验证码依赖数据库里的 SMTP 配置。需要在 `ga_system_settings` 中配置：
 
 ```text
+auth_verification_mode=email_code
 smtp_enabled
 smtp_host
 smtp_port

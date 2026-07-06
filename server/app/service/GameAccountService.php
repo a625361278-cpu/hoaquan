@@ -128,6 +128,34 @@ class GameAccountService
         ], I18n::t('api.game.local_config_saved', [], $this->locale));
     }
 
+    public function importConfig(int $userId, int $accountId, int $sourceAccountId): array
+    {
+        $this->requireAccount($userId, $accountId);
+        if ($sourceAccountId <= 0) {
+            throw new ApiException(I18n::t('api.game.import_source_required', [], $this->locale), 422);
+        }
+        if ($accountId === $sourceAccountId) {
+            throw new ApiException(I18n::t('api.game.import_same_account', [], $this->locale), 422);
+        }
+
+        $sourceAccount = $this->accounts->findByUserId($userId, $sourceAccountId);
+        if (!$sourceAccount) {
+            throw new ApiException(I18n::t('api.game.import_source_not_found', [], $this->locale), 404);
+        }
+
+        $sourceConfig = $this->decodeSourceConfig((string)($sourceAccount['config_json'] ?? ''));
+        if ($sourceConfig === []) {
+            throw new ApiException(I18n::t('api.game.import_source_empty', [], $this->locale), 422);
+        }
+
+        $account = $this->accounts->saveLocalConfig($userId, $accountId, $sourceConfig, self::LOCAL_UNSYNCED_STATUS);
+        return ApiResponse::success([
+            'account' => $this->publicAccount($account),
+            'config' => $sourceConfig,
+            'sync_status' => self::LOCAL_UNSYNCED_STATUS,
+        ], I18n::t('api.game.config_imported', [], $this->locale));
+    }
+
     public function start(int $userId, int $accountId): array
     {
         $account = $this->requireAccount($userId, $accountId);
@@ -207,6 +235,7 @@ class GameAccountService
             'third_party_account_id' => (string)($account['third_party_account_id'] ?? ''),
             'log_session_id' => (string)($account['log_session_id'] ?? ''),
             'expire_time' => $account['expire_time'] ?? null,
+            'has_config' => $this->hasSavedConfig((string)($account['config_json'] ?? '')),
             'resources' => $this->zeroResources(),
             'remark' => (string)($account['remark'] ?? ''),
             'created_at' => $account['created_at'] ?? null,
@@ -289,5 +318,32 @@ class GameAccountService
 
         $config = json_decode($json, true);
         return is_array($config) ? $config : [];
+    }
+
+    private function decodeSourceConfig(string $json): array
+    {
+        if (trim($json) === '') {
+            return [];
+        }
+
+        $config = json_decode($json, true);
+        if (!is_array($config)) {
+            throw new ApiException(I18n::t('api.game.import_source_invalid', [], $this->locale), 422);
+        }
+        if ($config !== [] && array_is_list($config)) {
+            throw new ApiException(I18n::t('api.game.import_source_invalid', [], $this->locale), 422);
+        }
+
+        return $config;
+    }
+
+    private function hasSavedConfig(string $json): bool
+    {
+        if (trim($json) === '') {
+            return false;
+        }
+
+        $config = json_decode($json, true);
+        return is_array($config) && $config !== [] && !array_is_list($config);
     }
 }

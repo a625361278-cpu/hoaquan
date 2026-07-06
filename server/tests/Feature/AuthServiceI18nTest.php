@@ -24,11 +24,9 @@ class AuthServiceI18nTest extends TestCase
 
     public function testRegisterSuccessUsesVietnameseLocale(): void
     {
-        $codes = new MemoryEmailCodeStore();
-        $codes->forceCode('new@example.com', '123456');
-        $service = $this->makeService('vi', $codes);
+        $service = $this->makeService('vi');
 
-        $result = $service->register('new_player', 'new@example.com', '123456', 'secret123', 'secret123');
+        $result = $service->register('new_player', '', '', 'secret123', 'secret123', '', '', 'first_pet', 'Mimi');
 
         $this->assertSame(0, $result['code']);
         $this->assertSame('Dang ky thanh cong', $result['msg']);

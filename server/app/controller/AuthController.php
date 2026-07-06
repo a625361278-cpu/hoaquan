@@ -8,6 +8,11 @@ use support\Response;
 
 class AuthController extends BaseApiController
 {
+    public function config(Request $request): Response
+    {
+        return ApiResponse::json($this->authService($request)->authConfig());
+    }
+
     public function login(Request $request): Response
     {
         $input = $this->jsonInput($request);
@@ -27,7 +32,9 @@ class AuthController extends BaseApiController
             (string)($input['password'] ?? ''),
             (string)($input['password_confirmation'] ?? ''),
             (string)($input['invite_code'] ?? ''),
-            (string)$request->getRealIp()
+            (string)$request->getRealIp(),
+            (string)($input['security_question_key'] ?? ''),
+            (string)($input['security_answer'] ?? '')
         ));
     }
 
@@ -55,6 +62,26 @@ class AuthController extends BaseApiController
             (string)($input['account'] ?? ''),
             (string)($input['email'] ?? ''),
             (string)($input['email_code'] ?? ''),
+            (string)($input['password'] ?? ''),
+            (string)($input['password_confirmation'] ?? ''),
+            (string)($input['security_answer'] ?? '')
+        ));
+    }
+
+    public function passwordSecurityQuestion(Request $request): Response
+    {
+        $input = $this->jsonInput($request);
+        return ApiResponse::json($this->authService($request)->passwordResetSecurityQuestion(
+            (string)($input['account'] ?? '')
+        ));
+    }
+
+    public function changePassword(Request $request): Response
+    {
+        $input = $this->jsonInput($request);
+        return ApiResponse::json($this->authService($request)->changePassword(
+            $this->bearerToken($request),
+            (string)($input['current_password'] ?? ''),
             (string)($input['password'] ?? ''),
             (string)($input['password_confirmation'] ?? '')
         ));

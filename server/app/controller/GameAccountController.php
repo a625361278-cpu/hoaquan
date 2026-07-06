@@ -44,6 +44,17 @@ class GameAccountController extends BaseApiController
         return ApiResponse::json($this->gameAccountService($request)->saveConfig($userId, $id, $config));
     }
 
+    public function importConfig(Request $request, int $id): Response
+    {
+        $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
+        $input = $this->jsonInput($request);
+        return ApiResponse::json($this->gameAccountService($request)->importConfig(
+            $userId,
+            $id,
+            (int)($input['source_account_id'] ?? 0)
+        ));
+    }
+
     public function start(Request $request, int $id): Response
     {
         $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));

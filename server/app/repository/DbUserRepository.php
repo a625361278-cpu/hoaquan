@@ -62,14 +62,25 @@ class DbUserRepository implements UserRepositoryInterface
         return Db::table('ga_users')->where('invite_code', $inviteCode)->exists();
     }
 
-    public function create(string $account, string $email, string $nickname, string $passwordHash, ?int $invitedByUserId = null, string $inviteRegisteredIp = '', ?string $inviteCode = null): array
-    {
+    public function create(
+        string $account,
+        ?string $email,
+        string $nickname,
+        string $passwordHash,
+        ?int $invitedByUserId = null,
+        string $inviteRegisteredIp = '',
+        ?string $inviteCode = null,
+        ?string $securityQuestionKey = null,
+        ?string $securityAnswerHash = null
+    ): array {
         $now = date('Y-m-d H:i:s');
         $id = Db::table('ga_users')->insertGetId([
             'account' => $account,
-            'email' => $email,
+            'email' => $email === '' ? null : $email,
             'nickname' => $nickname,
             'password_hash' => $passwordHash,
+            'security_question_key' => $securityQuestionKey,
+            'security_answer_hash' => $securityAnswerHash,
             'invite_code' => $inviteCode,
             'invited_by_user_id' => $invitedByUserId,
             'invite_registered_ip' => $inviteRegisteredIp,

@@ -18,12 +18,6 @@ class ProfileController extends BaseApiController
         return ApiResponse::json($this->profileService($request)->summary($userId, $this->origin($request)));
     }
 
-    public function redeemCard(Request $request): Response
-    {
-        $this->authService($request)->resolveUserId($this->bearerToken($request));
-        return ApiResponse::json($this->profileService($request)->redeemCard());
-    }
-
     private function profileService(Request $request): ProfileService
     {
         return new ProfileService(new DbUserRepository(), new SystemSettingService(), I18n::localeFromRequest($request));

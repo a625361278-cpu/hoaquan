@@ -41,7 +41,6 @@ class ProfileService
                 'role_id' => $user['bound_role_id'] ?? null,
                 'bound_at' => $user['role_bound_at'] ?? null,
             ],
-            'welfare_cards' => [],
             'transactions' => $this->latestTransactions($userId),
         ]);
     }
@@ -183,11 +182,6 @@ class ProfileService
         }
 
         return trim((string)($account['game_username'] ?? ''));
-    }
-
-    public function redeemCard(): array
-    {
-        throw new ApiException($this->t('api.profile.card_redeem_unavailable'), 503);
     }
 
     private function requireUser(int $userId): array

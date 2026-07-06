@@ -18,7 +18,17 @@ interface UserRepositoryInterface
 
     public function inviteCodeExists(string $inviteCode): bool;
 
-    public function create(string $account, string $email, string $nickname, string $passwordHash, ?int $invitedByUserId = null, string $inviteRegisteredIp = '', ?string $inviteCode = null): array;
+    public function create(
+        string $account,
+        ?string $email,
+        string $nickname,
+        string $passwordHash,
+        ?int $invitedByUserId = null,
+        string $inviteRegisteredIp = '',
+        ?string $inviteCode = null,
+        ?string $securityQuestionKey = null,
+        ?string $securityAnswerHash = null
+    ): array;
 
     public function updateInviteCode(int $id, string $inviteCode): array;
 

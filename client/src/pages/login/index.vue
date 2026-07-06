@@ -8,42 +8,54 @@
         </view>
 
         <view class="tabs">
-          <text :class="['tab', mode === 'login' ? 'active' : '']" @click="switchMode('login')">登录</text>
-          <text :class="['tab', mode === 'register' ? 'active' : '']" @click="switchMode('register')">注册</text>
+          <text :class="['tab', mode === 'login' ? 'active' : '']" @click="switchMode('login')">{{ t('client.auth.login') }}</text>
+          <text :class="['tab', mode === 'register' ? 'active' : '']" @click="switchMode('register')">{{ t('client.auth.register') }}</text>
         </view>
 
         <view class="field">
-          <text class="label"><text v-if="mode === 'register'" class="required">*</text> 用户名</text>
-          <input v-model="account" class="input" placeholder="请输入用户名" />
+          <text class="label"><text v-if="mode === 'register'" class="required">*</text> {{ t('client.auth.account') }}</text>
+          <input v-model="account" class="input" :placeholder="t('client.auth.placeholder_account')" />
         </view>
 
-        <view v-if="mode === 'register'" class="field">
-          <text class="label"><text class="required">*</text> 邮箱</text>
-          <input v-model="email" class="input" placeholder="请输入邮箱" />
+        <view v-if="mode === 'register' && isEmailCodeMode" class="field">
+          <text class="label"><text class="required">*</text> {{ t('client.auth.email') }}</text>
+          <input v-model="email" class="input" :placeholder="t('client.auth.placeholder_email')" />
         </view>
 
-        <view v-if="mode === 'register'" class="field">
-          <text class="label"><text class="required">*</text> 邮箱验证码</text>
+        <view v-if="mode === 'register' && isEmailCodeMode" class="field">
+          <text class="label"><text class="required">*</text> {{ t('client.auth.email_code') }}</text>
           <view class="code-row">
-            <input v-model="emailCode" class="input code-input" placeholder="请输入6位验证码" />
+            <input v-model="emailCode" class="input code-input" :placeholder="t('client.auth.placeholder_email_code')" />
             <button class="code-button" :disabled="codeSending || cooldown > 0" :loading="codeSending" @click="sendEmailCode">
-              {{ cooldown > 0 ? `${cooldown}s` : '发送验证码' }}
+              {{ cooldown > 0 ? `${cooldown}s` : t('client.auth.send_code') }}
             </button>
           </view>
         </view>
 
+        <view v-if="mode === 'register' && isSecurityQuestionMode" class="field">
+          <text class="label"><text class="required">*</text> {{ t('client.auth.security_question') }}</text>
+          <picker mode="selector" :range="securityQuestionLabels" @change="selectSecurityQuestion">
+            <view class="input picker-value">{{ selectedSecurityQuestionLabel || t('client.auth.placeholder_security_question') }}</view>
+          </picker>
+        </view>
+
+        <view v-if="mode === 'register' && isSecurityQuestionMode" class="field">
+          <text class="label"><text class="required">*</text> {{ t('client.auth.security_answer') }}</text>
+          <input v-model="securityAnswer" class="input" :placeholder="t('client.auth.placeholder_security_answer')" />
+        </view>
+
         <view class="field">
-          <text class="label"><text v-if="mode === 'register'" class="required">*</text> 密码</text>
+          <text class="label"><text v-if="mode === 'register'" class="required">*</text> {{ t('client.auth.password') }}</text>
           <view class="password-box">
-            <input v-model="password" class="input password-input" password placeholder="请输入密码（至少6位）" />
+            <input v-model="password" class="input password-input" password :placeholder="t('client.auth.placeholder_password')" />
             <text class="eye">◎</text>
           </view>
         </view>
 
         <view v-if="mode === 'register'" class="field">
-          <text class="label"><text class="required">*</text> 确认密码</text>
+          <text class="label"><text class="required">*</text> {{ t('client.auth.confirm_password') }}</text>
           <view class="password-box">
-            <input v-model="passwordConfirmation" class="input password-input" password placeholder="请再次输入密码" />
+            <input v-model="passwordConfirmation" class="input password-input" password :placeholder="t('client.auth.placeholder_password_again')" />
             <text class="eye">◎</text>
           </view>
         </view>
@@ -51,15 +63,24 @@
         <view v-if="mode === 'login'" class="login-extra">
           <label class="remember-row">
             <checkbox :checked="remember" color="#27c7ff" @click="remember = !remember" />
-            <text>记住登录状态</text>
+            <text>{{ t('client.auth.remember') }}</text>
           </label>
-          <text class="forgot-link" @click="openResetDialog">忘记密码？</text>
+          <text class="forgot-link" @click="openResetDialog">{{ t('client.auth.forgot_password') }}</text>
         </view>
 
-        <button class="primary" :loading="loading" @click="submit">{{ mode === 'login' ? '登 录' : '注 册' }}</button>
+        <button class="primary" :loading="loading" @click="submit">{{ mode === 'login' ? t('client.auth.login_button') : t('client.auth.register_button') }}</button>
         <text class="hint" @click="switchMode(mode === 'login' ? 'register' : 'login')">
-          {{ mode === 'login' ? '没有账号？立即注册' : '已有账号？立即登录' }}
+          {{ mode === 'login' ? t('client.auth.no_account') : t('client.auth.already_has_account') }}
         </text>
+        <view v-if="inviteCode" class="invite-tip">
+          <text>{{ t('client.profile.invite_code_help') }}</text>
+          <text class="invite-code">{{ inviteCode }}</text>
+        </view>
+        <view class="language-switch">
+          <text :class="['language-option', currentLocale === 'zh_CN' ? 'active' : '']" @click="changeLocale('zh_CN')">{{ t('client.language.zh_CN') }}</text>
+          <text class="language-divider">/</text>
+          <text :class="['language-option', currentLocale === 'vi' ? 'active' : '']" @click="changeLocale('vi')">{{ t('client.language.vi') }}</text>
+        </view>
       </view>
 
       <view class="showcase">
@@ -67,7 +88,7 @@
           <view class="flower">✦</view>
           <text>Hoa Quán</text>
         </view>
-        <text class="showcase-subtitle">账号托管 · 配置同步 · 执行日志</text>
+        <text class="showcase-subtitle">{{ t('client.auth.subtitle') }}</text>
         <view class="scene">
           <view class="moon"></view>
           <view class="stars">
@@ -88,54 +109,75 @@
     <view v-if="resetVisible" class="modal-mask">
       <view class="reset-dialog">
         <view class="dialog-head">
-          <text class="dialog-title">找回账号</text>
+          <text class="dialog-title">{{ t('client.auth.reset_account') }}</text>
           <text class="dialog-close" @click="closeResetDialog">×</text>
         </view>
 
         <view class="reset-field">
-          <text class="reset-label">用户名</text>
-          <input v-model="resetForm.account" class="reset-input" placeholder="请输入用户名" />
+          <text class="reset-label">{{ t('client.auth.account') }}</text>
+          <input v-model="resetForm.account" class="reset-input" :placeholder="t('client.auth.placeholder_account')" />
         </view>
 
-        <view class="reset-field">
-          <text class="reset-label">注册邮箱</text>
-          <input v-model="resetForm.email" class="reset-input" placeholder="请输入注册时使用的邮箱" />
+        <view v-if="isEmailCodeMode" class="reset-field">
+          <text class="reset-label">{{ t('client.auth.email') }}</text>
+          <input v-model="resetForm.email" class="reset-input" :placeholder="t('client.auth.placeholder_register_email')" />
         </view>
 
-        <view class="reset-field">
-          <text class="reset-label">邮箱验证码</text>
+        <view v-if="isEmailCodeMode" class="reset-field">
+          <text class="reset-label">{{ t('client.auth.email_code') }}</text>
           <view class="reset-code-row">
-            <input v-model="resetForm.emailCode" class="reset-input reset-code-input" placeholder="请输入6位验证码" />
+            <input v-model="resetForm.emailCode" class="reset-input reset-code-input" :placeholder="t('client.auth.placeholder_email_code')" />
             <button
               class="reset-code-button"
               :disabled="resetCodeSending || resetCooldown > 0"
               :loading="resetCodeSending"
               @click="sendResetEmailCode"
             >
-              {{ resetCooldown > 0 ? `${resetCooldown}s` : '发送验证码' }}
+              {{ resetCooldown > 0 ? `${resetCooldown}s` : t('client.auth.send_code') }}
             </button>
           </view>
         </view>
 
+        <view v-if="isSecurityQuestionMode" class="reset-field">
+          <text class="reset-label">{{ t('client.auth.security_question') }}</text>
+          <view class="reset-code-row">
+            <view class="reset-input reset-code-input reset-question-display">
+              {{ resetSecurityQuestion ? resetSecurityQuestion.label : t('client.auth.placeholder_lookup_security_question') }}
+            </view>
+            <button
+              class="reset-code-button"
+              :loading="resetQuestionLoading"
+              @click="fetchResetSecurityQuestion"
+            >
+              {{ t('client.auth.get_security_question') }}
+            </button>
+          </view>
+        </view>
+
+        <view v-if="isSecurityQuestionMode" class="reset-field">
+          <text class="reset-label">{{ t('client.auth.security_answer') }}</text>
+          <input v-model="resetForm.securityAnswer" class="reset-input" :placeholder="t('client.auth.placeholder_security_answer')" />
+        </view>
+
         <view class="reset-field">
-          <text class="reset-label">新密码</text>
+          <text class="reset-label">{{ t('client.auth.new_password') }}</text>
           <view class="reset-password-box">
-            <input v-model="resetForm.password" class="reset-input reset-password-input" password placeholder="请输入新密码（至少6位）" />
+            <input v-model="resetForm.password" class="reset-input reset-password-input" password :placeholder="t('client.auth.placeholder_new_password')" />
             <text class="reset-eye">◎</text>
           </view>
         </view>
 
         <view class="reset-field">
-          <text class="reset-label">确认新密码</text>
+          <text class="reset-label">{{ t('client.auth.confirm_new_password') }}</text>
           <view class="reset-password-box">
-            <input v-model="resetForm.passwordConfirmation" class="reset-input reset-password-input" password placeholder="请再次输入新密码" />
+            <input v-model="resetForm.passwordConfirmation" class="reset-input reset-password-input" password :placeholder="t('client.auth.placeholder_password_again')" />
             <text class="reset-eye">◎</text>
           </view>
         </view>
 
         <view class="dialog-actions">
-          <button class="dialog-secondary" @click="closeResetDialog">取消</button>
-          <button class="dialog-primary" :loading="resetLoading" @click="resetPassword">重置密码</button>
+          <button class="dialog-secondary" @click="closeResetDialog">{{ t('client.recharge.cancel') }}</button>
+          <button class="dialog-primary" :loading="resetLoading" @click="resetPassword">{{ t('client.auth.reset_password') }}</button>
         </view>
       </view>
     </view>
@@ -143,34 +185,64 @@
 </template>
 
 <script setup>
-import { onUnmounted, ref } from 'vue';
-import { request, setToken } from '../../utils/api';
+import { computed, onUnmounted, ref } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
+import { useI18n } from 'vue-i18n';
+import { markLoginAnnouncementPending, request, setToken } from '../../utils/api';
+import { getLocale, switchLocale } from '../../utils/i18n';
 
+const { t } = useI18n();
 const mode = ref('login');
+const currentLocale = ref(getLocale());
 const account = ref('');
 const email = ref('');
 const emailCode = ref('');
 const password = ref('');
 const passwordConfirmation = ref('');
+const securityQuestionKey = ref('');
+const securityAnswer = ref('');
+const inviteCode = ref('');
 const remember = ref(true);
 const loading = ref(false);
+const authConfigLoaded = ref(false);
+const verificationMode = ref('security_question');
+const securityQuestions = ref([]);
 const codeSending = ref(false);
 const cooldown = ref(0);
 const resetVisible = ref(false);
 const resetLoading = ref(false);
 const resetCodeSending = ref(false);
+const resetQuestionLoading = ref(false);
 const resetCooldown = ref(0);
+const resetSecurityQuestion = ref(null);
 const resetForm = ref({
   account: '',
   email: '',
   emailCode: '',
+  securityAnswer: '',
   password: '',
   passwordConfirmation: '',
 });
 const stars = Array.from({ length: 18 }, (_, index) => index);
+const isSecurityQuestionMode = computed(() => verificationMode.value === 'security_question');
+const isEmailCodeMode = computed(() => verificationMode.value === 'email_code');
+const securityQuestionLabels = computed(() => securityQuestions.value.map((item) => item.label));
+const selectedSecurityQuestionLabel = computed(() => {
+  const selected = securityQuestions.value.find((item) => item.key === securityQuestionKey.value);
+  return selected ? selected.label : '';
+});
 
 let timer = null;
 let resetTimer = null;
+
+onLoad((options = {}) => {
+  const code = String(options.invite || '').trim().toUpperCase();
+  if (code) {
+    inviteCode.value = code;
+    mode.value = 'register';
+  }
+  loadAuthConfig();
+});
 
 function switchMode(nextMode) {
   mode.value = nextMode;
@@ -205,13 +277,16 @@ function resetResetForm() {
     account: '',
     email: '',
     emailCode: '',
+    securityAnswer: '',
     password: '',
     passwordConfirmation: '',
   };
+  resetSecurityQuestion.value = null;
 }
 
 function openResetDialog() {
   resetForm.value.account = account.value;
+  resetSecurityQuestion.value = null;
   resetVisible.value = true;
 }
 
@@ -219,9 +294,40 @@ function closeResetDialog() {
   resetVisible.value = false;
 }
 
+async function changeLocale(locale) {
+  currentLocale.value = await switchLocale(locale);
+  await loadAuthConfig();
+}
+
+async function loadAuthConfig() {
+  authConfigLoaded.value = false;
+  try {
+    const data = await request({ url: '/api/auth/config' });
+    if (!['security_question', 'email_code'].includes(data.verification_mode)) {
+      throw new Error(t('client.error.auth_config_invalid'));
+    }
+    if (data.verification_mode === 'security_question' && (!Array.isArray(data.security_questions) || data.security_questions.length === 0)) {
+      throw new Error(t('client.error.auth_config_invalid'));
+    }
+    verificationMode.value = data.verification_mode;
+    securityQuestions.value = Array.isArray(data.security_questions) ? data.security_questions : [];
+    if (!securityQuestions.value.some((item) => item.key === securityQuestionKey.value)) {
+      securityQuestionKey.value = securityQuestions.value[0]?.key || '';
+    }
+    authConfigLoaded.value = true;
+  } catch (error) {
+    uni.showToast({ title: error.message, icon: 'none' });
+  }
+}
+
+function selectSecurityQuestion(event) {
+  const index = Number(event.detail.value);
+  securityQuestionKey.value = securityQuestions.value[index]?.key || '';
+}
+
 async function sendEmailCode() {
   if (!email.value) {
-    uni.showToast({ title: '请输入邮箱', icon: 'none' });
+    uni.showToast({ title: t('client.error.require_email'), icon: 'none' });
     return;
   }
 
@@ -232,7 +338,7 @@ async function sendEmailCode() {
       method: 'POST',
       data: { email: email.value },
     });
-    uni.showToast({ title: '验证码已发送', icon: 'none' });
+    uni.showToast({ title: t('client.auth.captcha_sent'), icon: 'none' });
     startCooldown(data.cooldown_seconds || 60);
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
@@ -243,7 +349,7 @@ async function sendEmailCode() {
 
 async function sendResetEmailCode() {
   if (!resetForm.value.account || !resetForm.value.email) {
-    uni.showToast({ title: '请输入用户名和注册邮箱', icon: 'none' });
+    uni.showToast({ title: t('client.error.require_account_email'), icon: 'none' });
     return;
   }
 
@@ -257,7 +363,7 @@ async function sendResetEmailCode() {
         email: resetForm.value.email,
       },
     });
-    uni.showToast({ title: '验证码已发送', icon: 'none' });
+    uni.showToast({ title: t('client.auth.captcha_sent'), icon: 'none' });
     startResetCooldown(data.cooldown_seconds || 60);
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
@@ -267,12 +373,18 @@ async function sendResetEmailCode() {
 }
 
 async function resetPassword() {
-  if (!resetForm.value.account || !resetForm.value.email || !resetForm.value.emailCode || !resetForm.value.password || !resetForm.value.passwordConfirmation) {
-    uni.showToast({ title: '请完整填写找回信息', icon: 'none' });
+  if (!authConfigLoaded.value) {
+    uni.showToast({ title: t('client.error.auth_config_unavailable'), icon: 'none' });
+    return;
+  }
+  const missingEmailReset = isEmailCodeMode.value && (!resetForm.value.email || !resetForm.value.emailCode);
+  const missingSecurityReset = isSecurityQuestionMode.value && (!resetSecurityQuestion.value || !resetForm.value.securityAnswer);
+  if (!resetForm.value.account || missingEmailReset || missingSecurityReset || !resetForm.value.password || !resetForm.value.passwordConfirmation) {
+    uni.showToast({ title: t('client.error.fill_reset'), icon: 'none' });
     return;
   }
   if (resetForm.value.password !== resetForm.value.passwordConfirmation) {
-    uni.showToast({ title: '两次输入的密码不一致', icon: 'none' });
+    uni.showToast({ title: t('client.error.password_mismatch'), icon: 'none' });
     return;
   }
 
@@ -281,15 +393,22 @@ async function resetPassword() {
     await request({
       url: '/api/auth/password/reset',
       method: 'POST',
-      data: {
-        account: resetForm.value.account,
-        email: resetForm.value.email,
-        email_code: resetForm.value.emailCode,
-        password: resetForm.value.password,
-        password_confirmation: resetForm.value.passwordConfirmation,
-      },
+      data: isEmailCodeMode.value
+        ? {
+            account: resetForm.value.account,
+            email: resetForm.value.email,
+            email_code: resetForm.value.emailCode,
+            password: resetForm.value.password,
+            password_confirmation: resetForm.value.passwordConfirmation,
+          }
+        : {
+            account: resetForm.value.account,
+            security_answer: resetForm.value.securityAnswer,
+            password: resetForm.value.password,
+            password_confirmation: resetForm.value.passwordConfirmation,
+          },
     });
-    uni.showToast({ title: '密码重置成功，请重新登录', icon: 'none' });
+    uni.showToast({ title: t('client.auth.password_reset_success'), icon: 'none' });
     resetVisible.value = false;
     resetResetForm();
     password.value = '';
@@ -301,19 +420,46 @@ async function resetPassword() {
   }
 }
 
+async function fetchResetSecurityQuestion() {
+  if (!resetForm.value.account) {
+    uni.showToast({ title: t('client.error.require_username'), icon: 'none' });
+    return;
+  }
+
+  resetQuestionLoading.value = true;
+  try {
+    const data = await request({
+      url: '/api/auth/password/security-question',
+      method: 'POST',
+      data: { account: resetForm.value.account },
+    });
+    resetSecurityQuestion.value = data.security_question;
+  } catch (error) {
+    uni.showToast({ title: error.message, icon: 'none' });
+  } finally {
+    resetQuestionLoading.value = false;
+  }
+}
+
 async function submit() {
+  if (mode.value === 'register' && !authConfigLoaded.value) {
+    uni.showToast({ title: t('client.error.auth_config_unavailable'), icon: 'none' });
+    return;
+  }
   if (!account.value || !password.value) {
-    uni.showToast({ title: '请输入用户名和密码', icon: 'none' });
+    uni.showToast({ title: t('client.error.require_username_password'), icon: 'none' });
     return;
   }
 
   if (mode.value === 'register') {
-    if (!email.value || !emailCode.value || !passwordConfirmation.value) {
-      uni.showToast({ title: '请完整填写注册信息', icon: 'none' });
+    const missingEmailRegister = isEmailCodeMode.value && (!email.value || !emailCode.value);
+    const missingSecurityRegister = isSecurityQuestionMode.value && (!securityQuestionKey.value || !securityAnswer.value);
+    if (missingEmailRegister || missingSecurityRegister || !passwordConfirmation.value) {
+      uni.showToast({ title: t('client.error.fill_register'), icon: 'none' });
       return;
     }
     if (password.value !== passwordConfirmation.value) {
-      uni.showToast({ title: '两次输入的密码不一致', icon: 'none' });
+      uni.showToast({ title: t('client.error.password_mismatch'), icon: 'none' });
       return;
     }
   }
@@ -322,13 +468,23 @@ async function submit() {
   try {
     const payload = mode.value === 'login'
       ? { account: account.value, password: password.value }
-      : {
-          account: account.value,
-          email: email.value,
-          email_code: emailCode.value,
-          password: password.value,
-          password_confirmation: passwordConfirmation.value,
-        };
+      : isEmailCodeMode.value
+        ? {
+            account: account.value,
+            email: email.value,
+            email_code: emailCode.value,
+            password: password.value,
+            password_confirmation: passwordConfirmation.value,
+            invite_code: inviteCode.value,
+          }
+        : {
+            account: account.value,
+            security_question_key: securityQuestionKey.value,
+            security_answer: securityAnswer.value,
+            password: password.value,
+            password_confirmation: passwordConfirmation.value,
+            invite_code: inviteCode.value,
+          };
 
     const data = await request({
       url: mode.value === 'login' ? '/api/auth/login' : '/api/auth/register',
@@ -336,6 +492,7 @@ async function submit() {
       data: payload,
     });
     setToken(data.token);
+    markLoginAnnouncementPending();
     uni.reLaunch({ url: '/pages/index/index' });
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
@@ -476,6 +633,10 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
+.picker-value {
+  line-height: 78rpx;
+}
+
 .password-box {
   position: relative;
 }
@@ -546,6 +707,48 @@ onUnmounted(() => {
   text-align: center;
   color: rgba(236, 246, 248, 0.62);
   font-size: 24rpx;
+}
+
+.language-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-top: 22rpx;
+  color: rgba(236, 246, 248, 0.62);
+  font-size: 24rpx;
+}
+
+.invite-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 20rpx;
+  padding: 18rpx 20rpx;
+  border: 1px solid rgba(39, 199, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(39, 199, 255, 0.1);
+  color: rgba(238, 249, 255, 0.8);
+  font-size: 24rpx;
+}
+
+.invite-code {
+  color: #27c7ff;
+  font-weight: 800;
+}
+
+.language-option {
+  color: rgba(236, 246, 248, 0.7);
+}
+
+.language-option.active {
+  color: #5bd8ff;
+  font-weight: 800;
+}
+
+.language-divider {
+  color: rgba(236, 246, 248, 0.32);
 }
 
 .showcase {
@@ -693,6 +896,13 @@ onUnmounted(() => {
   color: #152033;
   font-size: 28rpx;
   box-sizing: border-box;
+}
+
+.reset-question-display {
+  line-height: 76rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reset-code-row {

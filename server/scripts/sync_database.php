@@ -20,6 +20,8 @@ try {
     }
 
     $userColumns = [
+        'security_question_key' => static fn ($table) => $table->string('security_question_key', 64)->nullable()->after('email')->comment('密保问题标识'),
+        'security_answer_hash' => static fn ($table) => $table->string('security_answer_hash', 255)->nullable()->after('security_question_key')->comment('密保答案哈希'),
         'invite_code' => static fn ($table) => $table->string('invite_code', 16)->nullable()->after('expire_at')->unique('uniq_invite_code')->comment('专属邀请码'),
         'invited_by_user_id' => static fn ($table) => $table->unsignedInteger('invited_by_user_id')->nullable()->after('invite_code')->index('idx_invited_by_user_id')->comment('邀请人用户ID'),
         'invite_registered_ip' => static fn ($table) => $table->string('invite_registered_ip', 64)->default('')->after('invited_by_user_id')->comment('邀请注册IP'),
@@ -128,6 +130,7 @@ try {
         'third_party_ws_connection_capacity' => ['10', '第三方单条WebSocket连接最大承载账号数'],
         'third_party_transport' => ['websocket', '第三方通信方式：websocket或http'],
         'game_account_credential_key' => [app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''), '游戏账号密码加密密钥'],
+        'auth_verification_mode' => ['security_question', '认证方式：security_question密保问题，email_code邮箱验证码'],
         'smtp_enabled' => ['0', 'SMTP是否启用：0否，1是'],
         'smtp_host' => ['', 'SMTP服务器地址'],
         'smtp_port' => ['587', 'SMTP端口'],
@@ -149,11 +152,13 @@ try {
 
     echo '业务数据库结构同步完成' . PHP_EOL;
     echo 'ga_users.email：已存在' . PHP_EOL;
+    echo 'ga_users密保字段：已同步' . PHP_EOL;
     echo 'ga_game_accounts：预览账号与配置列已同步' . PHP_EOL;
     echo 'ga_game_account_logs：已同步' . PHP_EOL;
     echo 'ga_announcements：已同步' . PHP_EOL;
     echo 'ga_user_point_transactions：已同步' . PHP_EOL;
     echo 'SMTP配置项：已同步' . PHP_EOL;
+    echo '认证方式配置项：已同步' . PHP_EOL;
     echo '邀请奖励配置项：已同步' . PHP_EOL;
     echo '第三方WebSocket连接池配置项：已同步' . PHP_EOL;
 } catch (Throwable $e) {

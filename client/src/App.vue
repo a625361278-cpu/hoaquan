@@ -1,6 +1,12 @@
 <script>
+import { loadLocaleMessages } from './utils/i18n';
+
 export default {
-  onLaunch: function () {},
+  onLaunch: function () {
+    loadLocaleMessages().catch((error) => {
+      console.error(error);
+    });
+  },
   onShow: function () {},
   onHide: function () {},
 }

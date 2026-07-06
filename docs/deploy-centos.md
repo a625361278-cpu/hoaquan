@@ -397,12 +397,15 @@ redis-cli -h 127.0.0.1 -p 6379 -n 9 PING
 
 如果 Redis 设置了密码，用服务器真实密码测试，不要把密码写进命令历史或文档。
 
-### 6. 邮箱验证码发送失败
+### 6. 认证方式与邮箱验证码
 
-注册和找回密码验证码依赖后台数据库里的 SMTP 配置。SMTP 未启用、配置缺失或授权码错误时，接口会明确失败，不会假装发送成功。
+注册和找回密码默认使用密保问题，配置项为 `ga_system_settings.auth_verification_mode=security_question`。只有切换为 `email_code` 时才会使用邮箱验证码。
+
+如果已切换到 `email_code`，注册和找回密码验证码依赖后台数据库里的 SMTP 配置。SMTP 未启用、配置缺失或授权码错误时，接口会明确失败，不会假装发送成功。
 
 需要在 `ga_system_settings` 中配置：
 
+- `auth_verification_mode=email_code`
 - `smtp_enabled`
 - `smtp_host`
 - `smtp_port`

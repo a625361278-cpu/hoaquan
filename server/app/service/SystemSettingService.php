@@ -27,6 +27,11 @@ class SystemSettingService
         'smtp_from_name',
     ];
 
+    public const AUTH_VERIFICATION_MODES = [
+        'security_question',
+        'email_code',
+    ];
+
     public function thirdPartyConfig(): array
     {
         $rows = Db::table('ga_system_settings')
@@ -84,6 +89,15 @@ class SystemSettingService
             'from_email' => trim((string)($settings['smtp_from_email'] ?? '')),
             'from_name' => trim((string)($settings['smtp_from_name'] ?? 'Hoa Quán')),
         ];
+    }
+
+    public function authVerificationMode(): string
+    {
+        $mode = trim($this->get('auth_verification_mode', 'security_question'));
+        if (!in_array($mode, self::AUTH_VERIFICATION_MODES, true)) {
+            throw new \RuntimeException('认证方式配置错误：' . $mode);
+        }
+        return $mode;
     }
 
     public function get(string $name, string $default = ''): string

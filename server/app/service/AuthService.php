@@ -9,17 +9,27 @@ use app\support\I18n;
 
 class AuthService
 {
+    public const MODE_SECURITY_QUESTION = 'security_question';
+    public const MODE_EMAIL_CODE = 'email_code';
+
     private const EMAIL_PURPOSE_REGISTER = 'register';
     private const EMAIL_PURPOSE_PASSWORD_RESET = 'password_reset';
+    private const SECURITY_QUESTIONS = [
+        'first_pet' => 'api.auth.security_question.first_pet',
+        'birth_city' => 'api.auth.security_question.birth_city',
+        'favorite_game' => 'api.auth.security_question.favorite_game',
+    ];
 
     public function __construct(
         private UserRepositoryInterface $users,
         private TokenStoreInterface $tokens,
         private ?EmailCodeStoreInterface $emailCodes = null,
         private ?MailerInterface $mailer = null,
-        private string $locale = I18n::DEFAULT_LOCALE
+        private string $locale = I18n::DEFAULT_LOCALE,
+        private string $verificationMode = self::MODE_SECURITY_QUESTION
     ) {
         $this->locale = I18n::normalizeLocale($this->locale);
+        $this->verificationMode = $this->normalizeVerificationMode($this->verificationMode);
     }
 
     public function login(string $account, string $password): array
@@ -42,6 +52,7 @@ class AuthService
 
     public function sendRegisterEmailCode(string $email): array
     {
+        $this->assertEmailCodeMode();
         $email = $this->normalizeEmail($email);
         if ($this->users->emailExists($email)) {
             throw new ApiException($this->t('api.auth.email_exists'), 409);
@@ -67,6 +78,7 @@ class AuthService
 
     public function sendPasswordResetEmailCode(string $account, string $email): array
     {
+        $this->assertEmailCodeMode();
         $account = trim($account);
         if ($account === '') {
             throw new ApiException($this->t('api.auth.require_username'), 422);
@@ -99,11 +111,27 @@ class AuthService
         return ApiResponse::success(['cooldown_seconds' => 60], $this->t('api.auth.email_code_sent'));
     }
 
-    public function register(string $account, string $email, string $emailCode, string $password, string $passwordConfirmation, string $inviteCode = '', string $registeredIp = ''): array
+    public function authConfig(): array
+    {
+        return ApiResponse::success([
+            'verification_mode' => $this->verificationMode,
+            'security_questions' => $this->publicSecurityQuestions(),
+        ]);
+    }
+
+    public function register(
+        string $account,
+        string $email,
+        string $emailCode,
+        string $password,
+        string $passwordConfirmation,
+        string $inviteCode = '',
+        string $registeredIp = '',
+        string $securityQuestionKey = '',
+        string $securityAnswer = ''
+    ): array
     {
         $account = trim($account);
-        $email = $this->normalizeEmail($email);
-        $emailCode = trim($emailCode);
         $inviteCode = $this->normalizeInviteCode($inviteCode);
         if (!preg_match('/^[A-Za-z0-9_]{4,32}$/', $account)) {
             throw new ApiException($this->t('api.auth.invalid_account_format'), 422);
@@ -114,20 +142,31 @@ class AuthService
         if ($password !== $passwordConfirmation) {
             throw new ApiException($this->t('api.auth.passwords_mismatch'), 422);
         }
-        if ($emailCode === '') {
-            throw new ApiException($this->t('api.auth.require_email_code'), 422);
-        }
         if ($this->users->accountExists($account)) {
             throw new ApiException($this->t('api.auth.user_exists'), 409);
         }
-        if ($this->users->emailExists($email)) {
-            throw new ApiException($this->t('api.auth.email_exists'), 409);
-        }
-        if (!$this->emailCodes) {
-            throw new ApiException($this->t('api.auth.email_code_service_not_initialized'), 500);
-        }
 
-        $this->emailCodes->verify($email, $emailCode, self::EMAIL_PURPOSE_REGISTER);
+        $normalizedEmail = null;
+        $securityQuestionKey = trim($securityQuestionKey);
+        $securityAnswerHash = null;
+        if ($this->verificationMode === self::MODE_EMAIL_CODE) {
+            $normalizedEmail = $this->normalizeEmail($email);
+            $emailCode = trim($emailCode);
+            if ($emailCode === '') {
+                throw new ApiException($this->t('api.auth.require_email_code'), 422);
+            }
+            if ($this->users->emailExists($normalizedEmail)) {
+                throw new ApiException($this->t('api.auth.email_exists'), 409);
+            }
+            if (!$this->emailCodes) {
+                throw new ApiException($this->t('api.auth.email_code_service_not_initialized'), 500);
+            }
+            $this->emailCodes->verify($normalizedEmail, $emailCode, self::EMAIL_PURPOSE_REGISTER);
+        } else {
+            $securityQuestionKey = $this->normalizeSecurityQuestionKey($securityQuestionKey);
+            $securityAnswer = $this->normalizeSecurityAnswer($securityAnswer);
+            $securityAnswerHash = password_hash($securityAnswer, PASSWORD_DEFAULT);
+        }
         $inviter = null;
         if ($inviteCode !== '') {
             $inviter = $this->users->findByInviteCode($inviteCode);
@@ -138,12 +177,14 @@ class AuthService
 
         $user = $this->users->create(
             $account,
-            $email,
+            $normalizedEmail,
             $account,
             password_hash($password, PASSWORD_DEFAULT),
             $inviter ? (int)$inviter['id'] : null,
             trim($registeredIp),
-            $this->generateUniqueInviteCode()
+            $this->generateUniqueInviteCode(),
+            $securityQuestionKey ?: null,
+            $securityAnswerHash
         );
 
         return ApiResponse::success([
@@ -152,16 +193,28 @@ class AuthService
         ], $this->t('api.auth.register_success'));
     }
 
-    public function resetPassword(string $account, string $email, string $emailCode, string $password, string $passwordConfirmation): array
+    public function passwordResetSecurityQuestion(string $account): array
     {
         $account = trim($account);
         if ($account === '') {
             throw new ApiException($this->t('api.auth.require_username'), 422);
         }
-        $email = $this->normalizeEmail($email);
-        $emailCode = trim($emailCode);
-        if ($emailCode === '') {
-            throw new ApiException($this->t('api.auth.require_email_code'), 422);
+
+        $user = $this->users->findActiveByAccount($account);
+        if (!$user) {
+            throw new ApiException($this->t('api.auth.user_not_found'), 404);
+        }
+
+        return ApiResponse::success([
+            'security_question' => $this->securityQuestionForUser($user),
+        ]);
+    }
+
+    public function resetPassword(string $account, string $email, string $emailCode, string $password, string $passwordConfirmation, string $securityAnswer = ''): array
+    {
+        $account = trim($account);
+        if ($account === '') {
+            throw new ApiException($this->t('api.auth.require_username'), 422);
         }
         if (mb_strlen($password) < 6) {
             throw new ApiException($this->t('api.auth.password_min_length'), 422);
@@ -170,21 +223,67 @@ class AuthService
             throw new ApiException($this->t('api.auth.passwords_mismatch'), 422);
         }
 
-        $user = $this->users->findActiveByAccountAndEmail($account, $email);
-        if (!$user) {
-            if (!$this->users->findActiveByAccount($account)) {
+        if ($this->verificationMode === self::MODE_EMAIL_CODE) {
+            $email = $this->normalizeEmail($email);
+            $emailCode = trim($emailCode);
+            if ($emailCode === '') {
+                throw new ApiException($this->t('api.auth.require_email_code'), 422);
+            }
+
+            $user = $this->users->findActiveByAccountAndEmail($account, $email);
+            if (!$user) {
+                if (!$this->users->findActiveByAccount($account)) {
+                    throw new ApiException($this->t('api.auth.user_not_found'), 404);
+                }
+                throw new ApiException($this->t('api.auth.email_mismatch'), 422);
+            }
+            if (!$this->emailCodes) {
+                throw new ApiException($this->t('api.auth.email_code_service_not_initialized'), 500);
+            }
+
+            $this->emailCodes->verify($email, $emailCode, self::EMAIL_PURPOSE_PASSWORD_RESET);
+        } else {
+            $user = $this->users->findActiveByAccount($account);
+            if (!$user) {
                 throw new ApiException($this->t('api.auth.user_not_found'), 404);
             }
-            throw new ApiException($this->t('api.auth.email_mismatch'), 422);
-        }
-        if (!$this->emailCodes) {
-            throw new ApiException($this->t('api.auth.email_code_service_not_initialized'), 500);
+            $this->securityQuestionForUser($user);
+            $securityAnswer = $this->normalizeSecurityAnswer($securityAnswer);
+            if (!password_verify($securityAnswer, (string)($user['security_answer_hash'] ?? ''))) {
+                throw new ApiException($this->t('api.auth.security_answer_invalid'), 422);
+            }
         }
 
-        $this->emailCodes->verify($email, $emailCode, self::EMAIL_PURPOSE_PASSWORD_RESET);
         $this->users->updatePasswordHash((int)$user['id'], password_hash($password, PASSWORD_DEFAULT));
 
         return ApiResponse::success([], $this->t('api.auth.password_reset_success'));
+    }
+
+    public function changePassword(string $token, string $currentPassword, string $password, string $passwordConfirmation): array
+    {
+        $userId = $this->tokens->getUserId($token);
+        if (!$userId) {
+            throw new ApiException($this->t('api.auth.login_expired'), 401);
+        }
+
+        $user = $this->users->findActiveById($userId);
+        if (!$user) {
+            throw new ApiException($this->t('api.auth.login_expired'), 401);
+        }
+        if ($currentPassword === '' || !password_verify($currentPassword, (string)$user['password_hash'])) {
+            throw new ApiException($this->t('api.auth.current_password_invalid'), 422);
+        }
+        if (mb_strlen($password) < 6) {
+            throw new ApiException($this->t('api.auth.password_min_length'), 422);
+        }
+        if ($password !== $passwordConfirmation) {
+            throw new ApiException($this->t('api.auth.passwords_mismatch'), 422);
+        }
+
+        $this->users->updatePasswordHash((int)$user['id'], password_hash($password, PASSWORD_DEFAULT));
+        $this->tokens->delete($token);
+
+        return ApiResponse::success([], $this->t('api.auth.password_change_success'));
     }
 
     public function currentUser(string $token): array
@@ -246,6 +345,74 @@ class AuthService
             throw new ApiException($this->t('api.auth.email_invalid'), 422);
         }
         return $email;
+    }
+
+    private function assertEmailCodeMode(): void
+    {
+        if ($this->verificationMode !== self::MODE_EMAIL_CODE) {
+            throw new ApiException($this->t('api.auth.email_verification_disabled'), 403);
+        }
+    }
+
+    private function normalizeVerificationMode(string $mode): string
+    {
+        $mode = trim($mode);
+        if (!in_array($mode, [self::MODE_SECURITY_QUESTION, self::MODE_EMAIL_CODE], true)) {
+            throw new \RuntimeException('认证方式配置错误：' . $mode);
+        }
+        return $mode;
+    }
+
+    private function publicSecurityQuestions(): array
+    {
+        $questions = [];
+        foreach (self::SECURITY_QUESTIONS as $key => $labelKey) {
+            $questions[] = [
+                'key' => $key,
+                'label' => $this->t($labelKey),
+            ];
+        }
+        return $questions;
+    }
+
+    private function normalizeSecurityQuestionKey(string $key): string
+    {
+        $key = trim($key);
+        if ($key === '') {
+            throw new ApiException($this->t('api.auth.require_security_question'), 422);
+        }
+        if (!array_key_exists($key, self::SECURITY_QUESTIONS)) {
+            throw new ApiException($this->t('api.auth.security_question_invalid'), 422);
+        }
+        return $key;
+    }
+
+    private function normalizeSecurityAnswer(string $answer): string
+    {
+        $answer = trim($answer);
+        if ($answer === '') {
+            throw new ApiException($this->t('api.auth.require_security_answer'), 422);
+        }
+        if (mb_strlen($answer) > 128) {
+            throw new ApiException($this->t('api.auth.security_answer_too_long'), 422);
+        }
+        return $answer;
+    }
+
+    private function securityQuestionForUser(array $user): array
+    {
+        $key = (string)($user['security_question_key'] ?? '');
+        $hash = (string)($user['security_answer_hash'] ?? '');
+        if ($key === '' || $hash === '') {
+            throw new ApiException($this->t('api.auth.security_question_not_set'), 422);
+        }
+        if (!array_key_exists($key, self::SECURITY_QUESTIONS)) {
+            throw new \RuntimeException('用户密保问题配置异常：' . $key);
+        }
+        return [
+            'key' => $key,
+            'label' => $this->t(self::SECURITY_QUESTIONS[$key]),
+        ];
     }
 
     private function t(string $key, array $parameters = []): string

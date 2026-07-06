@@ -4,7 +4,7 @@
       <button class="back-button" @click="back">‹</button>
       <text class="page-title">{{ t('client.config.title') }}</text>
       <view class="top-actions">
-        <button class="import-button" :disabled="loading" @click="importConfig">{{ t('client.config.import') }}</button>
+        <button class="import-button" :disabled="loading || importDialog.importing" @click="importConfig">{{ t('client.config.import') }}</button>
         <button class="save-button" :disabled="saving" @click="saveConfig">{{ t('client.config.save') }}</button>
       </view>
     </view>
@@ -148,6 +148,39 @@
       </view>
     </view>
 
+    <view v-if="importDialog.visible && localeReady" class="modal-mask">
+      <view class="import-dialog">
+        <view class="import-head">
+          <text class="import-title">{{ t('client.config.import_dialog.title') }}</text>
+          <text class="import-close" @click="closeImportDialog()">×</text>
+        </view>
+        <text class="import-question">{{ t('client.config.import_dialog.question') }}</text>
+        <text class="import-warning">{{ t('client.config.import_dialog.warning') }}</text>
+        <view class="import-select">
+          <picker
+            mode="selector"
+            :range="importOptions"
+            range-key="label"
+            :disabled="importDialog.loading || importDialog.importing || importOptions.length === 0"
+            @change="selectImportAccount"
+          >
+            <view :class="['import-select-box', importOptions.length === 0 ? 'disabled' : '']">
+              <text>{{ selectedImportLabel || t('client.config.import_dialog.placeholder') }}</text>
+              <text class="import-select-arrow">⌄</text>
+            </view>
+          </picker>
+        </view>
+        <text v-if="importDialog.loading" class="import-empty">{{ t('client.config.import_dialog.loading') }}</text>
+        <text v-else-if="importOptions.length === 0" class="import-empty">{{ t('client.config.import_dialog.empty') }}</text>
+        <view class="import-actions">
+          <button class="import-cancel" :disabled="importDialog.importing" @click="closeImportDialog()">{{ t('client.config.import_dialog.cancel') }}</button>
+          <button class="import-confirm" :disabled="!importDialog.sourceAccountId || importDialog.importing" @click="confirmImportConfig">
+            {{ t('client.config.import_dialog.confirm') }}
+          </button>
+        </view>
+      </view>
+    </view>
+
     <view v-if="configFlowVisible && localeReady" class="modal-mask">
       <view class="config-flow-dialog">
         <view class="config-flow-body">
@@ -187,10 +220,29 @@ const configFlowVisible = ref(false);
 const activeDropdownPath = ref('');
 const selectSearch = reactive({});
 const currentLocale = ref(getLocale());
+const importDialog = reactive({
+  visible: false,
+  loading: false,
+  importing: false,
+  sourceAccountId: 0,
+  accounts: [],
+});
 
 const activeGroups = computed(() => {
   const tab = CONFIG_SCHEMA.find((item) => item.key === activeTab.value);
   return tab ? tab.groups : [];
+});
+
+const importOptions = computed(() => importDialog.accounts
+  .filter((item) => Number(item.id) !== accountId.value && item.has_config)
+  .map((item) => ({
+    id: Number(item.id),
+    label: accountLabel(item),
+  })));
+
+const selectedImportLabel = computed(() => {
+  const option = importOptions.value.find((item) => item.id === importDialog.sourceAccountId);
+  return option ? option.label : '';
 });
 
 onLoad(async (query = {}) => {
@@ -230,9 +282,58 @@ async function loadConfig() {
 }
 
 async function importConfig() {
-  const imported = await loadConfig();
-  if (imported) {
+  importDialog.visible = true;
+  importDialog.sourceAccountId = 0;
+  importDialog.accounts = [];
+  importDialog.loading = true;
+  try {
+    const result = await request({ url: '/api/game-accounts' });
+    importDialog.accounts = Array.isArray(result.items) ? result.items : [];
+  } catch (error) {
+    closeImportDialog();
+    uni.showToast({ title: error.message, icon: 'none' });
+  } finally {
+    importDialog.loading = false;
+  }
+}
+
+function closeImportDialog(force = false) {
+  if (importDialog.importing && !force) {
+    return;
+  }
+  importDialog.visible = false;
+  importDialog.loading = false;
+  importDialog.sourceAccountId = 0;
+  importDialog.accounts = [];
+}
+
+function selectImportAccount(event) {
+  const index = Number(event.detail.value);
+  const option = importOptions.value[index];
+  importDialog.sourceAccountId = option ? option.id : 0;
+}
+
+async function confirmImportConfig() {
+  if (!importDialog.sourceAccountId) {
+    uni.showToast({ title: t('client.config.import_dialog.placeholder'), icon: 'none' });
+    return;
+  }
+
+  importDialog.importing = true;
+  try {
+    const result = await request({
+      url: `/api/game-accounts/${accountId.value}/config/import`,
+      method: 'POST',
+      data: { source_account_id: importDialog.sourceAccountId },
+    });
+    account.value = result.account || account.value;
+    Object.assign(config, mergeConfig(result.config || {}));
+    closeImportDialog(true);
     uni.showToast({ title: t('client.config.import_success'), icon: 'none' });
+  } catch (error) {
+    uni.showToast({ title: error.message, icon: 'none' });
+  } finally {
+    importDialog.importing = false;
   }
 }
 
@@ -353,6 +454,12 @@ function optionText(entry, value) {
     return match.labelVi || match.labelZh || value;
   }
   return match.labelZh || match.labelVi || value;
+}
+
+function accountLabel(item) {
+  const name = item.display_name || item.game_username || `#${item.id}`;
+  const server = item.server_name || item.server_id || '';
+  return server ? `${name} - ${server}` : name;
 }
 
 function openHelp(path) {
@@ -888,6 +995,118 @@ function cloneConfig(value) {
   padding: 24px;
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.42);
+}
+
+.import-dialog {
+  width: min(520px, 92vw);
+  padding: 20px 24px 16px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+  box-sizing: border-box;
+}
+
+.import-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.import-title {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.import-close {
+  width: 26px;
+  height: 26px;
+  line-height: 24px;
+  color: #9ca3af;
+  text-align: center;
+  font-size: 26px;
+}
+
+.import-question,
+.import-warning,
+.import-empty {
+  display: block;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.import-question {
+  margin-bottom: 10px;
+  color: #111827;
+}
+
+.import-warning {
+  margin-bottom: 14px;
+  color: #f04438;
+}
+
+.import-select {
+  margin-bottom: 8px;
+}
+
+.import-select-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  box-sizing: border-box;
+  background: #fff;
+  color: #111827;
+  font-size: 14px;
+}
+
+.import-select-box.disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
+.import-select-arrow {
+  color: #9ca3af;
+  font-size: 18px;
+}
+
+.import-empty {
+  min-height: 22px;
+  color: #9ca3af;
+}
+
+.import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.import-cancel,
+.import-confirm {
+  min-width: 72px;
+  height: 32px;
+  line-height: 32px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.import-cancel {
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  color: #111827;
+}
+
+.import-confirm {
+  border: 1px solid #31b9f8;
+  background: #31b9f8;
+  color: #fff;
 }
 
 .config-flow-dialog {

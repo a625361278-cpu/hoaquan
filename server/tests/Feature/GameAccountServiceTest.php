@@ -20,6 +20,44 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame('未添加游戏账号', $result['data']['empty_text']);
     }
 
+    public function testGameAccountListMarksAccountsWithSavedConfig(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'configured-player',
+                'game_username' => 'configured-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'remark' => '',
+                'config_json' => '{"basic":{"debug":true}}',
+            ],
+            [
+                'id' => 4,
+                'user_id' => 7,
+                'display_name' => 'empty-player',
+                'game_username' => 'empty-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'remark' => '',
+                'config_json' => '{}',
+            ],
+        ]);
+        $service = new GameAccountService($repository, ['enabled' => false]);
+
+        $result = $service->listForUser(7);
+
+        $this->assertTrue($result['data']['items'][0]['has_config']);
+        $this->assertFalse($result['data']['items'][1]['has_config']);
+    }
+
     public function testCreateGameAccountCreatesLocalPreviewWhenThirdPartyApiIsDisabled(): void
     {
         $service = new GameAccountService(new ArrayGameAccountRepository([]), [
@@ -96,6 +134,239 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame('local_unsynced', $result['data']['sync_status']);
         $this->assertSame($config, $result['data']['config']);
         $this->assertSame('本地配置已保存，尚未同步第三方接口', $result['msg']);
+    }
+
+    public function testImportConfigCopiesAnotherOwnedAccountConfigImmediately(): void
+    {
+        $sourceConfig = [
+            'basic' => [
+                'debug' => true,
+                'reconnectInterval' => 8,
+            ],
+        ];
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'target-player',
+                'game_username' => 'target-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'synced',
+                'remark' => '',
+                'config_json' => '{"basic":{"debug":false}}',
+            ],
+            [
+                'id' => 4,
+                'user_id' => 7,
+                'display_name' => 'source-player',
+                'game_username' => 'source-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'remark' => '',
+                'config_json' => json_encode($sourceConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ],
+        ]);
+        $service = new GameAccountService($repository, ['enabled' => false]);
+
+        $result = $service->importConfig(7, 3, 4);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertSame($sourceConfig, $result['data']['config']);
+        $this->assertSame('local_unsynced', $result['data']['sync_status']);
+        $this->assertSame($sourceConfig, json_decode($repository->findByUserId(7, 3)['config_json'], true));
+        $this->assertSame('配置已导入', $result['msg']);
+    }
+
+    public function testImportConfigRejectsAccountOwnedByAnotherUser(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'target-player',
+                'game_username' => 'target-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'synced',
+                'remark' => '',
+                'config_json' => '{"basic":{"debug":false}}',
+            ],
+            [
+                'id' => 9,
+                'user_id' => 8,
+                'display_name' => 'other-player',
+                'game_username' => 'other-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'remark' => '',
+                'config_json' => '{"basic":{"debug":true}}',
+            ],
+        ]);
+        $service = new GameAccountService($repository, ['enabled' => false]);
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('来源游戏账号不存在或不属于当前用户');
+
+        $service->importConfig(7, 3, 9);
+    }
+
+    public function testImportConfigRejectsSameAccount(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'target-player',
+                'game_username' => 'target-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'synced',
+                'remark' => '',
+                'config_json' => '{"basic":{"debug":false}}',
+            ],
+        ]);
+        $service = new GameAccountService($repository, ['enabled' => false]);
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('不能从当前游戏账号导入配置');
+
+        $service->importConfig(7, 3, 3);
+    }
+
+    public function testImportConfigRejectsEmptySourceConfigWithoutChangingTarget(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'target-player',
+                'game_username' => 'target-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'synced',
+                'remark' => '',
+                'config_json' => '{"basic":{"debug":false}}',
+            ],
+            [
+                'id' => 4,
+                'user_id' => 7,
+                'display_name' => 'empty-source',
+                'game_username' => 'empty-source',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'remark' => '',
+                'config_json' => '{}',
+            ],
+        ]);
+        $service = new GameAccountService($repository, ['enabled' => false]);
+
+        try {
+            $service->importConfig(7, 3, 4);
+            $this->fail('Expected empty source config to be rejected.');
+        } catch (\app\exception\ApiException $exception) {
+            $this->assertSame('来源账号暂无可导入配置', $exception->getMessage());
+            $this->assertSame(['basic' => ['debug' => false]], json_decode($repository->findByUserId(7, 3)['config_json'], true));
+        }
+    }
+
+    public function testImportConfigRejectsInvalidSourceConfigWithoutChangingTarget(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'target-player',
+                'game_username' => 'target-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'synced',
+                'remark' => '',
+                'config_json' => '{"basic":{"debug":false}}',
+            ],
+            [
+                'id' => 4,
+                'user_id' => 7,
+                'display_name' => 'bad-source',
+                'game_username' => 'bad-source',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'remark' => '',
+                'config_json' => '{bad-json',
+            ],
+        ]);
+        $service = new GameAccountService($repository, ['enabled' => false]);
+
+        try {
+            $service->importConfig(7, 3, 4);
+            $this->fail('Expected invalid source config to be rejected.');
+        } catch (\app\exception\ApiException $exception) {
+            $this->assertSame('来源账号配置数据异常，不能导入', $exception->getMessage());
+            $this->assertSame(['basic' => ['debug' => false]], json_decode($repository->findByUserId(7, 3)['config_json'], true));
+        }
+    }
+
+    public function testImportConfigRejectsJsonListSourceConfigWithoutChangingTarget(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'target-player',
+                'game_username' => 'target-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'synced',
+                'remark' => '',
+                'config_json' => '{"basic":{"debug":false}}',
+            ],
+            [
+                'id' => 4,
+                'user_id' => 7,
+                'display_name' => 'list-source',
+                'game_username' => 'list-source',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'remark' => '',
+                'config_json' => '["not","an","object"]',
+            ],
+        ]);
+        $service = new GameAccountService($repository, ['enabled' => false]);
+
+        try {
+            $service->importConfig(7, 3, 4);
+            $this->fail('Expected JSON list source config to be rejected.');
+        } catch (\app\exception\ApiException $exception) {
+            $this->assertSame('来源账号配置数据异常，不能导入', $exception->getMessage());
+            $this->assertSame(['basic' => ['debug' => false]], json_decode($repository->findByUserId(7, 3)['config_json'], true));
+        }
     }
 
     public function testStartFailsClearlyWhenThirdPartyApiIsDisabled(): void

@@ -28,15 +28,17 @@ Route::get('/ws/game-accounts/{id}/logs', function () {
 
 Route::group('/api', function () {
     Route::get('/i18n/messages', [app\controller\I18nController::class, 'messages']);
+    Route::get('/auth/config', [app\controller\AuthController::class, 'config']);
     Route::post('/auth/login', [app\controller\AuthController::class, 'login']);
     Route::post('/auth/email-code/send', [app\controller\AuthController::class, 'sendEmailCode']);
     Route::post('/auth/password/email-code/send', [app\controller\AuthController::class, 'sendPasswordEmailCode']);
+    Route::post('/auth/password/security-question', [app\controller\AuthController::class, 'passwordSecurityQuestion']);
     Route::post('/auth/password/reset', [app\controller\AuthController::class, 'resetPassword']);
+    Route::post('/auth/password/change', [app\controller\AuthController::class, 'changePassword']);
     Route::post('/auth/register', [app\controller\AuthController::class, 'register']);
     Route::post('/auth/logout', [app\controller\AuthController::class, 'logout']);
     Route::get('/me', [app\controller\AuthController::class, 'me']);
     Route::get('/profile', [app\controller\ProfileController::class, 'show']);
-    Route::post('/profile/redeem-card', [app\controller\ProfileController::class, 'redeemCard']);
     Route::get('/announcements/latest', [app\controller\AnnouncementController::class, 'latest']);
     Route::get('/game-accounts', [app\controller\GameAccountController::class, 'index']);
     Route::post('/game-accounts', [app\controller\GameAccountController::class, 'store']);
@@ -49,6 +51,7 @@ Route::group('/api', function () {
     Route::delete('/game-accounts/{id}/logs', [app\controller\GameAccountController::class, 'clearLogs']);
     Route::get('/game-accounts/{id}/config', [app\controller\GameAccountController::class, 'config']);
     Route::post('/game-accounts/{id}/config', [app\controller\GameAccountController::class, 'saveConfig']);
+    Route::post('/game-accounts/{id}/config/import', [app\controller\GameAccountController::class, 'importConfig']);
     Route::get('/third-party/game-accounts/{id}/config', [app\controller\ThirdPartyController::class, 'config']);
     Route::post('/third-party/game-accounts/{id}/logs', [app\controller\ThirdPartyController::class, 'appendLogs']);
     Route::post('/third-party/apply-config', [app\controller\ThirdPartyController::class, 'applyConfig']);

@@ -54,8 +54,11 @@ class ArrayUserRepository implements UserRepositoryInterface
 
     public function emailExists(string $email): bool
     {
+        if ($email === '') {
+            return false;
+        }
         foreach ($this->users as $user) {
-            if (($user['email'] ?? null) === $email) {
+            if (($user['email'] ?? null) !== null && ($user['email'] ?? '') === $email) {
                 return true;
             }
         }
@@ -82,17 +85,28 @@ class ArrayUserRepository implements UserRepositoryInterface
         return false;
     }
 
-    public function create(string $account, string $email, string $nickname, string $passwordHash, ?int $invitedByUserId = null, string $inviteRegisteredIp = '', ?string $inviteCode = null): array
-    {
+    public function create(
+        string $account,
+        ?string $email,
+        string $nickname,
+        string $passwordHash,
+        ?int $invitedByUserId = null,
+        string $inviteRegisteredIp = '',
+        ?string $inviteCode = null,
+        ?string $securityQuestionKey = null,
+        ?string $securityAnswerHash = null
+    ): array {
         $user = [
             'id' => $this->nextId++,
             'account' => $account,
-            'email' => $email,
+            'email' => $email ?? '',
             'nickname' => $nickname,
             'password_hash' => $passwordHash,
             'avatar' => '',
             'balance' => '0.00',
             'expire_at' => null,
+            'security_question_key' => $securityQuestionKey,
+            'security_answer_hash' => $securityAnswerHash,
             'invite_code' => $inviteCode,
             'invited_by_user_id' => $invitedByUserId,
             'invite_registered_ip' => $inviteRegisteredIp,
