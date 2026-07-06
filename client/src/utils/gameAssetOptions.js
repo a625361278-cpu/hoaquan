@@ -2062,6 +2062,11 @@ export const FLOWER_OPTIONS = [
     "labelVi": "Mẫu Đơn Hà Bao Tím"
   },
   {
+    "value": "23475",
+    "labelZh": "待定花30",
+    "labelVi": "待定花30"
+  },
+  {
     "value": "23476",
     "labelZh": "花开未晚",
     "labelVi": "Hoa Nở Chưa Muộn"
@@ -2257,6 +2262,16 @@ export const FLOWER_OPTIONS = [
     "labelVi": "Quả Cầu Xanh Dịu"
   },
   {
+    "value": "23515",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23516",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
     "value": "23517",
     "labelZh": "槐月-蝶梦低语",
     "labelVi": "Hòe Nguyệt-Mộng Bướm Thì Thầm"
@@ -2270,8 +2285,414 @@ export const FLOWER_OPTIONS = [
     "value": "23519",
     "labelZh": "黄昏凤凰花",
     "labelVi": "Hoa Phượng Hoàng Hôn"
+  },
+  {
+    "value": "23520",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23521",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23522",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23523",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23524",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23525",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23526",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23527",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23528",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23529",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23530",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23531",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23532",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23533",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23534",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23535",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23536",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23537",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23538",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23539",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23540",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23541",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23542",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23543",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23544",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23545",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23546",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23547",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23548",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23549",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23550",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23551",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23552",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23553",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23554",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23555",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23556",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23557",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23558",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23559",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23560",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23561",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23562",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23563",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23564",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23565",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23566",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23567",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23568",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23569",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23570",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23571",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23572",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23573",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23574",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23575",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23576",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23577",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23578",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23579",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23580",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23581",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23582",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23583",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23584",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23585",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23586",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23587",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23588",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23589",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23590",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23591",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23592",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23593",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23594",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23595",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23596",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23597",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23598",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23599",
+    "labelZh": "待定",
+    "labelVi": "待定"
+  },
+  {
+    "value": "23600",
+    "labelZh": "待定",
+    "labelVi": "待定"
   }
 ];
+
 export const VASE_OPTIONS = [
   {
     "value": "3001",
@@ -2471,7 +2892,7 @@ export const VASE_OPTIONS = [
   {
     "value": "3057",
     "labelZh": "锦绣山河",
-    "labelVi": "Non Sông Tươi Đẹp"
+    "labelVi": "Non Sông Tươi Đẹp  "
   },
   {
     "value": "3058",
@@ -2594,6 +3015,11 @@ export const VASE_OPTIONS = [
     "labelVi": "Cá Bơi Bên Sen"
   },
   {
+    "value": "3082",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
     "value": "3083",
     "labelZh": "玉帘飘香",
     "labelVi": "Rèm Ngọc Ngát Hương"
@@ -2664,11 +3090,77 @@ export const VASE_OPTIONS = [
     "labelVi": "Tố Hoàn Ngưng Hương"
   },
   {
+    "value": "3097",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
     "value": "3098",
     "labelZh": "藤蔓绕梦",
     "labelVi": "Dây Mây Quấn Mộng"
+  },
+  {
+    "value": "3099",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3100",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3101",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3102",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3103",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3104",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3105",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3106",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3107",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3108",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3109",
+    "labelZh": "待定",
+    "labelVi": ""
+  },
+  {
+    "value": "3110",
+    "labelZh": "待定",
+    "labelVi": ""
   }
 ];
+
 export const FLOWER_ART_OPTIONS = [
   {
     "value": "300101",
@@ -6673,47 +7165,47 @@ export const FLOWER_ART_OPTIONS = [
   {
     "value": "305701",
     "labelZh": "锦绣山河（有龙则灵，玉兔抱光，萱草橙）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Thỏ Ngọc Ôm Ánh Sáng,Hoa Huyên Cam)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Thỏ Ngọc Ôm Ánh Sáng,Hoa Huyên Cam)"
   },
   {
     "value": "305702",
     "labelZh": "锦绣山河（有龙则灵，玉兔抱光，萱草紫）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Thỏ Ngọc Ôm Ánh Sáng,Hoa Huyên Tím)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Thỏ Ngọc Ôm Ánh Sáng,Hoa Huyên Tím)"
   },
   {
     "value": "305703",
     "labelZh": "锦绣山河（有龙则灵，玉兔抱光，萱草紫白）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Thỏ Ngọc Ôm Ánh Sáng,Hoa Huyên Tím Trắng)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Thỏ Ngọc Ôm Ánh Sáng,Hoa Huyên Tím Trắng)"
   },
   {
     "value": "305704",
     "labelZh": "锦绣山河（有龙则灵，鹤寄银河，萱草橙）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Hạc Gửi Ngân Hà,Hoa Huyên Cam)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Hạc Gửi Ngân Hà,Hoa Huyên Cam)"
   },
   {
     "value": "305705",
     "labelZh": "锦绣山河（有龙则灵，鹤寄银河，萱草紫）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Hạc Gửi Ngân Hà,Hoa Huyên Tím)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Hạc Gửi Ngân Hà,Hoa Huyên Tím)"
   },
   {
     "value": "305706",
     "labelZh": "锦绣山河（有龙则灵，鹤寄银河，萱草紫白）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Hạc Gửi Ngân Hà,Hoa Huyên Tím Trắng)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Hạc Gửi Ngân Hà,Hoa Huyên Tím Trắng)"
   },
   {
     "value": "305707",
     "labelZh": "锦绣山河（有龙则灵，紫灵福禄，萱草橙）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Tử Linh Phúc Lộc,Hoa Huyên Cam)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Tử Linh Phúc Lộc,Hoa Huyên Cam)"
   },
   {
     "value": "305708",
     "labelZh": "锦绣山河（有龙则灵，紫灵福禄，萱草紫）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Tử Linh Phúc Lộc,Hoa Huyên Tím)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Tử Linh Phúc Lộc,Hoa Huyên Tím)"
   },
   {
     "value": "305709",
     "labelZh": "锦绣山河（有龙则灵，紫灵福禄，萱草紫白）",
-    "labelVi": "Non Sông Tươi Đẹp (Có Rồng Ắt Linh,Tử Linh Phúc Lộc,Hoa Huyên Tím Trắng)"
+    "labelVi": "Non Sông Tươi Đẹp  (Có Rồng Ắt Linh,Tử Linh Phúc Lộc,Hoa Huyên Tím Trắng)"
   },
   {
     "value": "305901",
@@ -8081,6 +8573,11 @@ export const FLOWER_ART_OPTIONS = [
     "labelVi": "Ghế Mây Mơ Đẹp(Cừu Bông Ngọt Ngào,Nguyệt Quý Hồng,Hoa Thanh Tú)"
   },
   {
+    "value": "308701",
+    "labelZh": "纸上情缘（小鹿告白，待定花30，雏菊）",
+    "labelVi": "Mối Tình Trên Giấy(Nai Nhỏ Tỏ Tình,待定花30,Cúc Họa Mi)"
+  },
+  {
     "value": "308801",
     "labelZh": "花海亭（心形花MộngẢo，心形花TìmMật，荷包牡丹粉）",
     "labelVi": "Đình Giữa Biển Hoa(Trái Tim Mộng Ảo,Trái Tim Tìm Mật,Mẫu Đơn Hà Bao Hồng)"
@@ -8556,11 +9053,37 @@ export const FLOWER_ART_OPTIONS = [
     "labelVi": "Tố Hoàn Ngưng Hương(Hoa Bay Như Mộng,Bích Sắc Quỳnh Đài,Quả Cầu Xanh Dịu)"
   },
   {
+    "value": "309701",
+    "labelZh": "（待定，蔷薇粉，待定）",
+    "labelVi": "(待定,Tường Vi Hồng,待定)"
+  },
+  {
+    "value": "309702",
+    "labelZh": "（待定，蔷薇粉，报春花粉）",
+    "labelVi": "(待定,Tường Vi Hồng,Hoa Báo Xuân Hồng)"
+  },
+  {
+    "value": "309703",
+    "labelZh": "（待定，芦荟花白，待定）",
+    "labelVi": "(待定,Hoa Lộ Vi Trắng,待定)"
+  },
+  {
+    "value": "309704",
+    "labelZh": "（待定，芦荟花白，报春花粉）",
+    "labelVi": "(待定,Hoa Lộ Vi Trắng,Hoa Báo Xuân Hồng)"
+  },
+  {
     "value": "309801",
     "labelZh": "藤蔓绕梦（槐月-蝶梦低语，白玉草粉玫瑰，黄昏凤凰花）",
     "labelVi": "Dây Mây Quấn Mộng(Hòe Nguyệt-Mộng Bướm Thì Thầm,Bạch Ngọc Thảo Hồng Phấn,Hoa Phượng Hoàng Hôn)"
+  },
+  {
+    "value": "-1",
+    "labelZh": "待定",
+    "labelVi": "()"
   }
 ];
+
 export const ASSET_OPTION_ISSUES = {
   "FLOWER_OPTIONS": [
     {
@@ -8988,80 +9511,75 @@ export const ASSET_OPTION_ISSUES = {
     {
       "value": "3082",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3097",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3099",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3100",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3101",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3102",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3103",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3104",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3105",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3106",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3107",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3108",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3109",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     },
     {
       "value": "3110",
       "labelZh": "待定",
-      "labelVi": "待定"
+      "labelVi": ""
     }
   ],
   "FLOWER_ART_OPTIONS": [
-    {
-      "value": "-1",
-      "labelZh": "待定",
-      "labelVi": "()"
-    },
     {
       "value": "308701",
       "labelZh": "纸上情缘（小鹿告白，待定花30，雏菊）",
@@ -9086,6 +9604,11 @@ export const ASSET_OPTION_ISSUES = {
       "value": "309704",
       "labelZh": "（待定，芦荟花白，报春花粉）",
       "labelVi": "(待定,Hoa Lộ Vi Trắng,Hoa Báo Xuân Hồng)"
+    },
+    {
+      "value": "-1",
+      "labelZh": "待定",
+      "labelVi": "()"
     }
   ]
 };
