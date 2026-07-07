@@ -45,7 +45,11 @@ try {
         'sync_status' => static fn ($table) => $table->string('sync_status', 32)->default('local_unsynced')->after('status')->comment('同步状态'),
         'third_party_account_id' => static fn ($table) => $table->string('third_party_account_id', 128)->default('')->after('sync_status')->comment('第三方账号标识'),
         'log_session_id' => static fn ($table) => $table->string('log_session_id', 64)->default('')->after('third_party_account_id')->comment('当前运行日志会话'),
-        'expire_time' => static fn ($table) => $table->dateTime('expire_time')->nullable()->after('log_session_id')->comment('游戏账号到期时间'),
+        'desired_running' => static fn ($table) => $table->tinyInteger('desired_running')->default(0)->after('log_session_id')->comment('用户期望运行：1继续运行，0停止'),
+        'auto_restart_attempts' => static fn ($table) => $table->unsignedTinyInteger('auto_restart_attempts')->default(0)->after('desired_running')->comment('自动重连连续失败次数'),
+        'auto_restart_next_at' => static fn ($table) => $table->dateTime('auto_restart_next_at')->nullable()->after('auto_restart_attempts')->comment('下次自动重连时间'),
+        'auto_restart_last_error' => static fn ($table) => $table->text('auto_restart_last_error')->nullable()->after('auto_restart_next_at')->comment('最近自动重连错误'),
+        'expire_time' => static fn ($table) => $table->dateTime('expire_time')->nullable()->after('auto_restart_last_error')->comment('游戏账号到期时间'),
         'config_json' => static fn ($table) => $table->json('config_json')->nullable()->after('remark')->comment('本地配置JSON'),
     ];
 
@@ -53,6 +57,12 @@ try {
         if (!$schema->hasColumn('ga_game_accounts', $column)) {
             $schema->table('ga_game_accounts', $addColumn);
         }
+    }
+
+    if (!$schema->hasIndex('ga_game_accounts', 'idx_auto_restart_due')) {
+        $schema->table('ga_game_accounts', function ($table) {
+            $table->index(['desired_running', 'status', 'auto_restart_next_at'], 'idx_auto_restart_due');
+        });
     }
 
     if (!$schema->hasTable('ga_game_account_logs')) {
@@ -220,6 +230,7 @@ try {
     echo 'ga_users.email：已存在' . PHP_EOL;
     echo 'ga_users密保字段：已同步' . PHP_EOL;
     echo 'ga_game_accounts：预览账号与配置列已同步' . PHP_EOL;
+    echo 'ga_game_accounts自动重连字段：已同步' . PHP_EOL;
     echo 'ga_game_account_logs：已同步' . PHP_EOL;
     echo 'ga_game_account_log_segments：已同步' . PHP_EOL;
     echo 'ga_game_account_event_segments：已同步' . PHP_EOL;

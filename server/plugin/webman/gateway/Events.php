@@ -4,8 +4,10 @@ namespace plugin\webman\gateway;
 
 use app\repository\DbGameAccountRepository;
 use app\repository\DbUserRepository;
+use app\service\GameAccountAutoRestartService;
 use app\service\GameAccountService;
 use app\service\GameLogQueue;
+use app\service\GatewayThirdPartyScriptRuntime;
 use app\service\ProfileService;
 use app\service\RedisThirdPartyScriptConnectionStore;
 use app\service\SystemSettingService;
@@ -105,7 +107,7 @@ class Events
                 'event' => self::appendEventPayload($accountId, $payload),
                 'status' => self::appendStatusPayload($accountId, $payload, $sessionId),
                 'error' => self::markError($clientId, $accountId, (string)($payload['message'] ?? '第三方脚本返回异常'), $sessionId),
-                'stopped' => self::markStopped($clientId, $accountId),
+                'stopped' => self::markStopped($clientId, $accountId, (string)($state['state'] ?? ''), $sessionId),
                 default => self::appendLogLines($accountId, [self::json($payload)], $sessionId),
             };
         } catch (Throwable $e) {
@@ -128,7 +130,12 @@ class Events
         }
 
         $account = self::accounts()->findById($accountId);
-        if (!$account || !in_array((string)($account['status'] ?? ''), [GameAccountService::STARTING_STATUS, GameAccountService::RUNNING_STATUS], true)) {
+        if (!$account || !in_array((string)($account['status'] ?? ''), [GameAccountService::STARTING_STATUS, GameAccountService::RUNNING_STATUS, GameAccountService::RECONNECTING_STATUS], true)) {
+            return;
+        }
+
+        if ((int)($account['desired_running'] ?? 0) === 1) {
+            self::autoRestarter()->scheduleReconnect($accountId, '第三方脚本连接断开', (string)($state['session_id'] ?? ''));
             return;
         }
 
@@ -151,6 +158,10 @@ class Events
             'sync_status' => 'synced',
             'display_name' => (string)($payload['display_name'] ?? ($account['display_name'] ?? '')),
             'third_party_account_id' => (string)($payload['third_party_account_id'] ?? $payload['role_id'] ?? ($account['third_party_account_id'] ?? '')),
+            'desired_running' => 1,
+            'auto_restart_attempts' => 0,
+            'auto_restart_next_at' => null,
+            'auto_restart_last_error' => '',
         ]);
 
         try {
@@ -169,6 +180,10 @@ class Events
             self::accounts()->updateRuntimeState((int)$account['user_id'], $accountId, [
                 'status' => GameAccountService::ERROR_STATUS,
                 'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
+                'desired_running' => 0,
+                'auto_restart_attempts' => 0,
+                'auto_restart_next_at' => null,
+                'auto_restart_last_error' => '',
             ]);
         }
         self::appendLogLines($accountId, ['[ERROR] ' . $message], $sessionId);
@@ -176,11 +191,22 @@ class Events
         Gateway::closeClient($clientId);
     }
 
-    private static function markStopped(string $clientId, int $accountId): void
+    private static function markStopped(string $clientId, int $accountId, string $connectionState, string $sessionId): void
     {
-        self::markStoppedLocally($accountId);
         self::store()->releaseClient($clientId);
         Gateway::closeClient($clientId);
+        if ($connectionState === 'stopping') {
+            self::markStoppedLocally($accountId);
+            return;
+        }
+
+        $account = self::accounts()->findById($accountId);
+        if ($account && (int)($account['desired_running'] ?? 0) === 1) {
+            self::autoRestarter()->scheduleReconnect($accountId, '第三方脚本异常停止', $sessionId);
+            return;
+        }
+
+        self::markStoppedLocally($accountId);
     }
 
     private static function markStoppedLocally(int $accountId): void
@@ -193,6 +219,10 @@ class Events
             'status' => GameAccountService::STOPPED_STATUS,
             'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
             'log_session_id' => '',
+            'desired_running' => 0,
+            'auto_restart_attempts' => 0,
+            'auto_restart_next_at' => null,
+            'auto_restart_last_error' => '',
         ]);
         self::accounts()->clearNormalLogLines($accountId, null);
     }
@@ -285,5 +315,18 @@ class Events
     private static function queue(): GameLogQueue
     {
         return new GameLogQueue();
+    }
+
+    private static function autoRestarter(): GameAccountAutoRestartService
+    {
+        $store = self::store();
+        $config = (new SystemSettingService())->thirdPartyConfig();
+        return new GameAccountAutoRestartService(
+            self::accounts(),
+            new GatewayThirdPartyScriptRuntime($store),
+            $store,
+            self::queue(),
+            (string)($config['credential_key'] ?? '')
+        );
     }
 }

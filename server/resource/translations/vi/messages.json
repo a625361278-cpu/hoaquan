@@ -305,6 +305,7 @@
   "client.home.unknown_server": "May chu khong xac dinh",
   "client.home.status.running": "Dang chay",
   "client.home.status.starting": "Dang khoi dong",
+  "client.home.status.reconnecting": "等待重连",
   "client.home.status.stopping": "停止中",
   "client.home.status.error": "Bat thuong",
   "client.home.status.stopped": "Da dung",

@@ -4,7 +4,7 @@ namespace app\service;
 
 use support\Redis;
 
-class GameLogQueue
+class GameLogQueue implements GameLogQueueInterface
 {
     public const SHARD_COUNT = 64;
     public const QUEUE_PREFIX = 'gameassist:game_logs:queue:';

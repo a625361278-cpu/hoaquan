@@ -305,6 +305,7 @@
   "client.home.unknown_server": "未知服务器",
   "client.home.status.running": "运行中",
   "client.home.status.starting": "启动中",
+  "client.home.status.reconnecting": "等待重连",
   "client.home.status.stopping": "停止中",
   "client.home.status.error": "异常",
   "client.home.status.stopped": "已停止",

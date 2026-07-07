@@ -37,12 +37,17 @@ CREATE TABLE IF NOT EXISTS `ga_game_accounts` (
   `sync_status` varchar(32) NOT NULL DEFAULT 'local_unsynced' COMMENT '同步状态',
   `third_party_account_id` varchar(128) NOT NULL DEFAULT '' COMMENT '第三方账号标识',
   `log_session_id` varchar(64) NOT NULL DEFAULT '' COMMENT '当前运行日志会话',
+  `desired_running` tinyint NOT NULL DEFAULT 0 COMMENT '用户期望运行：1继续运行，0停止',
+  `auto_restart_attempts` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '自动重连连续失败次数',
+  `auto_restart_next_at` datetime DEFAULT NULL COMMENT '下次自动重连时间',
+  `auto_restart_last_error` text DEFAULT NULL COMMENT '最近自动重连错误',
   `expire_time` datetime DEFAULT NULL COMMENT '游戏账号到期时间',
   `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '备注',
   `config_json` json DEFAULT NULL COMMENT '本地配置JSON',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
+  KEY `idx_auto_restart_due` (`desired_running`, `status`, `auto_restart_next_at`),
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='预留游戏账号表';
 

@@ -446,6 +446,7 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame(3, $runtime->started[0]['account_id']);
         $this->assertSame('secret-password', $runtime->started[0]['game_password']);
         $this->assertSame([], $runtime->started[0]['config']);
+        $this->assertSame(1, (int)$repository->findById(3)['desired_running']);
         $this->assertSame('启动任务已提交，等待服务器确认', $result['msg']);
     }
 
@@ -513,6 +514,7 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame('stopping', $result['data']['account']['status']);
         $this->assertSame('local_unsynced', $result['data']['account']['sync_status']);
         $this->assertSame('session-1', $result['data']['account']['log_session_id']);
+        $this->assertSame(0, (int)$repository->findById(3)['desired_running']);
         $this->assertSame(3, $runtime->stopped[0]['account_id']);
         $this->assertSame(1, $repository->countNormalLogLines(3, 'session-1'));
     }

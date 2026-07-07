@@ -13,6 +13,7 @@ class GameAccountService
     public const LOCAL_UNSYNCED_STATUS = 'local_unsynced';
     public const STARTING_STATUS = 'starting';
     public const RUNNING_STATUS = 'running';
+    public const RECONNECTING_STATUS = 'reconnecting';
     public const STOPPING_STATUS = 'stopping';
     public const STOPPED_STATUS = 'stopped';
     public const ERROR_STATUS = 'error';
@@ -177,6 +178,10 @@ class GameAccountService
                 'status' => self::STARTING_STATUS,
                 'sync_status' => self::LOCAL_UNSYNCED_STATUS,
                 'log_session_id' => $logSessionId,
+                'desired_running' => 1,
+                'auto_restart_attempts' => 0,
+                'auto_restart_next_at' => null,
+                'auto_restart_last_error' => '',
             ]);
         } catch (\Throwable $e) {
             $this->scriptRuntime->releaseReservation($reservation);
@@ -195,6 +200,10 @@ class GameAccountService
                 'status' => (string)($account['status'] ?? self::STOPPED_STATUS),
                 'sync_status' => (string)($account['sync_status'] ?? self::LOCAL_UNSYNCED_STATUS),
                 'log_session_id' => (string)($account['log_session_id'] ?? ''),
+                'desired_running' => (int)($account['desired_running'] ?? 0),
+                'auto_restart_attempts' => (int)($account['auto_restart_attempts'] ?? 0),
+                'auto_restart_next_at' => $account['auto_restart_next_at'] ?? null,
+                'auto_restart_last_error' => (string)($account['auto_restart_last_error'] ?? ''),
             ]);
             throw $e;
         }
@@ -215,6 +224,10 @@ class GameAccountService
                 'status' => self::STOPPED_STATUS,
                 'sync_status' => self::LOCAL_UNSYNCED_STATUS,
                 'log_session_id' => '',
+                'desired_running' => 0,
+                'auto_restart_attempts' => 0,
+                'auto_restart_next_at' => null,
+                'auto_restart_last_error' => '',
             ]);
             $this->accounts->clearNormalLogLines($accountId, null);
 
@@ -227,6 +240,10 @@ class GameAccountService
         $updated = $this->accounts->updateRuntimeState($userId, $accountId, [
             'status' => self::STOPPING_STATUS,
             'sync_status' => self::LOCAL_UNSYNCED_STATUS,
+            'desired_running' => 0,
+            'auto_restart_attempts' => 0,
+            'auto_restart_next_at' => null,
+            'auto_restart_last_error' => '',
         ]);
 
         return ApiResponse::success([
@@ -275,6 +292,9 @@ class GameAccountService
             'sync_status' => (string)($account['sync_status'] ?? ''),
             'third_party_account_id' => (string)($account['third_party_account_id'] ?? ''),
             'log_session_id' => (string)($account['log_session_id'] ?? ''),
+            'desired_running' => (int)($account['desired_running'] ?? 0),
+            'auto_restart_attempts' => (int)($account['auto_restart_attempts'] ?? 0),
+            'auto_restart_next_at' => $account['auto_restart_next_at'] ?? null,
             'expire_time' => $account['expire_time'] ?? null,
             'has_config' => $this->hasSavedConfig((string)($account['config_json'] ?? '')),
             'resources' => $this->zeroResources(),

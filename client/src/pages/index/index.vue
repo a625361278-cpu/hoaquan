@@ -44,7 +44,7 @@
         </view>
 
         <view class="card-actions">
-          <text :class="['status-dot', item.status === 'running' ? 'online' : '', ['starting', 'stopping'].includes(item.status) ? 'pending' : '', item.status === 'error' ? 'error' : '']"></text>
+          <text :class="['status-dot', item.status === 'running' ? 'online' : '', ['starting', 'stopping', 'reconnecting'].includes(item.status) ? 'pending' : '', item.status === 'error' ? 'error' : '']"></text>
           <text class="status-text">{{ statusText(item) }}</text>
           <button class="action primary" :disabled="isActiveAccount(item) || actionLoading" @click="startAccount(item)">{{ t('client.home.start') }}</button>
           <button class="action stop" :disabled="!isActiveAccount(item) || actionLoading" @click="stopAccount(item)">{{ t('client.home.stop') }}</button>
@@ -305,12 +305,13 @@ function expireText(item) {
 }
 
 function isActiveAccount(item) {
-  return ['starting', 'running', 'stopping'].includes(item.status);
+  return ['starting', 'running', 'reconnecting', 'stopping'].includes(item.status);
 }
 
 function statusText(item) {
   if (item.status === 'running') return t('client.home.status.running');
   if (item.status === 'starting') return t('client.home.status.starting');
+  if (item.status === 'reconnecting') return t('client.home.status.reconnecting');
   if (item.status === 'stopping') return t('client.home.status.stopping');
   if (item.status === 'error') return t('client.home.status.error');
   if (item.status === 'stopped') return t('client.home.status.stopped');

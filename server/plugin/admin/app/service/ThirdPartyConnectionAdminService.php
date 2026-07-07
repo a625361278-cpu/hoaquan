@@ -4,6 +4,7 @@ namespace plugin\admin\app\service;
 
 use app\service\RedisThirdPartyScriptConnectionStore;
 use app\service\GameLogQueue;
+use app\service\GameLogQueueInterface;
 use app\service\ThirdPartyScriptConnectionStoreInterface;
 use app\support\I18n;
 
@@ -11,7 +12,7 @@ class ThirdPartyConnectionAdminService
 {
     public function __construct(
         private ?ThirdPartyScriptConnectionStoreInterface $connections = null,
-        private ?GameLogQueue $logQueue = null,
+        private ?GameLogQueueInterface $logQueue = null,
         private string $locale = I18n::DEFAULT_LOCALE
     )
     {

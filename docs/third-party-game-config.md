@@ -22,6 +22,8 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 `request_id` 是本次请求编号，不是游戏账号、区服或角色 ID；第三方回 `started/error/stopped` 时建议原样带回。`session_id` 是本次运行日志会话 ID。当前游戏只有一个区服，启动包不传 `server_id`、`server_name`。
 
+`start` 是幂等的“启动或重新绑定”指令。网络断开、我方服务重启或第三方脚本重连后，只要玩家没有手动停止账号，服务端会在有空闲脚本连接时再次发送 `start`。第三方需要用 `game_username` 判断该游戏任务是否已经在运行：如果已经在运行，不要重复启动任务，只需要把新的 WebSocket 连接绑定到该任务并返回 `started`；如果未运行，则正常启动后返回 `started`。本协议不另设 `resume` 消息。
+
 ```json
 {
   "type": "start",
@@ -457,6 +459,8 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 }
 ```
 
+`error` 表示第三方明确判定任务失败，服务端会把账号标记为异常并停止自动重连。临时网络断开不要用 `error` 表示，直接断开连接即可，服务端会按用户运行意图尝试重新绑定。
+
 ### 第三方推送 log
 
 ```json
@@ -509,6 +513,8 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
   "session_id": "f3b33b8d8c8e4f44a0c6a3b7"
 }
 ```
+
+`stopped` 只应作为收到后端 `stop` 后的确认。如果第三方在未收到 `stop` 的情况下返回 `stopped`，服务端会按异常停止处理：玩家没有手动停止时会进入等待重连，并在有空闲脚本连接后重新发送幂等 `start`。
 
 ## config 完整字段
 

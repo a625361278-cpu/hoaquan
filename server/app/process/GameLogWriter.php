@@ -7,6 +7,7 @@ use app\repository\GameAccountRepositoryInterface;
 use app\service\GameAccountLogService;
 use app\service\GameLogNormalizer;
 use app\service\GameLogQueue;
+use app\service\GameLogQueueInterface;
 use app\support\I18n;
 use support\Log;
 use Throwable;
@@ -33,7 +34,7 @@ class GameLogWriter
     private int $processedRecords = 0;
 
     public function __construct(
-        private ?GameLogQueue $queue = null,
+        private ?GameLogQueueInterface $queue = null,
         private ?GameAccountRepositoryInterface $accounts = null,
         private string $locale = I18n::DEFAULT_LOCALE,
         private ?GameLogNormalizer $normalizer = null

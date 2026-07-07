@@ -169,9 +169,11 @@ php start.php status
 ```text
 webman http://0.0.0.0:8790 [OK]
 game_log_writer [OK]
+game_account_auto_restarter [OK]
 ```
 
 日志写入链路为 GatewayWorker 写入 Redis 分片队列 `gameassist:game_logs:queue:{shard}`，再由 `game_log_writer` 内存聚合后批量写入 MariaDB 分段表。普通日志默认 10 秒或 50 行刷库一次，事件日志默认 2 秒或 20 条刷库一次；后台“第三方连接”页可查看日志积压、最大分片积压、writer 数和最近写入状态。
+`game_account_auto_restarter` 负责异常断线后的账号重连：只消费玩家仍期望运行的账号，复用原日志会话并重新下发幂等 `start` 包。
 
 常用命令：
 

@@ -9,6 +9,7 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
 {
     public array $started = [];
     public array $stopped = [];
+    public bool $failSend = false;
 
     public function __construct(public bool $hasIdleConnection = true)
     {
@@ -29,6 +30,10 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
 
     public function sendStartCommand(array $reservation, array $account, string $gamePassword, array $config): array
     {
+        if ($this->failSend) {
+            throw new ApiException('send failed', 503);
+        }
+
         $this->started[] = [
             'account_id' => (int)$account['id'],
             'request_id' => (string)$reservation['request_id'],

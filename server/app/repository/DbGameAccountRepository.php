@@ -51,6 +51,44 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
             ->all();
     }
 
+    public function listAutoRestartCandidates(array $statuses, string $now, int $limit): array
+    {
+        if ($statuses === [] || $limit <= 0) {
+            return [];
+        }
+
+        return Db::table('ga_game_accounts')
+            ->where('desired_running', 1)
+            ->whereIn('status', $statuses)
+            ->where(function ($query) use ($now) {
+                $query->whereNull('auto_restart_next_at')
+                    ->orWhere('auto_restart_next_at', '<=', $now);
+            })
+            ->orderBy('auto_restart_next_at')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get()
+            ->map(static fn ($row): array => (array)$row)
+            ->all();
+    }
+
+    public function listDesiredRunningAccounts(array $statuses, int $afterId, int $limit): array
+    {
+        if ($statuses === [] || $limit <= 0) {
+            return [];
+        }
+
+        return Db::table('ga_game_accounts')
+            ->where('desired_running', 1)
+            ->whereIn('status', $statuses)
+            ->where('id', '>', max(0, $afterId))
+            ->orderBy('id')
+            ->limit($limit)
+            ->get()
+            ->map(static fn ($row): array => (array)$row)
+            ->all();
+    }
+
     public function createLocalPreview(int $userId, array $data): array
     {
         $now = date('Y-m-d H:i:s');
@@ -113,6 +151,10 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
             'display_name',
             'third_party_account_id',
             'log_session_id',
+            'desired_running',
+            'auto_restart_attempts',
+            'auto_restart_next_at',
+            'auto_restart_last_error',
             'expire_time',
             'remark',
         ];

@@ -85,6 +85,7 @@
   "client.config.help.local_preview": "{name}：此配置当前只保存为本地预览值，服务器接入后才会同步到游戏侧。",
   "client.home.local_preview_status": "本地预览 · 未同步服务器",
   "client.home.status.starting": "启动中",
+  "client.home.status.reconnecting": "等待重连",
   "client.home.status.stopping": "停止中",
   "client.home.status.error": "异常",
   "client.config.import_dialog.cancel": "取消",

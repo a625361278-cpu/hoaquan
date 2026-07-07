@@ -56,6 +56,42 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
         ));
     }
 
+    public function listAutoRestartCandidates(array $statuses, string $now, int $limit): array
+    {
+        $rows = array_values(array_filter(
+            $this->accounts,
+            static function (array $account) use ($statuses, $now): bool {
+                if ((int)($account['desired_running'] ?? 0) !== 1) {
+                    return false;
+                }
+                if (!in_array((string)($account['status'] ?? ''), $statuses, true)) {
+                    return false;
+                }
+                $nextAt = $account['auto_restart_next_at'] ?? null;
+                return $nextAt === null || $nextAt === '' || (string)$nextAt <= $now;
+            }
+        ));
+
+        usort($rows, static function (array $a, array $b): int {
+            return strcmp((string)($a['auto_restart_next_at'] ?? ''), (string)($b['auto_restart_next_at'] ?? ''))
+                ?: ((int)$a['id'] <=> (int)$b['id']);
+        });
+        return array_slice($rows, 0, max(0, $limit));
+    }
+
+    public function listDesiredRunningAccounts(array $statuses, int $afterId, int $limit): array
+    {
+        $rows = array_values(array_filter(
+            $this->accounts,
+            static fn (array $account): bool => (int)($account['desired_running'] ?? 0) === 1
+                && in_array((string)($account['status'] ?? ''), $statuses, true)
+                && (int)($account['id'] ?? 0) > $afterId
+        ));
+
+        usort($rows, static fn (array $a, array $b): int => (int)$a['id'] <=> (int)$b['id']);
+        return array_slice($rows, 0, max(0, $limit));
+    }
+
     public function createLocalPreview(int $userId, array $data): array
     {
         $account = [

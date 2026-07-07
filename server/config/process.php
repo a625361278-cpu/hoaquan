@@ -50,6 +50,13 @@ return [
         'group' => app_env('WEBMAN_GROUP', ''),
         'reusePort' => false,
     ],
+    'game_account_auto_restarter' => [
+        'handler' => app\process\GameAccountAutoRestarter::class,
+        'count' => 1,
+        'user' => app_env('WEBMAN_USER', ''),
+        'group' => app_env('WEBMAN_GROUP', ''),
+        'reusePort' => false,
+    ],
     // File update detection and automatic reload
     'monitor' => [
         'handler' => app\process\Monitor::class,
