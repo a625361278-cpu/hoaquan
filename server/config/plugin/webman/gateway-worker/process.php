@@ -7,7 +7,7 @@ use Webman\GatewayWorker\Register;
 return [
     'gateway' => [
         'handler'     => Gateway::class,
-        'listen'      => 'websocket://0.0.0.0:7272',
+        'listen'      => 'websocket://0.0.0.0:' . (int)app_env('GATEWAY_PORT', 8792),
         'count'       => 2,
         'reloadable'  => false,
         'constructor' => ['config' => [
@@ -16,7 +16,7 @@ return [
             'pingInterval'    => 25,
             'pingNotResponseLimit' => 2,
             'pingData'        => '{"type":"ping"}',
-            'registerAddress' => '127.0.0.1:1236',
+            'registerAddress' => (string)app_env('GATEWAY_REGISTER_ADDRESS', '127.0.0.1:1238'),
             'onConnect'       => function(){},
         ]]
     ],
@@ -26,12 +26,12 @@ return [
         'constructor' => ['config' => [
             'eventHandler'    => plugin\webman\gateway\Events::class,
             'name'            => 'ThirdPartyScriptBusinessWorker',
-            'registerAddress' => '127.0.0.1:1236',
+            'registerAddress' => (string)app_env('GATEWAY_REGISTER_ADDRESS', '127.0.0.1:1238'),
         ]]
     ],
     'register' => [
         'handler'     => Register::class,
-        'listen'      => 'text://127.0.0.1:1236',
+        'listen'      => 'text://' . (string)app_env('GATEWAY_REGISTER_ADDRESS', '127.0.0.1:1238'),
         'count'       => 1, // Must be 1
         'reloadable'  => false,
         'constructor' => []

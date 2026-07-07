@@ -226,7 +226,7 @@ server {
     }
 
     location /ws/third-party/script {
-        proxy_pass http://127.0.0.1:7272;
+        proxy_pass http://127.0.0.1:8792;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -278,7 +278,7 @@ server {
     }
 
     location /ws/third-party/script {
-        proxy_pass http://127.0.0.1:7272;
+        proxy_pass http://127.0.0.1:8792;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -300,7 +300,7 @@ hoavienpro.com {
     reverse_proxy /api/* 127.0.0.1:8790
     reverse_proxy /app/admin/* 127.0.0.1:8790
     reverse_proxy /ws/game-accounts/* 127.0.0.1:8791
-    reverse_proxy /ws/third-party/script* 127.0.0.1:7272
+    reverse_proxy /ws/third-party/script* 127.0.0.1:8792
 }
 ```
 

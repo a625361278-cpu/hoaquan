@@ -12,13 +12,16 @@ class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
     public function __construct(
         private ?ThirdPartyScriptConnectionStoreInterface $connections = null,
         private string $locale = I18n::DEFAULT_LOCALE,
-        private string $registerAddress = '127.0.0.1:1236',
+        private string $registerAddress = '',
         private mixed $sender = null,
         private mixed $sessionUpdater = null
     )
     {
         $this->connections ??= new RedisThirdPartyScriptConnectionStore();
         $this->locale = I18n::normalizeLocale($this->locale);
+        $this->registerAddress = $this->registerAddress !== ''
+            ? $this->registerAddress
+            : (string)app_env('GATEWAY_REGISTER_ADDRESS', '127.0.0.1:1238');
         Gateway::$registerAddress = $this->registerAddress;
         $this->sender ??= static fn (string $clientId, string $payload): bool => (bool)Gateway::sendToClient($clientId, $payload);
         $this->sessionUpdater ??= static function (string $clientId, array $session): void {

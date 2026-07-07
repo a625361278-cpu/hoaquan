@@ -117,7 +117,7 @@ bash deploy/server_update.sh
 ## 第三方配置接口
 
 - 第三方正式通信已固定为 WebSocket，配置项 `third_party_transport` 仅保留旧配置兼容，不作为正式 HTTP 接入开关。
-- 第三方脚本主动连接我方地址：`ws://hoavienpro.com/ws/third-party/script?token=脚本池Token`。Caddy 需要把 `/ws/third-party/script` 代理到本机 GatewayWorker 端口 `7272`。
+- 第三方脚本主动连接我方地址：`ws://hoavienpro.com/ws/third-party/script?token=脚本池Token`。Caddy 需要把 `/ws/third-party/script` 代理到本机 GatewayWorker 端口，默认 `8792`，可通过 `GATEWAY_PORT` 调整；GatewayWorker Register 默认 `127.0.0.1:1238`，可通过 `GATEWAY_REGISTER_ADDRESS` 调整。
 - 后台不再配置第三方 URL、URL 列表或单连接容量；旧 `third_party_ws_url`、`third_party_ws_urls`、`third_party_ws_connection_capacity` 可暂留数据库用于兼容旧数据，但启动逻辑不读取。
 - 常驻进程包括 GatewayWorker 的 Gateway、BusinessWorker、Register，以及 `server/config/process.php` 中的 `game_log_writer`。脚本连接状态写入 Redis 前缀 `gameassist:third_party_scripts:*`；日志写入 `gameassist:game_logs:queue:{shard}` 分片队列，`shard=account_id%64`，再由多 writer 聚合写入分段表。默认 `GAME_LOG_WRITER_COUNT=8`，可按服务器压力调整。
 - 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端校验账号、验证密码可解密、读取本地配置 JSON、原子占用一个空闲脚本连接、写入 `starting` 和日志会话，再向该脚本连接发送 `start` 包；接口成功只表示启动包已发出，不表示第三方登录成功。
