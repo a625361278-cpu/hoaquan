@@ -44,10 +44,25 @@ assert(
   '协议 JSON schema 中 union.fmlRace.taskTypePriority 必须是 object',
 );
 
+assert(
+  schemaSource.includes("multiSelectItem('plant.market.buyQualities'"),
+  '前端配置 schema 缺少 plant.market.buyQualities',
+);
+
+const contractMarket = contractSchema.properties.config.properties.plant.properties.market;
+const contractBuyQualities = contractMarket.properties.buyQualities;
+assert(contractMarket.required.includes('buyQualities'), '协议 JSON schema 未要求 plant.market.buyQualities');
+assert(contractBuyQualities?.type === 'array', '协议 JSON schema 中 plant.market.buyQualities 必须是 array');
+assertArrayEqual(
+  contractBuyQualities.default,
+  ['green', 'blue', 'purple', 'gold', 'red'],
+  '协议 JSON schema 中 plant.market.buyQualities 默认值',
+);
+
 for (const docPath of ['docs/third-party-game-config.md', 'docs/协议说明.txt']) {
   const doc = readFileSync(docPath, 'utf8');
   assert(
-    doc.includes('plant.flower.categoryCount') && doc.includes('可选值：1 / 2 / 4 / 8 / 16'),
+    /plant\.flower\.categoryCount.*可选值：1=`?"1"`? \/ 2=`?"2"`? \/ 4=`?"4"`? \/ 8=`?"8"`? \/ 16=`?"16"`?/.test(doc),
     `${docPath} 未写明选择数量可选值 1 / 2 / 4 / 8 / 16`,
   );
   assert(
@@ -57,6 +72,10 @@ for (const docPath of ['docs/third-party-game-config.md', 'docs/协议说明.txt
   assert(
     /union\.fmlRace\.taskTypePriority.*数据类型：`?object`?/.test(doc),
     `${docPath} 未写明 union.fmlRace.taskTypePriority 的数据类型为 object`,
+  );
+  assert(
+    /plant\.market\.buyQualities.*数据类型：`?string\[\]`?/.test(doc),
+    `${docPath} 未写明 plant.market.buyQualities 的数据类型为 string[]`,
   );
 }
 

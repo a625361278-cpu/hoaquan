@@ -787,6 +787,7 @@
                 "buyPutCount",
                 "autoBuyFromFriend",
                 "buyMode",
+                "buyQualities",
                 "buyFlowers",
                 "minPutTimeDiff"
               ],
@@ -856,6 +857,27 @@
                   ],
                   "default": "quality",
                   "description": "好友摊位扫货策略：quality=指定品质，flower=指定花朵"
+                },
+                "buyQualities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
+                  },
+                  "default": [
+                    "green",
+                    "blue",
+                    "purple",
+                    "gold",
+                    "red"
+                  ],
+                  "description": "好友摊位扫货指定品质购买使用的鲜花品质"
                 },
                 "buyFlowers": {
                   "type": "array",

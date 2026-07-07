@@ -1040,6 +1040,7 @@
   "client.config.item.market_price": "上架价格",
   "client.config.item.put_password": "上架密码",
   "client.config.item.market_sweep_strategy": "扫货策略",
+  "client.config.help.market_buy_quality": "只购买指定品质的花朵",
   "client.config.help.market_buy_flower": "选择要从好友处购买的花朵，可多选",
   "client.config.help.resident_quality_limit": "仅提交指定品质的花朵到居民订单",
   "client.config.help.palace_quality_limit": "仅接受指定品质的宫廷订单，不符合时自动免费刷新一次（每天限1次），刷新后仍不符合则跳过",

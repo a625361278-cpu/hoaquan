@@ -192,6 +192,13 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
         "buyPutCount": 0,
         "autoBuyFromFriend": false,
         "buyMode": "quality",
+        "buyQualities": [
+          "green",
+          "blue",
+          "purple",
+          "gold",
+          "red"
+        ],
         "buyFlowers": [
           "23001"
         ],
@@ -663,6 +670,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - `plant.market.buyPutCount`：购买次数；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：购买多少上架次数
 - `plant.market.autoBuyFromFriend`：好友摊位扫货；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动购买好友货架的花朵
 - `plant.market.buyMode`：扫货策略；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：无；可选值：指定品质=`"quality"` / 指定花朵=`"flower"`
+- `plant.market.buyQualities`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只购买指定品质的花朵；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 - `plant.market.buyFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：只购买指定的花朵。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
 - `plant.market.minPutTimeDiff`：最小上架时长；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：只购买上架时间超过此时长的花朵，0表示不限制。单位：秒
 

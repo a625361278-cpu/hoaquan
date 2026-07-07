@@ -418,6 +418,9 @@ export const CONFIG_SCHEMA = [
           radioItem('plant.market.buyMode', 'client.config.item.market_sweep_strategy', 'quality', FLOWER_MODE_OPTIONS, '', {
             visibleWhen: { path: 'plant.market.autoBuyFromFriend', equals: true },
           }),
+          multiSelectItem('plant.market.buyQualities', 'client.config.item.specified_quality', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.market_buy_quality', {
+            visibleWhen: { path: 'plant.market.buyMode', equals: 'quality' },
+          }),
           multiSelectItem('plant.market.buyFlowers', 'client.config.item.specified_flower', ['23001'], FLOWER_OPTIONS, 'client.config.help.market_buy_flower', {
             visibleWhen: { path: 'plant.market.buyMode', equals: 'flower' },
           }),
