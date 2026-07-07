@@ -92,6 +92,7 @@ REDIS_PASSWORD=your_redis_password
 
 WEBMAN_USER=www
 WEBMAN_GROUP=www
+GAME_LOG_WRITER_COUNT=8
 ```
 
 说明：
@@ -99,6 +100,7 @@ WEBMAN_GROUP=www
 - `DB_DATABASE` 必须是实际导入 SQL 的数据库名。
 - Redis 如果服务器上已有其他项目使用，建议给 Hoa Quán 单独选一个逻辑库，例如 `9`、`10`、`11`。
 - `WEBMAN_USER` 和 `WEBMAN_GROUP` 用于让 webman worker 以普通用户运行。宝塔常见用户是 `www`。
+- `GAME_LOG_WRITER_COUNT` 是日志写入进程数，1 万游戏账号默认建议 `8`。日志队列固定 64 个分片，同一账号固定进入同一分片，避免多进程并发写乱顺序。
 - 不要把 `server/.env` 提交到 Git。
 - 不要把数据库密码、Redis 密码、SMTP 授权码写进 README 或部署文档。
 
@@ -166,7 +168,10 @@ php start.php status
 
 ```text
 webman http://0.0.0.0:8790 [OK]
+game_log_writer [OK]
 ```
+
+日志写入链路为 GatewayWorker 写入 Redis 分片队列 `gameassist:game_logs:queue:{shard}`，再由 `game_log_writer` 内存聚合后批量写入 MariaDB 分段表。普通日志默认 10 秒或 50 行刷库一次，事件日志默认 2 秒或 20 条刷库一次；后台“第三方连接”页可查看日志积压、最大分片积压、writer 数和最近写入状态。
 
 常用命令：
 
@@ -209,6 +214,26 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+
+    location /ws/game-accounts/ {
+        proxy_pass http://127.0.0.1:8791;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /ws/third-party/script {
+        proxy_pass http://127.0.0.1:7272;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
 }
 ```
 
@@ -241,6 +266,41 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+
+    location /ws/game-accounts/ {
+        proxy_pass http://127.0.0.1:8791;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /ws/third-party/script {
+        proxy_pass http://127.0.0.1:7272;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+如果使用 Caddy，保持路径原样反向代理即可：
+
+```caddyfile
+hoavienpro.com {
+    root * /data/www/hoaquan/client/dist/build/h5
+    file_server
+    try_files {path} /index.html
+
+    reverse_proxy /api/* 127.0.0.1:8790
+    reverse_proxy /app/admin/* 127.0.0.1:8790
+    reverse_proxy /ws/game-accounts/* 127.0.0.1:8791
+    reverse_proxy /ws/third-party/script* 127.0.0.1:7272
 }
 ```
 

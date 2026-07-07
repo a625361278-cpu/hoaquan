@@ -285,6 +285,7 @@ REDIS_PASSWORD=your_redis_password
 
 WEBMAN_USER=www
 WEBMAN_GROUP=www
+GAME_LOG_WRITER_COUNT=8
 ```
 
 说明：
@@ -292,6 +293,7 @@ WEBMAN_GROUP=www
 - `DB_DATABASE` 必须和导入 SQL 的数据库一致。
 - Redis 如果已有其他服务使用，必须给 Hoa Quán 单独选一个逻辑库，例如 `9`、`10`、`11`。
 - `WEBMAN_USER` 和 `WEBMAN_GROUP` 是 webman worker 的运行用户。宝塔常见用户是 `www`。
+- `GAME_LOG_WRITER_COUNT` 是日志写入进程数，1 万游戏账号默认建议 `8`。日志队列固定 64 个分片，同一账号固定进入同一分片，避免多进程并发写乱顺序。
 - 不要把真实 `.env` 发给别人，也不要写进文档。
 
 设置权限：
@@ -450,6 +452,26 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+
+    location /ws/game-accounts/ {
+        proxy_pass http://127.0.0.1:8791;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /ws/third-party/script {
+        proxy_pass http://127.0.0.1:7272;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
 }
 ```
 
@@ -484,6 +506,41 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+
+    location /ws/game-accounts/ {
+        proxy_pass http://127.0.0.1:8791;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /ws/third-party/script {
+        proxy_pass http://127.0.0.1:7272;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+如果服务器使用 Caddy，保持 WebSocket 路径原样反向代理：
+
+```caddyfile
+hoavienpro.com {
+    root * /data/www/hoaquan/client/dist/build/h5
+    file_server
+    try_files {path} /index.html
+
+    reverse_proxy /api/* 127.0.0.1:8790
+    reverse_proxy /app/admin/* 127.0.0.1:8790
+    reverse_proxy /ws/game-accounts/* 127.0.0.1:8791
+    reverse_proxy /ws/third-party/script* 127.0.0.1:7272
 }
 ```
 

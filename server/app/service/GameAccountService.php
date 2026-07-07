@@ -13,6 +13,7 @@ class GameAccountService
     public const LOCAL_UNSYNCED_STATUS = 'local_unsynced';
     public const STARTING_STATUS = 'starting';
     public const RUNNING_STATUS = 'running';
+    public const STOPPING_STATUS = 'stopping';
     public const STOPPED_STATUS = 'stopped';
     public const ERROR_STATUS = 'error';
     public const PREVIEW_CHANNEL = 'official_app';
@@ -20,13 +21,13 @@ class GameAccountService
 
     private array $thirdPartyConfig;
     private string $locale;
-    private ThirdPartyCommandQueueInterface $commandQueue;
+    private ThirdPartyScriptRuntimeInterface $scriptRuntime;
 
     public function __construct(
         private GameAccountRepositoryInterface $accounts,
         array|string $thirdPartyConfigOrLocale = [],
         string $locale = I18n::DEFAULT_LOCALE,
-        ?ThirdPartyCommandQueueInterface $commandQueue = null
+        ?ThirdPartyScriptRuntimeInterface $scriptRuntime = null
     )
     {
         if (is_string($thirdPartyConfigOrLocale)) {
@@ -37,13 +38,12 @@ class GameAccountService
         $this->thirdPartyConfig = array_merge([
             'enabled' => false,
             'base_url' => '',
-            'ws_url' => '',
-            'ws_urls' => [],
-            'ws_connection_capacity' => 10,
+            'script_token' => '',
+            'script_ws_url' => '',
             'sign_secret' => '',
         ], $thirdPartyConfigOrLocale);
         $this->locale = I18n::normalizeLocale($locale);
-        $this->commandQueue = $commandQueue ?? new RedisThirdPartyCommandQueue();
+        $this->scriptRuntime = $scriptRuntime ?? new GatewayThirdPartyScriptRuntime(locale: $this->locale);
     }
 
     public function listForUser(int $userId): array
@@ -165,39 +165,74 @@ class GameAccountService
     public function start(int $userId, int $accountId): array
     {
         $account = $this->requireAccount($userId, $accountId);
-        $this->assertThirdPartyWebSocketReady();
-        $this->cipher()->decrypt((string)($account['game_password_cipher'] ?? ''));
+        $this->assertThirdPartyScriptReady();
+        $gamePassword = $this->cipher()->decrypt((string)($account['game_password_cipher'] ?? ''));
         $logSessionId = bin2hex(random_bytes(12));
+        $requestId = bin2hex(random_bytes(16));
+        $reservation = $this->scriptRuntime->reserveAccount($accountId, $requestId, $logSessionId);
 
-        $updated = $this->accounts->updateRuntimeState($userId, $accountId, [
-            'status' => self::STARTING_STATUS,
-            'sync_status' => self::LOCAL_UNSYNCED_STATUS,
-            'log_session_id' => $logSessionId,
-        ]);
-        $command = $this->commandQueue->enqueueStart($accountId);
+        try {
+            $this->accounts->clearNormalLogLines($accountId, null);
+            $updated = $this->accounts->updateRuntimeState($userId, $accountId, [
+                'status' => self::STARTING_STATUS,
+                'sync_status' => self::LOCAL_UNSYNCED_STATUS,
+                'log_session_id' => $logSessionId,
+            ]);
+        } catch (\Throwable $e) {
+            $this->scriptRuntime->releaseReservation($reservation);
+            throw $e;
+        }
+
+        try {
+            $runtime = $this->scriptRuntime->sendStartCommand(
+                $reservation,
+                $account,
+                $gamePassword,
+                $this->decodeConfig((string)($account['config_json'] ?? '{}'))
+            );
+        } catch (\Throwable $e) {
+            $this->accounts->updateRuntimeState($userId, $accountId, [
+                'status' => (string)($account['status'] ?? self::STOPPED_STATUS),
+                'sync_status' => (string)($account['sync_status'] ?? self::LOCAL_UNSYNCED_STATUS),
+                'log_session_id' => (string)($account['log_session_id'] ?? ''),
+            ]);
+            throw $e;
+        }
 
         return ApiResponse::success([
             'account' => $this->publicAccount($updated),
-            'command' => $command,
+            'runtime' => $runtime,
         ], I18n::t('api.game.start_queued', [], $this->locale));
     }
 
     public function stop(int $userId, int $accountId): array
     {
         $account = $this->requireAccount($userId, $accountId);
-        $command = $this->commandQueue->enqueueStop($accountId);
+        $runtime = $this->scriptRuntime->stopAccount($accountId, bin2hex(random_bytes(16)));
+
+        if (!($runtime['sent'] ?? false)) {
+            $updated = $this->accounts->updateRuntimeState($userId, $accountId, [
+                'status' => self::STOPPED_STATUS,
+                'sync_status' => self::LOCAL_UNSYNCED_STATUS,
+                'log_session_id' => '',
+            ]);
+            $this->accounts->clearNormalLogLines($accountId, null);
+
+            return ApiResponse::success([
+                'account' => $this->publicAccount($updated),
+                'runtime' => $runtime,
+            ], I18n::t('api.game.stopped', [], $this->locale));
+        }
 
         $updated = $this->accounts->updateRuntimeState($userId, $accountId, [
-            'status' => self::STOPPED_STATUS,
+            'status' => self::STOPPING_STATUS,
             'sync_status' => self::LOCAL_UNSYNCED_STATUS,
-            'log_session_id' => '',
         ]);
-        $this->accounts->clearLogLines($accountId);
 
         return ApiResponse::success([
             'account' => $this->publicAccount($updated),
-            'command' => $command,
-        ], I18n::t('api.game.stopped', [], $this->locale));
+            'runtime' => $runtime,
+        ], I18n::t('api.game.stop_queued', [], $this->locale));
     }
 
     public function updatePassword(int $userId, int $accountId, string $password): array
@@ -257,7 +292,7 @@ class GameAccountService
         return $account;
     }
 
-    private function assertThirdPartyWebSocketReady(): void
+    private function assertThirdPartyScriptReady(): void
     {
         if (empty($this->thirdPartyConfig['enabled'])) {
             throw new ApiException(I18n::t('api.third_party.disabled', [], $this->locale), 409);
@@ -267,28 +302,9 @@ class GameAccountService
             throw new ApiException(I18n::t('api.third_party.websocket_required', [], $this->locale), 503);
         }
 
-        if ($this->configuredWsUrls() === []) {
-            throw new ApiException(I18n::t('api.third_party.websocket_unconfigured', [], $this->locale), 503);
+        if (trim((string)($this->thirdPartyConfig['script_token'] ?? '')) === '') {
+            throw new ApiException(I18n::t('api.third_party.script_token_missing', [], $this->locale), 503);
         }
-    }
-
-    private function configuredWsUrls(): array
-    {
-        $urls = $this->thirdPartyConfig['ws_urls'] ?? [];
-        if (!is_array($urls)) {
-            $urls = [];
-        }
-        $urls = array_values(array_filter(array_map(
-            static fn ($url): string => trim((string)$url),
-            $urls
-        ), static fn (string $url): bool => $url !== ''));
-
-        if ($urls !== []) {
-            return $urls;
-        }
-
-        $legacyUrl = trim((string)($this->thirdPartyConfig['ws_url'] ?? ''));
-        return $legacyUrl === '' ? [] : [$legacyUrl];
     }
 
     private function cipher(): CredentialCipher

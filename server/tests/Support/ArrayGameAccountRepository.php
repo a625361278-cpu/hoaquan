@@ -8,6 +8,8 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
 {
     private int $nextId = 1;
     private array $logs = [];
+    private array $normalLogs = [];
+    private array $events = [];
 
     public function __construct(private array $accounts)
     {
@@ -125,32 +127,47 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
             static fn (array $account): bool => !((int)$account['user_id'] === $userId && (int)$account['id'] === $accountId)
         ));
         unset($this->logs[$accountId]);
+        unset($this->normalLogs[$accountId], $this->events[$accountId]);
     }
 
     public function appendLogLines(int $accountId, array $lines, int $maxLines): void
     {
-        $this->logs[$accountId] ??= [];
+        $this->appendNormalLogLines($accountId, 'legacy', $lines, $maxLines);
+    }
+
+    public function appendNormalLogLines(int $accountId, string $sessionId, array $lines, int $maxLines): void
+    {
+        $sessionId = $sessionId !== '' ? $sessionId : 'legacy';
+        $this->normalLogs[$accountId][$sessionId] ??= [];
         $lastLine = 0;
-        foreach ($this->logs[$accountId] as $row) {
+        foreach ($this->normalLogs[$accountId][$sessionId] as $row) {
             $lastLine = max($lastLine, (int)$row['line_no']);
         }
         foreach ($lines as $line) {
-            $this->logs[$accountId][] = [
-                'id' => count($this->logs[$accountId]) + 1,
+            $this->normalLogs[$accountId][$sessionId][] = [
+                'id' => count($this->normalLogs[$accountId][$sessionId]) + 1,
                 'game_account_id' => $accountId,
                 'line_no' => ++$lastLine,
                 'message' => $line,
+                'created_at' => '2026-07-03 00:00:00',
             ];
         }
-        if (count($this->logs[$accountId]) > $maxLines) {
-            $this->logs[$accountId] = array_slice($this->logs[$accountId], -$maxLines);
+        if (count($this->normalLogs[$accountId][$sessionId]) > $maxLines) {
+            $this->normalLogs[$accountId][$sessionId] = array_slice($this->normalLogs[$accountId][$sessionId], -$maxLines);
         }
+        $this->logs[$accountId] = $this->normalLogs[$accountId][$sessionId];
     }
 
     public function listLogLines(int $accountId, int $afterLine, int $limit): array
     {
+        return $this->listNormalLogLines($accountId, 'legacy', $afterLine, $limit);
+    }
+
+    public function listNormalLogLines(int $accountId, string $sessionId, int $afterLine, int $limit): array
+    {
+        $sessionId = $sessionId !== '' ? $sessionId : 'legacy';
         $rows = array_values(array_filter(
-            $this->logs[$accountId] ?? [],
+            $this->normalLogs[$accountId][$sessionId] ?? [],
             static fn (array $row): bool => (int)$row['line_no'] > $afterLine
         ));
         return array_slice($rows, 0, $limit);
@@ -158,11 +175,67 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
 
     public function countLogLines(int $accountId): int
     {
-        return count($this->logs[$accountId] ?? []);
+        return $this->countNormalLogLines($accountId, 'legacy');
+    }
+
+    public function countNormalLogLines(int $accountId, string $sessionId): int
+    {
+        $sessionId = $sessionId !== '' ? $sessionId : 'legacy';
+        return count($this->normalLogs[$accountId][$sessionId] ?? []);
     }
 
     public function clearLogLines(int $accountId): void
     {
+        $this->clearNormalLogLines($accountId, null);
+    }
+
+    public function clearNormalLogLines(int $accountId, ?string $sessionId = null): void
+    {
+        if ($sessionId === null || $sessionId === '') {
+            $this->normalLogs[$accountId] = [];
+            $this->logs[$accountId] = [];
+            return;
+        }
+        $this->normalLogs[$accountId][$sessionId] = [];
         $this->logs[$accountId] = [];
+    }
+
+    public function appendEventLogs(int $accountId, array $events, int $maxEvents): void
+    {
+        $this->events[$accountId] ??= [];
+        $lastEventNo = 0;
+        foreach ($this->events[$accountId] as $event) {
+            $lastEventNo = max($lastEventNo, (int)$event['event_no']);
+        }
+        foreach ($events as $event) {
+            if (!is_array($event)) {
+                continue;
+            }
+            $event['event_no'] = ++$lastEventNo;
+            $event['created_at'] = '2026-07-03 00:00:00';
+            $this->events[$accountId][] = $event;
+        }
+        if (count($this->events[$accountId]) > $maxEvents) {
+            $this->events[$accountId] = array_slice($this->events[$accountId], -$maxEvents);
+        }
+    }
+
+    public function listEventLogs(int $accountId, int $afterEventNo, int $limit): array
+    {
+        $rows = array_values(array_filter(
+            $this->events[$accountId] ?? [],
+            static fn (array $row): bool => (int)$row['event_no'] > $afterEventNo
+        ));
+        return array_slice($rows, 0, $limit);
+    }
+
+    public function countEventLogs(int $accountId): int
+    {
+        return count($this->events[$accountId] ?? []);
+    }
+
+    public function clearEventLogs(int $accountId): void
+    {
+        $this->events[$accountId] = [];
     }
 }

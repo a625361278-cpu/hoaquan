@@ -5,7 +5,7 @@ namespace tests\Feature;
 use app\service\GameAccountService;
 use PHPUnit\Framework\TestCase;
 use tests\Support\ArrayGameAccountRepository;
-use tests\Support\ArrayThirdPartyCommandQueue;
+use tests\Support\ArrayThirdPartyScriptRuntime;
 
 class GameAccountServiceTest extends TestCase
 {
@@ -394,7 +394,7 @@ class GameAccountServiceTest extends TestCase
                 'user_id' => 7,
                 'display_name' => 'any-player',
                 'game_username' => 'any-player',
-                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('anything'),
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
                 'channel_code' => 'official_app',
                 'server_id' => '',
                 'server_name' => '',
@@ -412,7 +412,7 @@ class GameAccountServiceTest extends TestCase
         $service->start(7, 3);
     }
 
-    public function testStartQueuesWebSocketCommandAndMarksAccountStarting(): void
+    public function testStartUsesIdleScriptConnectionAndMarksAccountStarting(): void
     {
         $repository = new ArrayGameAccountRepository([
             [
@@ -420,7 +420,7 @@ class GameAccountServiceTest extends TestCase
                 'user_id' => 7,
                 'display_name' => 'any-player',
                 'game_username' => 'any-player',
-                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('anything'),
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
                 'channel_code' => 'official_app',
                 'server_id' => '',
                 'server_name' => '',
@@ -431,21 +431,57 @@ class GameAccountServiceTest extends TestCase
                 'config_json' => '{}',
             ],
         ]);
-        $queue = new ArrayThirdPartyCommandQueue();
+        $runtime = new ArrayThirdPartyScriptRuntime();
         $service = new GameAccountService($repository, [
             'enabled' => true,
             'transport' => 'websocket',
-            'ws_url' => 'ws://127.0.0.1:9999',
+            'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, $queue);
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime);
 
         $result = $service->start(7, 3);
 
         $this->assertSame(0, $result['code']);
         $this->assertSame('starting', $result['data']['account']['status']);
-        $this->assertSame('start', $queue->commands[0]['action']);
-        $this->assertSame(3, $queue->commands[0]['account_id']);
+        $this->assertSame(3, $runtime->started[0]['account_id']);
+        $this->assertSame('secret-password', $runtime->started[0]['game_password']);
+        $this->assertSame([], $runtime->started[0]['config']);
         $this->assertSame('启动任务已提交，等待第三方登录确认', $result['msg']);
+    }
+
+    public function testStartFailsWithoutIdleScriptConnectionAndKeepsAccountStopped(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'stopped',
+                'sync_status' => 'local_unsynced',
+                'third_party_account_id' => '',
+                'remark' => '',
+                'config_json' => '{}',
+            ],
+        ]);
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+        ], \app\support\I18n::DEFAULT_LOCALE, new ArrayThirdPartyScriptRuntime(false));
+
+        try {
+            $service->start(7, 3);
+            $this->fail('Expected start without idle script connection to fail.');
+        } catch (\app\exception\ApiException $exception) {
+            $this->assertSame('脚本未就绪，请联系管理员', $exception->getMessage());
+            $this->assertSame('stopped', $repository->findById(3)['status']);
+        }
     }
 
     public function testStopQueuesCommandMarksStoppedAndClearsLogs(): void
@@ -467,18 +503,18 @@ class GameAccountServiceTest extends TestCase
                 'config_json' => '{}',
             ],
         ]);
-        $repository->appendLogLines(3, ['line 1'], 2500);
-        $queue = new ArrayThirdPartyCommandQueue();
-        $service = new GameAccountService($repository, ['enabled' => true], \app\support\I18n::DEFAULT_LOCALE, $queue);
+        $repository->appendNormalLogLines(3, 'session-1', ['line 1'], 2500);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $service = new GameAccountService($repository, ['enabled' => true], \app\support\I18n::DEFAULT_LOCALE, $runtime);
 
         $result = $service->stop(7, 3);
 
         $this->assertSame(0, $result['code']);
-        $this->assertSame('stopped', $result['data']['account']['status']);
+        $this->assertSame('stopping', $result['data']['account']['status']);
         $this->assertSame('local_unsynced', $result['data']['account']['sync_status']);
-        $this->assertSame('', $result['data']['account']['log_session_id']);
-        $this->assertSame('stop', $queue->commands[0]['action']);
-        $this->assertSame(0, $repository->countLogLines(3));
+        $this->assertSame('session-1', $result['data']['account']['log_session_id']);
+        $this->assertSame(3, $runtime->stopped[0]['account_id']);
+        $this->assertSame(1, $repository->countNormalLogLines(3, 'session-1'));
     }
 
     public function testLogStorageKeepsLatest2500Lines(): void
@@ -495,6 +531,7 @@ class GameAccountServiceTest extends TestCase
                 'status' => 'running',
                 'sync_status' => 'synced',
                 'third_party_account_id' => 'pod-1',
+                'log_session_id' => 'session-1',
                 'remark' => '',
                 'config_json' => '{}',
             ],

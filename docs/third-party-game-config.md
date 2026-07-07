@@ -1,18 +1,32 @@
 # 第三方游戏配置 JSON 对接说明
 
-本文档说明启动游戏账号时传给第三方的 WebSocket 载荷结构，以及其中 `config` 游戏配置 JSON 的完整字段。字段由用户端配置 schema 生成，字段名与实际保存/发送结构一致。
+本文档说明第三方脚本主动连接我方 GatewayWorker 后，服务端启动游戏账号时发送给脚本的 WebSocket 载荷结构，以及其中 `config` 游戏配置 JSON 的完整字段。字段由用户端配置 schema 生成，字段名与实际保存/发送结构一致。
+
+## 连接方式
+
+第三方脚本先主动连接我方 WebSocket：
+
+```text
+ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
+```
+
+- `SCRIPT_POOL_TOKEN` 由后台“第三方配置”的脚本池 Token 提供。
+- 连接通过校验后会收到 `{"type":"ready","client_id":"...","state":"idle"}`。
+- 一个连接同一时间只服务一个游戏账号。账号停止后该连接会断开；脚本如需继续接单，需要重新连接。
+- 运行消息不再携带 `account_id`。账号归属由服务端连接绑定关系判断；未绑定连接发送业务消息会被关闭。
+- 心跳可发送 `{"type":"ping"}`、`{"type":"pong"}` 或 `{"type":"heartbeat","script_version":"1.0.0"}`，服务端会回 `pong` 并更新最近心跳。
 
 ## 启动载荷
 
-正式第三方接入固定使用 WebSocket。用户点击启动后，服务端会向第三方连接发送下面的 `start` 包。`game_password` 只在启动通信中传递，不写入 `config`。
+正式第三方接入固定使用 WebSocket。用户点击启动后，服务端会从空闲脚本连接中分配一个连接，并向该连接发送下面的 `start` 包。`game_password` 只在启动通信中传递，不写入 `config`。
 
-`request_id` 是本次请求编号，不是游戏账号、区服或角色 ID；第三方回 `started/error` 时建议原样带回。当前游戏只有一个区服，启动包不传 `server_id`、`server_name`。同一长连接可能承载多个账号，所有账号相关消息都必须带 `account_id`。
+`request_id` 是本次请求编号，不是游戏账号、区服或角色 ID；第三方回 `started/error/stopped` 时建议原样带回。`session_id` 是本次运行日志会话 ID。当前游戏只有一个区服，启动包不传 `server_id`、`server_name`。
 
 ```json
 {
   "type": "start",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
-  "account_id": 10001,
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
   "game_username": "game_account_001",
   "game_password": "plain-password-used-only-during-start",
   "config": {
@@ -410,7 +424,7 @@
 {
   "type": "stop",
   "request_id": "b0ff0f0e5f584d1fb1c164a40ff6d68a",
-  "account_id": 10001
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7"
 }
 ```
 
@@ -420,7 +434,7 @@
 {
   "type": "started",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
-  "account_id": 10001,
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
   "display_name": "role-name"
 }
 ```
@@ -431,7 +445,7 @@
 {
   "type": "error",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
-  "account_id": 10001,
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
   "message": "login failed"
 }
 ```
@@ -441,7 +455,6 @@
 ```json
 {
   "type": "log",
-  "account_id": 10001,
   "level": "info",
   "category": "runtime",
   "time": "2026-07-04 12:00:00",
@@ -449,16 +462,44 @@
 }
 ```
 
+普通日志按本次运行会话保存，最多保留 2500 条；主动停止和下次启动前会清空。普通日志会先进入 Redis 分片队列，由日志 writer 聚合后批量写库，用户端读取可能有几秒延迟。事件卡片历史请优先使用结构化 `event` 消息；如果只能写在日志文本里，可在行尾追加 `[[EVT]]` 后接事件 JSON，服务端会解析并写入事件历史。
+
+### 第三方推送 event
+
+```json
+{
+  "type": "event",
+  "event": {
+    "module": "种植",
+    "title": "完成种植任务",
+    "desc": "已种植库存较少的花朵",
+    "status": "success",
+    "time": "2026-07-04 12:00:00"
+  }
+}
+```
+
+事件历史按游戏账号保存，跨停止/重启保留，最多保留 2500 条。事件日志同样经过分片队列和 writer 批量写库，但刷新周期更短。用户点击清除事件历史时才会清空。
+
 ### 第三方推送 status
 
 ```json
 {
   "type": "status",
-  "account_id": 10001,
   "level": 14,
   "water": 1,
   "diamond": 754,
   "coin": 236000
+}
+```
+
+### 第三方返回 stopped
+
+```json
+{
+  "type": "stopped",
+  "request_id": "b0ff0f0e5f584d1fb1c164a40ff6d68a",
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7"
 }
 ```
 

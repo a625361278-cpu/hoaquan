@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "97552c646d652e093c5028649925c71f",
+    "content-hash": "54db44e4a295c27eb0e1aee4709b53a2",
     "packages": [
         {
             "name": "brick/math",
@@ -4419,6 +4419,40 @@
             "time": "2023-12-04T09:22:12+00:00"
         },
         {
+            "name": "webman/gateway-worker",
+            "version": "v2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/webman-php/gateway-worker.git",
+                "reference": "2f56245b32834a66934386b81d616aaf3ce2fa45"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/webman-php/gateway-worker/zipball/2f56245b32834a66934386b81d616aaf3ce2fa45",
+                "reference": "2f56245b32834a66934386b81d616aaf3ce2fa45",
+                "shasum": ""
+            },
+            "require": {
+                "workerman/gateway-worker": ">=3.0",
+                "workerman/webman-framework": "^2.1 || dev-master"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Webman\\GatewayWorker\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "support": {
+                "issues": "https://github.com/webman-php/gateway-worker/issues",
+                "source": "https://github.com/webman-php/gateway-worker/tree/v2.1.0"
+            },
+            "time": "2025-11-14T07:45:28+00:00"
+        },
+        {
             "name": "webman/redis",
             "version": "v2.1.5",
             "source": {
@@ -4493,6 +4527,60 @@
                 "source": "https://github.com/workerman-php/coroutine/tree/v1.1.5"
             },
             "time": "2026-03-12T02:07:37+00:00"
+        },
+        {
+            "name": "workerman/gateway-worker",
+            "version": "v4.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/walkor/GatewayWorker.git",
+                "reference": "25e4430982caa98f82e9187d092ce34b2fddfc90"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/walkor/GatewayWorker/zipball/25e4430982caa98f82e9187d092ce34b2fddfc90",
+                "reference": "25e4430982caa98f82e9187d092ce34b2fddfc90",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.2",
+                "workerman/workerman": "^4.0.30 || ^5.1"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "4.0-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "GatewayWorker\\": "./src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "homepage": "http://www.workerman.net",
+            "keywords": [
+                "communication",
+                "distributed"
+            ],
+            "support": {
+                "issues": "https://github.com/walkor/GatewayWorker/issues",
+                "source": "https://github.com/walkor/GatewayWorker/tree/v4.0.1"
+            },
+            "funding": [
+                {
+                    "url": "https://opencollective.com/walkor",
+                    "type": "open_collective"
+                },
+                {
+                    "url": "https://www.patreon.com/walkor",
+                    "type": "patreon"
+                }
+            ],
+            "time": "2025-06-27T01:30:09+00:00"
         },
         {
             "name": "workerman/webman-framework",

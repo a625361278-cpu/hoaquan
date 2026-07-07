@@ -44,7 +44,7 @@
         </view>
 
         <view class="card-actions">
-          <text :class="['status-dot', item.status === 'running' ? 'online' : '', item.status === 'starting' ? 'pending' : '', item.status === 'error' ? 'error' : '']"></text>
+          <text :class="['status-dot', item.status === 'running' ? 'online' : '', ['starting', 'stopping'].includes(item.status) ? 'pending' : '', item.status === 'error' ? 'error' : '']"></text>
           <text class="status-text">{{ statusText(item) }}</text>
           <button class="action primary" :disabled="isActiveAccount(item) || actionLoading" @click="startAccount(item)">{{ t('client.home.start') }}</button>
           <button class="action stop" :disabled="!isActiveAccount(item) || actionLoading" @click="stopAccount(item)">{{ t('client.home.stop') }}</button>
@@ -94,7 +94,7 @@
           <view class="log-main">
             <view class="log-tools">
               <input v-model="logs.search" class="log-search" :placeholder="t('client.logs.search')" />
-              <button class="log-mode" @click="logs.mode = logs.mode === 'raw' ? 'event' : 'raw'">
+              <button class="log-mode" @click="toggleLogMode">
                 {{ logs.mode === 'raw' ? t('client.logs.event_cards') : t('client.logs.normal_logs') }}
               </button>
             </view>
@@ -103,7 +103,7 @@
               <label class="check"><checkbox :checked="logs.autoScroll" @click="logs.autoScroll = !logs.autoScroll" />{{ t('client.logs.auto_scroll') }}</label>
               <button class="transport" @click="toggleLogTransport">{{ logs.transport === 'ws' ? t('client.logs.transport_ws') : t('client.logs.transport_http') }}</button>
               <button class="clear-log" @click="clearLogs">{{ t('client.logs.clear_history') }}</button>
-              <text class="recent-text">{{ t('client.logs.show_recent', { count: filteredLogLines.length }) }}</text>
+              <text class="recent-text">{{ t('client.logs.show_recent', { count: visibleLogCount }) }}</text>
             </view>
             <scroll-view class="log-list" scroll-y :scroll-into-view="logs.autoScroll ? logsTailId : ''">
               <view v-if="logs.mode === 'event'">
@@ -121,7 +121,7 @@
                   <text>{{ line }}</text>
                 </view>
               </view>
-              <view v-if="filteredLogLines.length === 0 && filteredEvents.length === 0" class="empty-log">{{ t('client.logs.empty') }}</view>
+              <view v-if="visibleLogCount === 0" class="empty-log">{{ t('client.logs.empty') }}</view>
               <view :id="logsTailId" class="log-tail"></view>
             </scroll-view>
             <view class="log-footer">
@@ -220,7 +220,9 @@ const logs = reactive({
   visible: false,
   account: null,
   lines: [],
+  events: [],
   lastLine: 0,
+  lastEvent: 0,
   category: t('client.logs.all'),
   search: '',
   mode: 'raw',
@@ -303,12 +305,13 @@ function expireText(item) {
 }
 
 function isActiveAccount(item) {
-  return ['starting', 'running'].includes(item.status);
+  return ['starting', 'running', 'stopping'].includes(item.status);
 }
 
 function statusText(item) {
   if (item.status === 'running') return t('client.home.status.running');
   if (item.status === 'starting') return t('client.home.status.starting');
+  if (item.status === 'stopping') return t('client.home.status.stopping');
   if (item.status === 'error') return t('client.home.status.error');
   if (item.status === 'stopped') return t('client.home.status.stopped');
   return t('client.home.status.local_preview');
@@ -402,7 +405,9 @@ function openLogs(item) {
   logs.visible = true;
   logs.account = item;
   logs.lines = [];
+  logs.events = [];
   logs.lastLine = 0;
+  logs.lastEvent = 0;
   logs.category = t('client.logs.all');
   fetchLogs(true);
   connectLogSocket();
@@ -420,17 +425,28 @@ async function fetchLogs(reset = false) {
   if (!logs.account) return;
   try {
     const lastLine = reset ? 0 : logs.lastLine;
-    const result = await request({ url: `/api/game-accounts/${logs.account.id}/logs?lastLine=${lastLine}` });
-    const incoming = result.logs || [];
-    logs.lines = reset ? incoming : logs.lines.concat(incoming);
-    if (logs.lines.length > 2500) {
-      logs.lines = logs.lines.slice(-2500);
-    }
-    logs.lastLine = result.lastLine || logs.lastLine;
+    const lastEvent = reset ? 0 : logs.lastEvent;
+    const result = await request({ url: `/api/game-accounts/${logs.account.id}/logs?lastLine=${lastLine}&lastEvent=${lastEvent}` });
+    applyLogPayload(result, reset);
     await nextTick();
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
   }
+}
+
+function applyLogPayload(payload, reset = false) {
+  const incomingLines = Array.isArray(payload.logs) ? payload.logs.map((line) => String(line)) : [];
+  const incomingEvents = Array.isArray(payload.events) ? payload.events : [];
+  logs.lines = reset ? incomingLines : logs.lines.concat(incomingLines);
+  logs.events = reset ? incomingEvents : logs.events.concat(incomingEvents);
+  if (logs.lines.length > 2500) {
+    logs.lines = logs.lines.slice(-2500);
+  }
+  if (logs.events.length > 2500) {
+    logs.events = logs.events.slice(-2500);
+  }
+  logs.lastLine = payload.lastLine || logs.lastLine;
+  logs.lastEvent = payload.lastEvent || logs.lastEvent;
 }
 
 function connectLogSocket() {
@@ -446,9 +462,7 @@ function connectLogSocket() {
   logSocket.onmessage = (event) => {
     try {
       const payload = JSON.parse(event.data);
-      const incoming = payload.logs || payload.lines || [];
-      logs.lines = logs.lines.concat(incoming).slice(-2500);
-      logs.lastLine = payload.lastLine || logs.lastLine;
+      applyLogPayload({ ...payload, logs: payload.logs || payload.lines || [] }, false);
     } catch (error) {
       logs.lines = logs.lines.concat(String(event.data)).slice(-2500);
     }
@@ -493,18 +507,29 @@ function toggleLogTransport() {
   }
 }
 
+function toggleLogMode() {
+  logs.mode = logs.mode === 'raw' ? 'event' : 'raw';
+  logs.category = t('client.logs.all');
+}
+
 async function clearLogs() {
   if (!logs.account) return;
   try {
-    await request({ url: `/api/game-accounts/${logs.account.id}/logs`, method: 'DELETE' });
-    logs.lines = [];
-    logs.lastLine = 0;
+    const type = logs.mode === 'event' ? 'event' : 'normal';
+    await request({ url: `/api/game-accounts/${logs.account.id}/logs?type=${type}`, method: 'DELETE' });
+    if (type === 'event') {
+      logs.events = [];
+      logs.lastEvent = 0;
+    } else {
+      logs.lines = [];
+      logs.lastLine = 0;
+    }
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
   }
 }
 
-const parsedLogs = computed(() => logs.lines.map((line) => {
+const normalLogItems = computed(() => logs.lines.map((line) => {
   const moduleMatch = String(line).match(/\[([^\]]+)\]/);
   const evtIndex = String(line).indexOf('[[EVT]]');
   let event = null;
@@ -522,23 +547,40 @@ const parsedLogs = computed(() => logs.lines.map((line) => {
   };
 }));
 
+const eventLogItems = computed(() => logs.events.map((event, index) => ({
+  id: event.id || `${event.event_no || index}`,
+  module: event.module || t('client.logs.all'),
+  title: event.title || '',
+  desc: event.desc || event.message || '',
+  status: event.status || '',
+  time: event.time || '',
+  raw: event,
+  searchText: JSON.stringify(event),
+})));
+
+const activeLogItems = computed(() => (logs.mode === 'event' ? eventLogItems.value : normalLogItems.value));
+
 const logCategories = computed(() => {
-  const counts = new Map([[t('client.logs.all'), parsedLogs.value.length]]);
-  parsedLogs.value.forEach((item) => counts.set(item.module, (counts.get(item.module) || 0) + 1));
+  const counts = new Map([[t('client.logs.all'), activeLogItems.value.length]]);
+  activeLogItems.value.forEach((item) => counts.set(item.module, (counts.get(item.module) || 0) + 1));
   return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
 });
 
-const filteredLogItems = computed(() => parsedLogs.value.filter((item) => {
+const filteredLogItems = computed(() => activeLogItems.value.filter((item) => {
   const all = t('client.logs.all');
   const matchCategory = logs.category === all || item.module === logs.category;
-  const matchSearch = !logs.search || item.raw.toLowerCase().includes(logs.search.toLowerCase());
+  const raw = typeof item.raw === 'string' ? item.raw : item.searchText || JSON.stringify(item.raw);
+  const matchSearch = !logs.search || raw.toLowerCase().includes(logs.search.toLowerCase());
   return matchCategory && matchSearch;
 }));
 
-const filteredLogLines = computed(() => filteredLogItems.value.map((item) => item.raw));
+const filteredLogLines = computed(() => filteredLogItems.value
+  .filter((item) => typeof item.raw === 'string')
+  .map((item) => item.raw));
 const filteredEvents = computed(() => filteredLogItems.value
-  .filter((item) => item.event)
-  .map((item, index) => ({ id: item.event.id || index, ...item.event })));
+  .filter((item) => typeof item.raw !== 'string')
+  .map((item) => ({ id: item.id, ...item.raw })));
+const visibleLogCount = computed(() => (logs.mode === 'event' ? filteredEvents.value.length : filteredLogLines.value.length));
 
 function goAddGame() {
   uni.navigateTo({ url: '/pages/game/add' });

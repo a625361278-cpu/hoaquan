@@ -43,9 +43,9 @@ return [
         'group' => app_env('WEBMAN_GROUP', ''),
         'reusePort' => false,
     ],
-    'third_party_connection_worker' => [
-        'handler' => app\process\ThirdPartyConnectionWorker::class,
-        'count' => 1,
+    'game_log_writer' => [
+        'handler' => app\process\GameLogWriter::class,
+        'count' => max(1, (int)app_env('GAME_LOG_WRITER_COUNT', 8)),
         'user' => app_env('WEBMAN_USER', ''),
         'group' => app_env('WEBMAN_GROUP', ''),
         'reusePort' => false,

@@ -67,6 +67,59 @@ try {
         });
     }
 
+    if (!$schema->hasTable('ga_game_account_log_segments')) {
+        $schema->create('ga_game_account_log_segments', function ($table) {
+            $table->bigIncrements('id')->comment('日志段ID');
+            $table->unsignedInteger('game_account_id')->comment('游戏账号ID');
+            $table->string('session_id', 64)->comment('运行日志会话ID');
+            $table->unsignedInteger('segment_no')->comment('段序号');
+            $table->unsignedBigInteger('start_line_no')->comment('起始行号');
+            $table->unsignedBigInteger('end_line_no')->comment('结束行号');
+            $table->unsignedSmallInteger('entry_count')->comment('段内日志条数');
+            $table->longText('payload_json')->comment('日志段JSON');
+            $table->dateTime('first_at')->comment('段首日志时间');
+            $table->dateTime('last_at')->comment('段尾日志时间');
+            $table->dateTime('created_at')->useCurrent()->comment('创建时间');
+            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate()->comment('更新时间');
+            $table->unique(['game_account_id', 'session_id', 'segment_no'], 'uniq_account_session_segment');
+            $table->index(['game_account_id', 'session_id', 'end_line_no'], 'idx_account_session_line');
+        });
+    }
+
+    if (!$schema->hasTable('ga_game_account_event_segments')) {
+        $schema->create('ga_game_account_event_segments', function ($table) {
+            $table->bigIncrements('id')->comment('事件日志段ID');
+            $table->unsignedInteger('game_account_id')->comment('游戏账号ID');
+            $table->unsignedInteger('segment_no')->comment('段序号');
+            $table->unsignedBigInteger('start_event_no')->comment('起始事件号');
+            $table->unsignedBigInteger('end_event_no')->comment('结束事件号');
+            $table->unsignedSmallInteger('entry_count')->comment('段内事件条数');
+            $table->longText('payload_json')->comment('事件段JSON');
+            $table->dateTime('first_at')->comment('段首事件时间');
+            $table->dateTime('last_at')->comment('段尾事件时间');
+            $table->dateTime('created_at')->useCurrent()->comment('创建时间');
+            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate()->comment('更新时间');
+            $table->unique(['game_account_id', 'segment_no'], 'uniq_account_event_segment');
+            $table->index(['game_account_id', 'end_event_no'], 'idx_account_event_no');
+        });
+    }
+
+    if (!$schema->hasTable('ga_game_account_log_states')) {
+        $schema->create('ga_game_account_log_states', function ($table) {
+            $table->bigIncrements('id')->comment('日志游标ID');
+            $table->unsignedInteger('game_account_id')->comment('游戏账号ID');
+            $table->string('log_type', 16)->comment('日志类型：normal/event');
+            $table->string('session_id', 64)->default('')->comment('普通日志运行会话，事件日志为空');
+            $table->unsignedBigInteger('last_sequence')->default(0)->comment('最后写入行号或事件号');
+            $table->unsignedInteger('entry_count')->default(0)->comment('当前保留条数');
+            $table->unsignedInteger('last_segment_no')->default(0)->comment('最后段序号');
+            $table->dateTime('created_at')->useCurrent()->comment('创建时间');
+            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate()->comment('更新时间');
+            $table->unique(['game_account_id', 'log_type', 'session_id'], 'uniq_account_log_state');
+            $table->index(['log_type', 'updated_at'], 'idx_type_updated');
+        });
+    }
+
     if (!$schema->hasTable('ga_announcements')) {
         $schema->create('ga_announcements', function ($table) {
             $table->increments('id')->comment('公告ID');
@@ -125,9 +178,11 @@ try {
         'third_party_enabled' => ['0', '第三方接口是否启用：0否，1是'],
         'third_party_base_url' => ['', '第三方接口地址'],
         'third_party_sign_secret' => ['', '第三方签名密钥'],
-        'third_party_ws_url' => ['', '第三方WebSocket地址'],
-        'third_party_ws_urls' => ['', '第三方WebSocket连接池地址列表，每行一个连接槽位'],
-        'third_party_ws_connection_capacity' => ['10', '第三方单条WebSocket连接最大承载账号数'],
+        'third_party_ws_url' => ['', '旧版第三方WebSocket地址，已停用'],
+        'third_party_ws_urls' => ['', '旧版第三方WebSocket连接池地址列表，已停用'],
+        'third_party_ws_connection_capacity' => ['10', '旧版单连接账号容量，已停用'],
+        'third_party_script_token' => [bin2hex(random_bytes(24)), '第三方脚本池连接Token'],
+        'third_party_script_ws_url' => [app_env('THIRD_PARTY_SCRIPT_WS_URL', 'ws://hoavienpro.com/ws/third-party/script'), '我方第三方脚本WebSocket地址'],
         'third_party_transport' => ['websocket', '第三方通信方式：websocket或http'],
         'game_account_credential_key' => [app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''), '游戏账号密码加密密钥'],
         'auth_verification_mode' => ['security_question', '认证方式：security_question密保问题，email_code邮箱验证码'],
@@ -141,6 +196,8 @@ try {
         'smtp_from_name' => ['Hoa Quán', '发件名称'],
         'invite_daily_limit' => ['50', '同一邀请人每日邀请奖励上限'],
         'invite_same_ip_daily_limit' => ['3', '同一邀请人同IP每日邀请奖励风控上限'],
+        'game_log_queue_shards' => ['64', '日志队列分片数量，当前代码固定为64'],
+        'game_log_writer_count' => [app_env('GAME_LOG_WRITER_COUNT', '8'), '日志写入进程数量，建议1万账号使用8'],
     ];
 
     foreach ($settings as $name => [$value, $remark]) {
@@ -164,12 +221,16 @@ try {
     echo 'ga_users密保字段：已同步' . PHP_EOL;
     echo 'ga_game_accounts：预览账号与配置列已同步' . PHP_EOL;
     echo 'ga_game_account_logs：已同步' . PHP_EOL;
+    echo 'ga_game_account_log_segments：已同步' . PHP_EOL;
+    echo 'ga_game_account_event_segments：已同步' . PHP_EOL;
+    echo 'ga_game_account_log_states：已同步' . PHP_EOL;
     echo 'ga_announcements：已同步' . PHP_EOL;
     echo 'ga_user_point_transactions：已同步' . PHP_EOL;
     echo 'SMTP配置项：已同步' . PHP_EOL;
     echo '认证方式配置项：已同步' . PHP_EOL;
     echo '邀请奖励配置项：已同步' . PHP_EOL;
-    echo '第三方WebSocket连接池配置项：已同步' . PHP_EOL;
+    echo '第三方脚本连接配置项：已同步' . PHP_EOL;
+    echo '高吞吐日志配置项：已同步' . PHP_EOL;
 } catch (Throwable $e) {
     fwrite(STDERR, '业务数据库结构同步失败：' . $e->getMessage() . PHP_EOL);
     exit(1);

@@ -15,9 +15,13 @@
                 font-size: 12px;
                 line-height: 1.5;
             }
-            .ws-textarea {
-                min-height: 160px;
-                resize: vertical;
+            .readonly-url {
+                margin-top: 10px;
+                padding: 10px 12px;
+                border-radius: 4px;
+                background: #f7f8fa;
+                color: #1f2937;
+                word-break: break-all;
             }
         </style>
     </head>
@@ -33,19 +37,24 @@
                     </div>
 
                     <div class="layui-form-item">
-                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.ws_urls')?></label>
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.script_ws_url')?></label>
                         <div class="layui-input-block">
-                            <textarea name="third_party_ws_urls" class="layui-textarea ws-textarea"></textarea>
-                            <div class="form-help"><?=admin_t('admin.third_party_config.ws_urls_help')?></div>
+                            <input type="text" name="third_party_script_ws_url" autocomplete="off" class="layui-input">
+                            <div class="form-help"><?=admin_t('admin.third_party_config.script_ws_url_help')?></div>
+                            <div id="script-full-url" class="readonly-url"></div>
                         </div>
                     </div>
 
                     <div class="layui-form-item">
-                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.capacity')?></label>
-                        <div class="layui-input-inline">
-                            <input type="number" min="1" step="1" name="third_party_ws_connection_capacity" class="layui-input">
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.script_token')?></label>
+                        <div class="layui-input-block">
+                            <input type="text" name="third_party_script_token" autocomplete="off" class="layui-input">
+                            <div class="form-help"><?=admin_t('admin.third_party_config.script_token_help')?></div>
+                            <input type="hidden" name="reset_script_token" value="0">
+                            <button type="button" id="reset-token" class="pear-btn pear-btn-warming pear-btn-sm" style="margin-top:8px;">
+                                <?=admin_t('admin.third_party_config.reset_script_token')?>
+                            </button>
                         </div>
-                        <div class="layui-form-mid layui-word-aux"><?=admin_t('admin.third_party_config.capacity_help')?></div>
                     </div>
 
                     <div class="layui-form-item">
@@ -82,24 +91,35 @@
                 let form = layui.form;
                 let $ = layui.$;
 
-                $.get(GET_API, function(res) {
-                    if (res.code) return layui.popup.failure(res.msg);
-                    form.val("third-party-config-form", {
-                        third_party_enabled: res.data.enabled ? "1" : "",
-                        third_party_ws_urls: res.data.ws_urls_text || "",
-                        third_party_ws_connection_capacity: res.data.ws_connection_capacity || 10,
-                        third_party_sign_secret: res.data.sign_secret || ""
-                    });
-                    form.render();
+                loadConfig();
+
+                $("#reset-token").on("click", function() {
+                    $("input[name=reset_script_token]").val("1");
+                    layui.popup.success("<?=admin_t('admin.third_party_config.reset_script_token_pending')?>");
                 });
 
                 form.on("submit(save-config)", function(data) {
                     $.post(SAVE_API, data.field, function(res) {
                         if (res.code) return layui.popup.failure(res.msg);
-                        layui.popup.success("<?=admin_t('admin.common.operation_success')?>");
+                        $("input[name=reset_script_token]").val("0");
+                        layui.popup.success("<?=admin_t('admin.common.operation_success')?>", loadConfig);
                     });
                     return false;
                 });
+
+                function loadConfig() {
+                    $.get(GET_API, function(res) {
+                        if (res.code) return layui.popup.failure(res.msg);
+                        form.val("third-party-config-form", {
+                            third_party_enabled: res.data.enabled ? "1" : "",
+                            third_party_script_ws_url: res.data.script_ws_url || "",
+                            third_party_script_token: res.data.script_token || "",
+                            third_party_sign_secret: res.data.sign_secret || ""
+                        });
+                        $("#script-full-url").text(res.data.script_full_url || "");
+                        form.render();
+                    });
+                }
             });
         </script>
     </body>

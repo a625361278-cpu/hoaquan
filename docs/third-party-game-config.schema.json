@@ -7,7 +7,7 @@
   "required": [
     "type",
     "request_id",
-    "account_id",
+    "session_id",
     "game_username",
     "game_password",
     "config"
@@ -21,12 +21,12 @@
     "request_id": {
       "type": "string",
       "minLength": 1,
-      "description": "本次请求编号，第三方回 started/error 时建议原样带回"
+      "description": "本次请求编号，第三方回 started/error/stopped 时建议原样带回"
     },
-    "account_id": {
-      "type": "integer",
-      "minimum": 1,
-      "description": "GameAssist 游戏账号 ID；同一长连接承载多个账号时用于路由"
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "本次运行日志会话 ID"
     },
     "game_username": {
       "type": "string",

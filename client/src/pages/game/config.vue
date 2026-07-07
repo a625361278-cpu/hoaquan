@@ -55,7 +55,7 @@
               </view>
               <text class="colon">:</text>
             </view>
-            <view class="control-area">
+            <view :class="['control-area', `control-area--${entry.type}`]">
               <switch
                 v-if="entry.type === 'switch'"
                 :checked="Boolean(getConfigValue(config, entry.path))"
@@ -536,6 +536,7 @@ function cloneConfig(value) {
   box-sizing: border-box;
   background: #eef2f6;
   color: #111827;
+  color-scheme: light;
 }
 
 .topbar {
@@ -1289,22 +1290,47 @@ function cloneConfig(value) {
   }
 
   .config-row {
+    flex-wrap: wrap;
     justify-content: space-between;
     width: 100%;
     min-height: 48px;
-    margin-bottom: 0;
+    margin: 0;
+    padding: 10px 0;
+    box-sizing: border-box;
     border-bottom: 1px solid #eef2f7;
   }
 
   .row-label {
+    flex: 1 1 0;
     justify-content: flex-start;
     width: auto;
     min-width: 0;
-    padding-right: 10px;
+    max-width: calc(100% - 70px);
+    padding-right: 0;
+    line-height: 1.4;
+  }
+
+  .label-text {
+    min-width: 0;
+    word-break: break-word;
   }
 
   .control-area {
+    flex: 0 0 auto;
+    justify-content: flex-end;
     min-width: 0;
+    max-width: 100%;
+  }
+
+  .control-area--radio,
+  .control-area--multiSelect,
+  .control-area--priorityGroup {
+    flex: 1 0 100%;
+    justify-content: stretch;
+  }
+
+  .number-control {
+    max-width: 156px;
   }
 
   .number-input {
@@ -1316,32 +1342,43 @@ function cloneConfig(value) {
   }
 
   .radio-control {
+    width: 100%;
     min-width: 130px;
   }
 
-  .select-control {
+  .single-select-control {
     width: 150px;
   }
 
+  .select-control {
+    width: 100%;
+  }
+
   .selected-tag {
-    max-width: 112px;
+    max-width: calc(100vw - 86px);
   }
 
   .priority-control {
-    width: 180px;
+    width: 100%;
   }
 
   .priority-row {
-    grid-template-columns: 1fr 70px;
+    grid-template-columns: minmax(0, 1fr) 76px;
     column-gap: 8px;
   }
 
+  .priority-label {
+    min-width: 0;
+    word-break: break-word;
+  }
+
   .priority-input {
-    width: 70px;
+    width: 76px;
   }
 
   .help-tooltip {
     left: 0;
+    max-width: calc(100vw - 32px);
     transform: none;
   }
 

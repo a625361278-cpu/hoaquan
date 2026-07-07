@@ -9,7 +9,7 @@ use RuntimeException;
 
 class ThirdPartyConfigAdminServiceTest extends TestCase
 {
-    public function testSaveAcceptsEmptySignSecretAndNormalizesWebSocketUrls(): void
+    public function testSaveAcceptsScriptEndpointTokenAndEmptySignSecret(): void
     {
         $settings = new class extends SystemSettingService {
             public array $saved = [];
@@ -29,20 +29,19 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
 
         $service->save([
             'third_party_enabled' => '1',
-            'third_party_ws_urls' => " ws://third-party/a \r\n\r\n wss://third-party/b ",
-            'third_party_ws_connection_capacity' => '10',
+            'third_party_script_ws_url' => 'ws://hoavienpro.com/ws/third-party/script',
+            'third_party_script_token' => 'script-token',
             'third_party_sign_secret' => '',
         ]);
 
         $this->assertSame('1', $settings->saved['third_party_enabled']);
-        $this->assertSame("ws://third-party/a\nwss://third-party/b", $settings->saved['third_party_ws_urls']);
-        $this->assertSame('ws://third-party/a', $settings->saved['third_party_ws_url']);
-        $this->assertSame('10', $settings->saved['third_party_ws_connection_capacity']);
+        $this->assertSame('ws://hoavienpro.com/ws/third-party/script', $settings->saved['third_party_script_ws_url']);
+        $this->assertSame('script-token', $settings->saved['third_party_script_token']);
         $this->assertSame('', $settings->saved['third_party_sign_secret']);
         $this->assertSame('websocket', $settings->saved['third_party_transport']);
     }
 
-    public function testSaveRejectsEnabledConfigWithoutWebSocketUrls(): void
+    public function testSaveRejectsEnabledConfigWithoutScriptToken(): void
     {
         $service = new ThirdPartyConfigAdminService(new class extends SystemSettingService {
             public function saveSettings(array $settings): void
@@ -51,12 +50,12 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
         });
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('第三方WebSocket地址未配置');
+        $this->expectExceptionMessage('脚本池Token不能为空');
 
         $service->save([
             'third_party_enabled' => '1',
-            'third_party_ws_urls' => '',
-            'third_party_ws_connection_capacity' => '10',
+            'third_party_script_ws_url' => 'ws://hoavienpro.com/ws/third-party/script',
+            'third_party_script_token' => '',
             'third_party_sign_secret' => '',
         ]);
     }
@@ -68,8 +67,8 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
             {
                 return [
                     'third_party_enabled' => '1',
-                    'third_party_ws_urls' => "ws://third-party/a\nws://third-party/b",
-                    'third_party_ws_connection_capacity' => '8',
+                    'third_party_script_ws_url' => 'ws://hoavienpro.com/ws/third-party/script',
+                    'third_party_script_token' => 'script-token',
                     'third_party_sign_secret' => '',
                 ];
             }
@@ -78,8 +77,9 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
         $config = $service->config();
 
         $this->assertTrue($config['enabled']);
-        $this->assertSame("ws://third-party/a\nws://third-party/b", $config['ws_urls_text']);
-        $this->assertSame(8, $config['ws_connection_capacity']);
+        $this->assertSame('ws://hoavienpro.com/ws/third-party/script', $config['script_ws_url']);
+        $this->assertSame('script-token', $config['script_token']);
+        $this->assertSame('ws://hoavienpro.com/ws/third-party/script?token=script-token', $config['script_full_url']);
         $this->assertSame('', $config['sign_secret']);
     }
 }

@@ -1,6 +1,6 @@
 # Hoa Quán
 
-Hoa Quán 是一个游戏助手基础骨架。当前版本实现基础账号、后台、多游戏账号卡片、游戏配置保存、WebSocket 常驻 worker 启动/停止第三方连接和运行日志存储；第三方 WebSocket 未配置或拒绝登录时会明确失败，不伪造执行结果。
+Hoa Quán 是一个游戏助手基础骨架。当前版本实现基础账号、后台、多游戏账号卡片、游戏配置保存、GatewayWorker 入站脚本连接池和运行日志存储；第三方脚本未连接或拒绝登录时会明确失败，不伪造执行结果。
 
 ## 技术栈
 
@@ -63,9 +63,10 @@ bash deploy/server_update.sh
 - 邀请奖励触发条件是被邀请的新用户添加游戏账号并启动成功。第三方 `started` 回包确认后，系统自动绑定角色并发放奖励；角色标识优先使用 `third_party_account_id`，其次使用 `role_id`、`display_name`、游戏登录账号。
 - 邀请奖励为邀请人 `balance + 1` 点，并写入 `ga_user_point_transactions`；同一邀请人每日奖励上限由 `ga_system_settings.invite_daily_limit` 控制，默认 `50`；同邀请人同 IP 每日奖励风控上限由 `invite_same_ip_daily_limit` 控制，默认 `3`。
 - `ga_user_point_transactions` 通过 `uniq_invite_reward_user(type, related_user_id)` 在数据库层限制同一个被邀请账号只能产生一次邀请奖励流水。
-- 第三方正式接入固定使用 WebSocket：用户端启动接口只提交启动任务，webman 常驻 worker 通过第三方长连接池发送账号启动包，并等待真实 `started` 回包后才标记为运行中。
-- 第三方接口默认未启用，启动、加配额和配置同步请求都会明确失败；停止会提交停止任务并清理本地运行状态和当前日志。
-- 运行日志由服务端按游戏账号维护，每个账号只保留最近 `2500` 条；账号仍运行时浏览器关闭后再登录仍可查看，账号停止或删除后清空当前日志。
+- 第三方正式接入固定使用 WebSocket：第三方脚本主动连接我方 GatewayWorker，用户端启动接口会从空闲脚本连接中分配一个连接给当前账号，并等待真实 `started` 回包后才标记为运行中。
+- 第三方接口默认未启用，启动、加配额和配置同步请求都会明确失败；没有空闲脚本连接时启动会返回“脚本未就绪，请联系管理员”，账号不进入 `starting`。
+- 运行日志分为普通日志和事件卡片历史。普通日志按本次运行会话保存，启动新会话和主动停止后清空；事件卡片历史按账号保留，跨停止/重启保留。两类数据每个账号各最多保留 `2500` 条。
+- 日志写入按 1 万游戏账号设计：GatewayWorker 只把日志写入 64 个 Redis 分片队列，`game_log_writer` 默认 8 个进程按分片消费、内存聚合、批量落库。普通日志默认 10 秒或 50 行刷库一次，事件日志默认 2 秒或 20 条刷库一次；用户端读取结构不变，但普通日志可能有几秒延迟。
 - 用户注册和找回密码默认使用密保问题；`auth_verification_mode=email_code` 时才启用邮箱验证码。邮箱模式下 SMTP 未启用或配置不完整时，发送验证码会明确失败。
 - 登录公告来自后台 `ga_announcements` 的最新启用记录；没有启用公告时用户端不弹窗，不使用前端假公告。
 - 用户端“点数充值”是申请支付接口用的临时展示入口，只在当前页打开小窗口；点击“立即支付”才打开 `/static/temp-payment-apply.html#/` 静态页并显示“待接入充值”，不创建订单、不修改点数，正式支付接入后需要删除或替换。
@@ -89,12 +90,12 @@ bash deploy/server_update.sh
 - 后台仪表盘的今日注册、7日注册、30日注册和总用户数均统计 `ga_users.created_at`，不使用后台用户表。
 - GameAssist 用户后台只允许查看、启用/禁用和重置密码；余额 `balance` 与到期日 `expire_at` 只读展示，不能通过普通用户管理表单修改。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
-- 后台“第三方配置”负责编辑 `third_party_ws_urls` 连接池地址、单连接账号容量和第三方启用状态；签名密钥为选填，仅用于第三方 HTTP 接口签名校验，WebSocket 长连接可为空。后台“第三方连接”读取该配置，可查看每条 WebSocket 槽位的连接状态、承载账号和最近错误，并支持单条/全部启动或强制关闭。强制关闭会先停止该连接上的账号，再断开连接。
+- 后台“第三方配置”负责编辑第三方启用状态、脚本池 Token 和我方 WebSocket 地址；签名密钥为选填，仅用于历史第三方 HTTP 接口签名校验。后台“第三方连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
 
 ## 邀请与个人中心
 
 - 个人中心接口：`GET /api/profile`，需要 Bearer token，返回用户信息、邀请码、邀请链接、推广人数、角色绑定状态和最近点数流水。
-- 角色绑定没有用户端手动接口。用户添加游戏账号并启动成功后，`ThirdPartyConnectionWorker` 收到第三方 `started` 回包，会自动把该角色绑定到当前用户。
+- 角色绑定没有用户端手动接口。用户添加游戏账号并启动成功后，GatewayWorker 收到第三方脚本 `started` 回包，会自动把该角色绑定到当前用户。
 - 自动绑定成功后，如果当前用户来自有效邀请且邀请人当天未超过上限，系统即时给邀请人增加 `1` 点配额并记录流水。
 
 ## 用户认证与找回密码
@@ -116,22 +117,21 @@ bash deploy/server_update.sh
 ## 第三方配置接口
 
 - 第三方正式通信已固定为 WebSocket，配置项 `third_party_transport` 仅保留旧配置兼容，不作为正式 HTTP 接入开关。
-- WebSocket 模式需要配置 `third_party_ws_urls`，每行一个第三方长连接槽位；旧 `third_party_ws_url` 仅作为未配置多地址列表时的兼容来源。
-- 单条连接承载账号数由 `third_party_ws_connection_capacity` 控制，默认 `10`。连接池满时启动会明确失败，不进入本地预览或伪造运行中。
-- 常驻进程：`server/config/process.php` 中的 `third_party_connection_worker`，默认 1 个进程。它使用 Redis 指令队列 `gameassist:third_party_ws:commands`，连接状态写入 `gameassist:third_party_ws:accounts:{account_id}`，并在状态中记录账号所在连接槽位 `slot_id`。
-- 后台预启动第三方连接同样通过 `gameassist:third_party_ws:commands` 写入槽位级指令；槽位运行状态写入 `gameassist:third_party_ws:slots:{slot_id}`。HTTP 后台请求只排队和读取状态，不在请求进程里直接建立 WebSocket 长连接。
-- 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端校验账号、验证密码可解密、读取本地配置 JSON，把状态改为 `starting` 并写入启动任务；接口成功只表示任务已提交，不表示第三方登录成功。
-- 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端写入停止任务，把本地状态改为 `stopped`，并清空当前账号运行日志。
+- 第三方脚本主动连接我方地址：`ws://hoavienpro.com/ws/third-party/script?token=脚本池Token`。Caddy 需要把 `/ws/third-party/script` 代理到本机 GatewayWorker 端口 `7272`。
+- 后台不再配置第三方 URL、URL 列表或单连接容量；旧 `third_party_ws_url`、`third_party_ws_urls`、`third_party_ws_connection_capacity` 可暂留数据库用于兼容旧数据，但启动逻辑不读取。
+- 常驻进程包括 GatewayWorker 的 Gateway、BusinessWorker、Register，以及 `server/config/process.php` 中的 `game_log_writer`。脚本连接状态写入 Redis 前缀 `gameassist:third_party_scripts:*`；日志写入 `gameassist:game_logs:queue:{shard}` 分片队列，`shard=account_id%64`，再由多 writer 聚合写入分段表。默认 `GAME_LOG_WRITER_COUNT=8`，可按服务器压力调整。
+- 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端校验账号、验证密码可解密、读取本地配置 JSON、原子占用一个空闲脚本连接、写入 `starting` 和日志会话，再向该脚本连接发送 `start` 包；接口成功只表示启动包已发出，不表示第三方登录成功。
+- 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端向已绑定脚本发送 `stop` 后本地状态进入 `stopping`；收到脚本 `stopped` 或连接关闭确认后才改为 `stopped` 并清空本次普通日志，事件卡片历史不会清空。
 - 第三方读取游戏配置：`GET /api/third-party/game-accounts/{id}/config`。
-- 第三方 WebSocket start/stop/started/log/status/error/stopped 协议、完整配置 JSON 示例和字段说明见 [docs/third-party-game-config.md](docs/third-party-game-config.md)。同一连接可承载多个账号，所以所有账号相关消息都必须带 `account_id`；JSON Schema 见 [docs/third-party-game-config.schema.json](docs/third-party-game-config.schema.json)，它是可选机器校验文件，不是实际传输数据。
+- 第三方 WebSocket ready/start/stop/started/log/event/status/error/stopped 协议、完整配置 JSON 示例和字段说明见 [docs/third-party-game-config.md](docs/third-party-game-config.md)。一个连接同一时间只绑定一个账号，运行消息不再传 `account_id`；账号归属由服务端连接绑定关系判断。JSON Schema 见 [docs/third-party-game-config.schema.json](docs/third-party-game-config.schema.json)，它是可选机器校验文件，不是实际传输数据。
 - 配置页里的“指定花朵 / 指定花瓶 / 指定花艺”显示中越双语名称，但保存和第三方协议只传第三方提供的资产 ID；当前资产来源是 `VN鲜花(1).txt`、`VN花瓶.txt`、`VN花艺.txt` 整理后的前端选项表，源文件里的每个 ID 都必须保留进下拉，名称为空或待定的条目会继续显示 ID/待定名并记录在 `ASSET_OPTION_ISSUES`。
 - 第三方主动写日志：`POST /api/third-party/game-accounts/{id}/logs`，body 为 `{"logs":["..."]}` 或 `{"lines":["..."]}`。
-- 第三方接口需要先在后台“第三方配置”或 `ga_system_settings` 配置 `third_party_enabled=1` 和 `third_party_ws_urls`。`third_party_sign_secret` 可为空；为空时不影响 WebSocket 长连接，只会导致需要 HTTP 签名校验的第三方 HTTP 接口不可用。
+- 第三方接口需要先在后台“第三方配置”或 `ga_system_settings` 配置 `third_party_enabled=1`、`third_party_script_token` 和 `third_party_script_ws_url`。`third_party_sign_secret` 可为空；为空时不影响脚本池 WebSocket，只会导致需要 HTTP 签名校验的历史第三方 HTTP 接口不可用。
 - 请求头必须包含：
   - `X-Timestamp`：当前 Unix 时间戳，5 分钟内有效。
   - `X-Signature`：`hash_hmac('sha256', "{METHOD}\n{PATH}\n{timestamp}", third_party_sign_secret)`。
 - 返回结构中的 `data.config` 就是保存到 `ga_game_accounts.config_json` 的配置 JSON，供第三方按原样读取。
-- 用户端查看日志优先尝试本地 `/ws/game-accounts/{id}/logs`，不可用时切换为 `GET /api/game-accounts/{id}/logs?lastLine=0` HTTP 轮询。
+- 用户端查看日志优先尝试本地 `/ws/game-accounts/{id}/logs`，不可用时切换为 `GET /api/game-accounts/{id}/logs?lastLine=0&lastEvent=0` HTTP 轮询。普通日志读取 `logs/lastLine/log_session_id`，事件卡片历史读取 `events/lastEvent/categories`。
 
 ## 多语言
 
@@ -143,6 +143,7 @@ bash deploy/server_update.sh
 - 用户端游戏配置页的种植、订单、公会、活动分组和问号说明保持原版复刻；原版没有说明的开关不显示问号，不用占位文案伪装。
 - 用户端游戏配置页以原站当前页面为校验口径，开关展开、单选、下拉等控件形态要和原站一致；例如种植的“选择数量”为下拉选择，保存值仍是字符串。
 - 用户端游戏配置页支持开关展开子配置，例如自动种植展开加速/水滴/任务优先级/种植模式，订单展开数量上限和品质限定，公会展开分享/摸花/竞赛规则，活动展开领取体力、速度、重开、开箱等专项配置。
+- 用户端游戏配置页必须支持手机浏览器访问；移动端不得继承桌面表单左侧偏移，宽控件应在窄屏下换行并保持可见、可操作，不能因此修改配置字段语义或保存结构。
 - 给越南客户翻译时，只提供 `server/resource/translations/vi/messages.json`。客户只能替换 value，不能删除、改名或新增 key。
 - webman 是常驻进程，语言包会按文件修改时间自动刷新；覆盖 JSON 后无需改代码，但生产环境仍建议执行一次 `php start.php reload` 或重启服务，便于确认进程状态一致。
 - 校验语言包完整性：

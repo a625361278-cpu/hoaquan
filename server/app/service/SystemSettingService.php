@@ -12,6 +12,8 @@ class SystemSettingService
         'third_party_ws_url',
         'third_party_ws_urls',
         'third_party_ws_connection_capacity',
+        'third_party_script_token',
+        'third_party_script_ws_url',
         'third_party_transport',
         'third_party_sign_secret',
     ];
@@ -43,20 +45,14 @@ class SystemSettingService
             $settings[$row->name] = $row->value;
         }
 
-        $wsUrls = $this->parseWsUrls(
-            (string)($settings['third_party_ws_urls'] ?? ''),
-            (string)($settings['third_party_ws_url'] ?? '')
-        );
-
         return [
             'enabled' => ($settings['third_party_enabled'] ?? '0') === '1',
             'base_url' => $settings['third_party_base_url'] ?? '',
-            'ws_url' => $wsUrls[0] ?? '',
-            'ws_urls' => $wsUrls,
-            'ws_connection_capacity' => max(1, (int)($settings['third_party_ws_connection_capacity'] ?? 10)),
+            'script_token' => (string)($settings['third_party_script_token'] ?? ''),
+            'script_ws_url' => (string)($settings['third_party_script_ws_url'] ?? app_env('THIRD_PARTY_SCRIPT_WS_URL', 'ws://hoavienpro.com/ws/third-party/script')),
             'transport' => $settings['third_party_transport'] ?? 'websocket',
             'sign_secret' => $settings['third_party_sign_secret'] ?? '',
-            'credential_key' => $settings['game_account_credential_key'] ?: app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''),
+            'credential_key' => ($settings['game_account_credential_key'] ?? '') ?: app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''),
         ];
     }
 
@@ -115,16 +111,5 @@ class SystemSettingService
             $settings[$row->name] = $row->value;
         }
         return $settings;
-    }
-
-    private function parseWsUrls(string $multiLineValue, string $legacyValue): array
-    {
-        $source = trim($multiLineValue) !== '' ? $multiLineValue : $legacyValue;
-        $urls = preg_split('/\r\n|\r|\n/', $source) ?: [];
-
-        return array_values(array_filter(array_map(
-            static fn (string $url): string => trim($url),
-            $urls
-        ), static fn (string $url): bool => $url !== ''));
     }
 }

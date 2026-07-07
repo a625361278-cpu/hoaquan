@@ -20,15 +20,13 @@ class ThirdPartyConfigAdminService
     public function config(): array
     {
         $settings = $this->settings->thirdPartyRawSettings();
-        $urlsText = trim((string)($settings['third_party_ws_urls'] ?? ''));
-        if ($urlsText === '') {
-            $urlsText = trim((string)($settings['third_party_ws_url'] ?? ''));
-        }
+        $token = (string)($settings['third_party_script_token'] ?? '');
 
         return [
             'enabled' => ($settings['third_party_enabled'] ?? '0') === '1',
-            'ws_urls_text' => $urlsText,
-            'ws_connection_capacity' => max(1, (int)($settings['third_party_ws_connection_capacity'] ?? 10)),
+            'script_token' => $token,
+            'script_ws_url' => (string)($settings['third_party_script_ws_url'] ?? 'ws://hoavienpro.com/ws/third-party/script'),
+            'script_full_url' => $this->fullScriptUrl((string)($settings['third_party_script_ws_url'] ?? 'ws://hoavienpro.com/ws/third-party/script'), $token),
             'sign_secret' => (string)($settings['third_party_sign_secret'] ?? ''),
         ];
     }
@@ -36,32 +34,34 @@ class ThirdPartyConfigAdminService
     public function save(array $payload): void
     {
         $enabled = !empty($payload['third_party_enabled']) && (string)$payload['third_party_enabled'] !== '0';
-        $urls = $this->normalizeUrls((string)($payload['third_party_ws_urls'] ?? ''));
-        if ($enabled && $urls === []) {
-            throw new RuntimeException(I18n::t('admin.third_party_config.websocket_required', [], $this->locale));
+        $token = trim((string)($payload['third_party_script_token'] ?? ''));
+        if (!empty($payload['reset_script_token'])) {
+            $token = bin2hex(random_bytes(24));
         }
-
-        $capacity = (int)($payload['third_party_ws_connection_capacity'] ?? 10);
-        if ($capacity < 1) {
-            throw new RuntimeException(I18n::t('admin.third_party_config.capacity_invalid', [], $this->locale));
+        if ($enabled && $token === '') {
+            throw new RuntimeException(I18n::t('admin.third_party_config.script_token_required', [], $this->locale));
+        }
+        $scriptWsUrl = trim((string)($payload['third_party_script_ws_url'] ?? ''));
+        if ($enabled && $scriptWsUrl === '') {
+            throw new RuntimeException(I18n::t('admin.third_party_config.script_url_required', [], $this->locale));
         }
 
         $this->settings->saveSettings([
             'third_party_enabled' => $enabled ? '1' : '0',
-            'third_party_ws_urls' => implode("\n", $urls),
-            'third_party_ws_url' => $urls[0] ?? '',
-            'third_party_ws_connection_capacity' => (string)$capacity,
+            'third_party_script_token' => $token,
+            'third_party_script_ws_url' => $scriptWsUrl,
             'third_party_sign_secret' => trim((string)($payload['third_party_sign_secret'] ?? '')),
             'third_party_transport' => 'websocket',
         ]);
     }
 
-    private function normalizeUrls(string $urlsText): array
+    private function fullScriptUrl(string $baseUrl, string $token): string
     {
-        $urls = preg_split('/\r\n|\r|\n/', $urlsText) ?: [];
-        return array_values(array_filter(array_map(
-            static fn (string $url): string => trim($url),
-            $urls
-        ), static fn (string $url): bool => $url !== ''));
+        $baseUrl = trim($baseUrl);
+        if ($baseUrl === '' || $token === '') {
+            return $baseUrl;
+        }
+        $separator = str_contains($baseUrl, '?') ? '&' : '?';
+        return $baseUrl . $separator . 'token=' . rawurlencode($token);
     }
 }

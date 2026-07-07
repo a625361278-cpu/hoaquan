@@ -96,14 +96,19 @@ class GameAccountController extends BaseApiController
         return ApiResponse::json($this->gameAccountLogService($request)->logsForUser(
             $userId,
             $id,
-            (int)$request->get('lastLine', 0)
+            (int)$request->get('lastLine', 0),
+            (int)$request->get('lastEvent', 0)
         ));
     }
 
     public function clearLogs(Request $request, int $id): Response
     {
         $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
-        return ApiResponse::json($this->gameAccountLogService($request)->clearForUser($userId, $id));
+        return ApiResponse::json($this->gameAccountLogService($request)->clearForUser(
+            $userId,
+            $id,
+            (string)$request->get('type', 'normal')
+        ));
     }
 
     private function gameAccountService(Request $request): GameAccountService

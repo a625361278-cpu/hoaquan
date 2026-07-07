@@ -24,9 +24,25 @@ interface GameAccountRepositoryInterface
 
     public function appendLogLines(int $accountId, array $lines, int $maxLines): void;
 
+    public function appendNormalLogLines(int $accountId, string $sessionId, array $lines, int $maxLines): void;
+
     public function listLogLines(int $accountId, int $afterLine, int $limit): array;
+
+    public function listNormalLogLines(int $accountId, string $sessionId, int $afterLine, int $limit): array;
 
     public function countLogLines(int $accountId): int;
 
+    public function countNormalLogLines(int $accountId, string $sessionId): int;
+
     public function clearLogLines(int $accountId): void;
+
+    public function clearNormalLogLines(int $accountId, ?string $sessionId = null): void;
+
+    public function appendEventLogs(int $accountId, array $events, int $maxEvents): void;
+
+    public function listEventLogs(int $accountId, int $afterEventNo, int $limit): array;
+
+    public function countEventLogs(int $accountId): int;
+
+    public function clearEventLogs(int $accountId): void;
 }

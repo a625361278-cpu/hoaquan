@@ -2,20 +2,40 @@ Hoa Quán 第三方 WebSocket 对接协议说明
 
 一、连接方式
 
-服务端会连接第三方提供的 WebSocket 地址。，单条连接默认最多 50 个账号，具体容量以后端后台配置为准。连接建立后，服务端会发送启动包，第三方根据包内账号、密码和配置启动游戏任务。
+第三方脚本主动连接我方 WebSocket 地址：
 
-所有消息均使用 JSON 字符串。所有账号相关消息都必须携带 account_id，用于区分同一长连接上的不同账号。当前游戏只有一个区服，启动包不传 server_id、server_name，第三方也不需要返回区服字段。
+ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
+
+SCRIPT_POOL_TOKEN 由后台“第三方配置”的脚本池 Token 提供。连接通过校验后，服务端会返回 ready 消息，表示该脚本连接进入空闲池。用户启动游戏账号时，服务端会从空闲池分配一个连接，发送启动包，第三方根据包内账号、密码和配置启动游戏任务。
+
+所有消息均使用 JSON 字符串。一个连接同一时间只服务一个游戏账号，运行消息不再携带 account_id；账号归属由服务端连接绑定关系判断。未通过 Token 校验、未绑定状态发送业务消息、超大消息或非法 JSON 都会被明确拒绝并关闭连接。当前游戏只有一个区服，启动包不传 server_id、server_name，第三方也不需要返回区服字段。
+
+连接成功 ready 示例：
+
+{
+  "type": "ready",
+  "client_id": "7f00000108fc00000001",
+  "state": "idle",
+  "server_time": 1783430400
+}
+
+脚本可发送 ping/pong/heartbeat 维持心跳：
+
+{
+  "type": "heartbeat",
+  "script_version": "1.0.0"
+}
 
 二、后端发送：启动账号 start
 
-request_id 是本次请求编号，由后端发送，第三方回 started/error 时建议原样带回。它不是游戏账号、区服或角色 ID。
+request_id 是本次请求编号，由后端发送，第三方回 started/error/stopped 时建议原样带回。它不是游戏账号、区服或角色 ID。session_id 是本次运行日志会话 ID。
 
 示例：
 
 {
   "type": "start",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
-  "account_id": 10001,
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
   "game_username": "game_account_001",
   "game_password": "plain-password-used-only-during-start",
   "config": {
@@ -408,7 +428,7 @@ request_id 是本次请求编号，由后端发送，第三方回 started/error 
 
 type：字符串，固定为 start。
 request_id：字符串，本次请求编号。
-account_id：数字，GameAssist 游戏账号 ID。同一长连接承载多个账号时，第三方必须用它区分账号。
+session_id：字符串，本次运行日志会话 ID。
 game_username：字符串，用户填写的游戏账号。
 game_password：字符串，本次启动使用的游戏密码。
 config：对象，用户保存的完整游戏配置，字段见下文。
@@ -418,7 +438,7 @@ config：对象，用户保存的完整游戏配置，字段见下文。
 {
   "type": "started",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
-  "account_id": 10001,
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
   "display_name": "role-name"
 }
 
@@ -429,7 +449,7 @@ config：对象，用户保存的完整游戏配置，字段见下文。
 {
   "type": "error",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
-  "account_id": 10001,
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
   "message": "login failed"
 }
 
@@ -439,39 +459,60 @@ config：对象，用户保存的完整游戏配置，字段见下文。
 
 {
   "type": "log",
-  "account_id": 10001,
   "level": "info",
   "category": "runtime",
   "time": "2026-07-04 12:00:00",
   "message": "started"
 }
 
-level/category/time 可选，message 必填。
+level/category/time 可选，message 必填。普通日志按本次运行会话保存，最多保留 2500 条；主动停止和下次启动前会清空。普通日志会先进入 Redis 分片队列，由日志 writer 聚合后批量写库，用户端读取可能有几秒延迟。
 
-六、第三方推送：状态 status
+六、第三方推送：事件 event
+
+{
+  "type": "event",
+  "event": {
+    "module": "种植",
+    "title": "完成种植任务",
+    "desc": "已种植库存较少的花朵",
+    "status": "success",
+    "time": "2026-07-04 12:00:00"
+  }
+}
+
+事件卡片历史按游戏账号保存，跨停止/重启保留，最多保留 2500 条。事件日志同样经过分片队列和 writer 批量写库，但刷新周期更短。第三方也可以在普通日志行尾追加 [[EVT]] 后接事件 JSON，服务端会解析入事件历史。
+
+七、第三方推送：状态 status
 
 {
   "type": "status",
-  "account_id": 10001,
   "level": 14,
   "water": 1,
   "diamond": 754,
   "coin": 236000
 }
 
-status 用于同步运行资源数据。除 account_id 外，其他字段可按第三方实际可获取的数据扩展，例如等级、水滴、元宝、金币、订单统计等。
+status 用于同步运行资源数据。字段可按第三方实际可获取的数据扩展，例如等级、水滴、元宝、金币、订单统计等。
 
-七、后端发送：停止账号 stop
+八、后端发送：停止账号 stop
 
 {
   "type": "stop",
   "request_id": "b0ff0f0e5f584d1fb1c164a40ff6d68a",
-  "account_id": 10001
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7"
 }
 
-收到 stop 后，第三方停止当前 account_id 对应的账号任务，不影响同一长连接上的其他账号。
+收到 stop 后，第三方停止当前连接绑定的账号任务，并返回 stopped：
 
-八、config 完整字段说明
+{
+  "type": "stopped",
+  "request_id": "b0ff0f0e5f584d1fb1c164a40ff6d68a",
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7"
+}
+
+停止完成后服务端会断开该连接；脚本如需继续接单，需要重新连接。
+
+九、config 完整字段说明
 
 说明：控件类型用于说明前端配置项的展示方式；数据类型才是第三方实际收到的 JSON 字段格式。switch 的真实 JSON 类型为 boolean，取值只能是 true 或 false，不是 1/0 或字符串。
 
