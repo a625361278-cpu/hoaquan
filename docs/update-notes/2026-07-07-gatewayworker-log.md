@@ -22,6 +22,7 @@
 - 更新服务器后必须执行 `php scripts/sync_database.php`，用于创建 `ga_game_account_log_states` 表和补齐日志相关配置项。
 - `sync_database.php` 只新增缺失表/字段/配置项，不覆盖线上已有正式配置值。
 - 常驻进程需要重启，确保 GatewayWorker、BusinessWorker、Register 和 `game_log_writer` 使用新代码。
+- GatewayWorker 默认端口为：对外 WebSocket `8792`、内部起始端口 `2500`、Register `127.0.0.1:1238`；如同机已有其他 Workerman/GatewayWorker 项目，可通过 `GATEWAY_PORT`、`GATEWAY_START_PORT`、`GATEWAY_REGISTER_ADDRESS` 在 `.env` 调整。
 - 默认建议设置 `GAME_LOG_WRITER_COUNT=8`；服务器资源不足时可降低，但需要观察后台日志积压是否持续增长。
 - 当前文档仍使用 `ws://`，正式商用建议升级为 `wss://`，因为启动包会传游戏账号和密码。
 

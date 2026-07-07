@@ -12,7 +12,7 @@ return [
         'reloadable'  => false,
         'constructor' => ['config' => [
             'lanIp'           => '127.0.0.1',
-            'startPort'       => 2300,
+            'startPort'       => (int)app_env('GATEWAY_START_PORT', 2500),
             'pingInterval'    => 25,
             'pingNotResponseLimit' => 2,
             'pingData'        => '{"type":"ping"}',
