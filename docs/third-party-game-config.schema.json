@@ -498,12 +498,27 @@
                 },
                 "plantingMode": {
                   "type": "string",
-                  "default": "quality"
+                  "enum": [
+                    "quality",
+                    "category",
+                    "flower",
+                    "stock",
+                    "sixtyFour"
+                  ],
+                  "default": "quality",
+                  "description": "种植模式：quality=指定品质，category=指定种类，flower=指定花朵，stock=库存模式，sixtyFour=64块地模式"
                 },
                 "flowerQuality": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
                   },
                   "default": [
                     "green",
@@ -565,12 +580,25 @@
                 },
                 "stealMode": {
                   "type": "string",
-                  "default": "quality"
+                  "enum": [
+                    "quality",
+                    "flower",
+                    "exclude"
+                  ],
+                  "default": "quality",
+                  "description": "偷花模式：quality=指定品质，flower=指定花朵，exclude=排除花朵"
                 },
                 "qualities": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
                   },
                   "default": [
                     "green",
@@ -704,7 +732,13 @@
                 },
                 "sellMode": {
                   "type": "string",
-                  "default": "specified"
+                  "enum": [
+                    "specified",
+                    "full",
+                    "stock"
+                  ],
+                  "default": "specified",
+                  "description": "花艺上架模式：specified=指定花瓶，full=指定花艺，stock=库存模式"
                 },
                 "specifiedVases": {
                   "type": "array",
@@ -816,7 +850,12 @@
                 },
                 "buyMode": {
                   "type": "string",
-                  "default": "quality"
+                  "enum": [
+                    "quality",
+                    "flower"
+                  ],
+                  "default": "quality",
+                  "description": "好友摊位扫货策略：quality=指定品质，flower=指定花朵"
                 },
                 "buyFlowers": {
                   "type": "array",
@@ -886,7 +925,14 @@
                 "qualities": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
                   },
                   "default": [
                     "green",
@@ -932,7 +978,14 @@
                 "qualities": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
                   },
                   "default": [
                     "green",
@@ -973,7 +1026,14 @@
                 "qualities": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
                   },
                   "default": [
                     "green",
@@ -1021,12 +1081,25 @@
                 },
                 "plantMode": {
                   "type": "string",
-                  "default": "quality"
+                  "enum": [
+                    "quality",
+                    "flower",
+                    "stock"
+                  ],
+                  "default": "quality",
+                  "description": "公会土地种植策略：quality=指定品质，flower=指定花朵，stock=库存模式"
                 },
                 "flowers": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
                   },
                   "default": [
                     "green",
@@ -1095,12 +1168,24 @@
                 },
                 "shareMode": {
                   "type": "string",
-                  "default": "quality"
+                  "enum": [
+                    "quality",
+                    "flower"
+                  ],
+                  "default": "quality",
+                  "description": "公会分享模式：quality=指定品质，flower=指定花朵"
                 },
                 "shareQualities": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
                   },
                   "default": [
                     "green",
@@ -1126,12 +1211,24 @@
                 },
                 "touchMode": {
                   "type": "string",
-                  "default": "quality"
+                  "enum": [
+                    "quality",
+                    "flower"
+                  ],
+                  "default": "quality",
+                  "description": "公会摸花模式：quality=指定品质，flower=指定花朵"
                 },
                 "touchQualities": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "green",
+                      "blue",
+                      "purple",
+                      "gold",
+                      "red"
+                    ]
                   },
                   "default": [
                     "green",
@@ -1457,7 +1554,13 @@
                 },
                 "speed": {
                   "type": "string",
-                  "default": "normal"
+                  "enum": [
+                    "slow",
+                    "normal",
+                    "fast"
+                  ],
+                  "default": "normal",
+                  "description": "游戏倍速：slow=慢速，normal=普通，fast=快速"
                 },
                 "showResult": {
                   "type": "boolean",
@@ -1488,7 +1591,13 @@
                 },
                 "speed": {
                   "type": "string",
-                  "default": "normal"
+                  "enum": [
+                    "slow",
+                    "normal",
+                    "fast"
+                  ],
+                  "default": "normal",
+                  "description": "游戏倍速：slow=慢速，normal=普通，fast=快速"
                 }
               }
             },
@@ -1612,7 +1721,13 @@
                 },
                 "speed": {
                   "type": "string",
-                  "default": "normal"
+                  "enum": [
+                    "slow",
+                    "normal",
+                    "fast"
+                  ],
+                  "default": "normal",
+                  "description": "游戏倍速：slow=慢速，normal=普通，fast=快速"
                 }
               }
             },
@@ -1635,7 +1750,13 @@
                 },
                 "speed": {
                   "type": "string",
-                  "default": "normal"
+                  "enum": [
+                    "slow",
+                    "normal",
+                    "fast"
+                  ],
+                  "default": "normal",
+                  "description": "游戏倍速：slow=慢速，normal=普通，fast=快速"
                 }
               }
             },
@@ -1668,7 +1789,13 @@
                 },
                 "speed": {
                   "type": "string",
-                  "default": "normal"
+                  "enum": [
+                    "slow",
+                    "normal",
+                    "fast"
+                  ],
+                  "default": "normal",
+                  "description": "游戏倍速：slow=慢速，normal=普通，fast=快速"
                 }
               }
             },

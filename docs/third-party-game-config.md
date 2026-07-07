@@ -600,10 +600,10 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - `plant.flower.waterThreshold`：保留水滴；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：保留多少水滴不用于浇花
 - `plant.flower.taskMode`：任务优先；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：开启后：如果订单里缺花，系统会先种订单需要的花；发现有空地时，会直接插队用来种这些花；花种完以后，会自动恢复到原来设置的模式（指定品质 / 指定种类 / 指定花朵）
 - `plant.flower.taskLogEnabled`：任务日志；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：是否显示种植任务队列日志
-- `plant.flower.taskPriority`：任务优先级；控件类型：`priorityGroup`；数据类型：`object`；默认值：`{"customerOrder":1,"residentOrder":2,"artSell":6,"flowerNews":3,"palaceOrder":4,"unionRace":3}`；说明：配置订单任务的优先级，数字越小优先级越高，0是不做此任务，可以几个任务设置一样的数字，就会一起做这几个任务。有些玩家说居民订单不做，花艺不做，莳花不做，都跟您设置的数字有关，数字最大就会把任务排到最后，让您产生不做的错觉；对象键：customerOrder / residentOrder / artSell / flowerNews / palaceOrder / unionRace；可选值：顾客订单 / 居民订单 / 花艺售卖 / 莳花纪闻 / 宫廷订单 / 公会竞赛
-- `plant.flower.plantingMode`：种植模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择种植模式，只能启用一种模式。需要保持种植整洁的玩家请自行清空所有土地；可选值：指定品质 / 指定种类 / 指定花朵 / 库存模式 / 64块地模式
-- `plant.flower.flowerQuality`：选择品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：选择要种植的花朵品质，可多选，库存少的优先种植。
-- `plant.flower.categoryCount`：选择数量；控件类型：`select`；数据类型：`string`；默认值：`"4"`；说明：选择要种植几种花，库存少的优先种植。；可选值：1 / 2 / 4 / 8 / 16
+- `plant.flower.taskPriority`：任务优先级；控件类型：`priorityGroup`；数据类型：`object`；默认值：`{"customerOrder":1,"residentOrder":2,"artSell":6,"flowerNews":3,"palaceOrder":4,"unionRace":3}`；说明：配置订单任务的优先级，数字越小优先级越高，0是不做此任务，可以几个任务设置一样的数字，就会一起做这几个任务。有些玩家说居民订单不做，花艺不做，莳花不做，都跟您设置的数字有关，数字最大就会把任务排到最后，让您产生不做的错觉；对象键：customerOrder / residentOrder / artSell / flowerNews / palaceOrder / unionRace；可选值：顾客订单=`"customerOrder"` / 居民订单=`"residentOrder"` / 花艺售卖=`"artSell"` / 莳花纪闻=`"flowerNews"` / 宫廷订单=`"palaceOrder"` / 公会竞赛=`"unionRace"`
+- `plant.flower.plantingMode`：种植模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择种植模式，只能启用一种模式。需要保持种植整洁的玩家请自行清空所有土地；可选值：指定品质=`"quality"` / 指定种类=`"category"` / 指定花朵=`"flower"` / 库存模式=`"stock"` / 64块地模式=`"sixtyFour"`
+- `plant.flower.flowerQuality`：选择品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：选择要种植的花朵品质，可多选，库存少的优先种植。；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
+- `plant.flower.categoryCount`：选择数量；控件类型：`select`；数据类型：`string`；默认值：`"4"`；说明：选择要种植几种花，库存少的优先种植。；可选值：1=`"1"` / 2=`"2"` / 4=`"4"` / 8=`"8"` / 16=`"16"`
 - `plant.flower.specificFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要种植的花朵，可多选，库存少的优先种植。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
 - `plant.flower.minFlowerLevel`：限制花朵等级；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：限制种植的最低花朵等级，0则不限制，此项的设置只针对补库存，做订单和公会竞赛之类的不受此设置影响
 
@@ -611,8 +611,8 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 - `plant.friendSteal.enabled`：自动偷花；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：默认不会偷取花灵，但在好友种植花灵时会偷取花朵，需要在偷花模式里设置排除花朵，排除花灵主花
 - `plant.friendSteal.includeElf`：偷取花灵；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后偷取有花灵的地块，关闭则跳过有花灵的地块
-- `plant.friendSteal.stealMode`：偷花模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择偷花过滤模式：指定品质或指定花朵或排除花朵；可选值：指定品质 / 指定花朵 / 排除花朵
-- `plant.friendSteal.qualities`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只偷取指定品质的花朵
+- `plant.friendSteal.stealMode`：偷花模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择偷花过滤模式：指定品质或指定花朵或排除花朵；可选值：指定品质=`"quality"` / 指定花朵=`"flower"` / 排除花朵=`"exclude"`
+- `plant.friendSteal.qualities`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只偷取指定品质的花朵；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 - `plant.friendSteal.specificFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：只偷取指定的花朵。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
 - `plant.friendSteal.excludeFlowers`：排除花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：不偷取指定的花朵，不想影响好友种植花灵的话，建议把所有花灵主花设置上，排除掉。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
 - `plant.friendSteal.buyCount`：购买偷取次数；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：花费好友币购买偷取次数
@@ -643,7 +643,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 - `plant.art.unlockShelf`：自动解锁花架；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动解锁花架
 - `plant.art.autoPut`：自动上架；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动上架花艺，自动领取金币收益
-- `plant.art.sellMode`：上架模式；控件类型：`radio`；数据类型：`string`；默认值：`"specified"`；说明：无；可选值：指定花瓶 / 指定花艺 / 库存模式
+- `plant.art.sellMode`：上架模式；控件类型：`radio`；数据类型：`string`；默认值：`"specified"`；说明：无；可选值：指定花瓶=`"specified"` / 指定花艺=`"full"` / 库存模式=`"stock"`
 - `plant.art.specifiedVases`：指定花瓶；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["3001"]`；说明：指定花瓶，优先选择有库存的上架，否则进行制作，如果花朵库存不足需要配合种植开启任务优先进行使用。数组内为花瓶 ID，ID 来自第三方提供的花瓶表，不传显示名。
 - `plant.art.specifiedArts`：指定花艺；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：指定花艺，优先选择有库存的上架，否则进行制作，如果花朵库存不足需要配合种植开启任务优先进行使用。数组内为花艺 ID，ID 来自第三方提供的花艺表，不传显示名。
 - `plant.art.flowerArtPerRack`：上架数量；控件类型：`number`；数据类型：`number`；默认值：`12`；说明：每个花架上架多少花艺
@@ -654,15 +654,15 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 - `plant.market.unlockShelf`：解锁货架；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动花费元宝解锁花贸市场货架
 - `plant.market.autoPut`：自动上架；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花贸市场收益并上架花朵，注意上架会消耗元宝，请谨慎开启！
-- `plant.market.putMode`：上架策略；控件类型：`radio`；数据类型：`string`；默认值：`"inventory"`；说明：无；可选值：库存最多 / 指定花朵
+- `plant.market.putMode`：上架策略；控件类型：`radio`；数据类型：`string`；默认值：`"inventory"`；说明：无；可选值：库存最多=`"inventory"` / 指定花朵=`"flower"`
 - `plant.market.specificFlowers`：选择花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要上架的花朵，可多选，库存多的优先上架。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
-- `plant.market.priceIndex`：上架价格；控件类型：`radio`；数据类型：`string`；默认值：`"0"`；说明：无；可选值：最低 / 中等 / 最高
+- `plant.market.priceIndex`：上架价格；控件类型：`radio`；数据类型：`string`；默认值：`"0"`；说明：无；可选值：最低=`"0"` / 中等=`"1"` / 最高=`"2"`
 - `plant.market.maxSell`：上架数量；控件类型：`number`；数据类型：`number`；默认值：`25`；说明：无
 - `plant.market.putPassword`：上架密码；控件类型：`text`；数据类型：`string`；默认值：`""`；说明：保护自己上架的花朵，防止被他人购买（4位数字）
 - `plant.market.autoBuyPutCount`：购买上架次数；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：当免费上架次数用完时，自动花费元宝购买上架次数
 - `plant.market.buyPutCount`：购买次数；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：购买多少上架次数
 - `plant.market.autoBuyFromFriend`：好友摊位扫货；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动购买好友货架的花朵
-- `plant.market.buyMode`：扫货策略；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：无；可选值：指定品质 / 指定花朵
+- `plant.market.buyMode`：扫货策略；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：无；可选值：指定品质=`"quality"` / 指定花朵=`"flower"`
 - `plant.market.buyFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：只购买指定的花朵。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
 - `plant.market.minPutTimeDiff`：最小上架时长；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：只购买上架时间超过此时长的花朵，0表示不限制。单位：秒
 
@@ -676,7 +676,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - `order.resident.satinMaxNum`：绸缎订单上限；控件类型：`number`；数据类型：`number`；默认值：`120`；说明：绸缎订单单日最大完成次数
 - `order.resident.building`：建材订单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动提交建材订单，如果花库存不足，需要配合种植开启任务优先使用
 - `order.resident.buildingMaxNum`：建材订单上限；控件类型：`number`；数据类型：`number`；默认值：`120`；说明：建材订单单日最大完成次数
-- `order.resident.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅提交指定品质的花朵到居民订单
+- `order.resident.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅提交指定品质的花朵到居民订单；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 
 #### 顾客订单
 
@@ -686,7 +686,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 #### 宫廷订单
 
 - `order.palace.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
-- `order.palace.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅接受指定品质的宫廷订单，不符合时自动免费刷新一次（每天限1次），刷新后仍不符合则跳过
+- `order.palace.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅接受指定品质的宫廷订单，不符合时自动免费刷新一次（每天限1次），刷新后仍不符合则跳过；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 - `order.palace.ignoreQuality`：不论品质；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后，若没有用户设置的品质，且没有免费刷新了，则会无视品质做完这个宫廷订单
 
 #### 组团订单
@@ -694,7 +694,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - `order.group.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成团单
 - `order.group.oneMore`：再来一单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：花费元宝再来一单
 - `order.group.submitOnlyCultivatedFlowers`：仅已培育；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：仅提交已培育的花朵
-- `order.group.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅提交指定品质的花朵到团单
+- `order.group.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅提交指定品质的花朵到团单；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 
 ### 公会（union）
 
@@ -702,8 +702,8 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 - `union.land.harvest`：自动收获；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `union.land.plant`：自动种植；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动种植空闲土地，自动将不符合限定条件的已种土地替换为目标花朵
-- `union.land.plantMode`：种植策略；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：三种模式均为低等级优先；可选值：指定品质 / 指定花朵 / 库存模式
-- `union.land.flowers`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：留空则不限制品质
+- `union.land.plantMode`：种植策略；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：三种模式均为低等级优先；可选值：指定品质=`"quality"` / 指定花朵=`"flower"` / 库存模式=`"stock"`
+- `union.land.flowers`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：留空则不限制品质；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 - `union.land.specificFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：留空则不限定花朵。数组内为鲜花 ID，ID 来自第三方提供的鲜花表，不传显示名。
 - `union.land.maxFlowerLevel`：最高等级限制；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：花朵等级高于该值的不种，0表示不限制，比如设置了13，就会种植低于13级且为你所有花里最低等级的花
 
@@ -716,15 +716,15 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 #### 公会分享
 
 - `union.flower.share`：自动分享；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动分享花到公会分享栏
-- `union.flower.shareMode`：分享模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择分享模式：品质模式或指定花模式；可选值：指定品质 / 指定花朵
-- `union.flower.shareQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：限定要分享到公会的花朵品质
+- `union.flower.shareMode`：分享模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择分享模式：品质模式或指定花模式；可选值：指定品质=`"quality"` / 指定花朵=`"flower"`
+- `union.flower.shareQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：限定要分享到公会的花朵品质；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 - `union.flower.shareFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要分享到公会的具体花朵
 
 #### 公会摸花
 
 - `union.flower.touch`：自动摸花；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动摸取别人分享的花
-- `union.flower.touchMode`：摸花模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择摸花模式：品质模式或指定花模式；可选值：指定品质 / 指定花朵
-- `union.flower.touchQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：限定要从公会拿取的花朵品质
+- `union.flower.touchMode`：摸花模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择摸花模式：品质模式或指定花模式；可选值：指定品质=`"quality"` / 指定花朵=`"flower"`
+- `union.flower.touchQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：限定要从公会拿取的花朵品质；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 - `union.flower.touchFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要从公会摸取的具体花朵
 
 #### 公会竞赛
@@ -737,7 +737,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - `union.fmlRace.dropLowScore`：放弃低分任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：根据「限制分数-未升级」「限制分数-升级后」的设置来判断，例：未升级设置了25，升级后设置了50，则任务列表里有小于等于25的未升级会放弃，有小于等于50的已升级会放弃。开启此项又开启了【自动升级任务】的话，必须要按照「限制分数-未升级」乘以2大于等于「限制分数-升级后」这个规则来设置，否则会出现元宝升级后把这个任务放弃的情况。
 - `union.fmlRace.onlyUpgradeTask`：只接已升级任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：比如设置了限制27分，开启后就只会接大于等于54分的任务，会使公会任务做的非常慢，慎重开启（系统/玩家升级好的双倍任务比较少，捡漏的可能是比较小的哦）
 - `union.fmlRace.excludeOtherUpgradeTask`：排除他人升级任务；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：基于礼貌的开关，开启后，公会其他玩家用元宝升级的任务就不会去接了
-- `union.fmlRace.taskTypePriority`：任务优先级；控件类型：`priorityGroup`；数据类型：`object`；默认值：`{"vipShop":0,"residentOrder":0,"customerOrder":0,"materialShop":0,"palaceOrder":0,"pearlHire":0,"friendSteal":0,"artSell":0,"artCraft":0,"flowerUpgrade":0,"plantHarvest":0,"flowerCultivate":0,"animalInteract":0}`；说明：设置每种任务类型的接取优先级。数字越小越优先；填 0 表示不接此类任务。优先级相同时分数高优先。；对象键：vipShop / residentOrder / customerOrder / materialShop / palaceOrder / pearlHire / friendSteal / artSell / artCraft / flowerUpgrade / plantHarvest / flowerCultivate / animalInteract；可选值：vip商店购买 / 居民订单 / 顾客订单 / 材料商店购买 / 宫廷订单 / 珍珠采集雇佣 / 自动偷花 / 花艺售卖 / 花艺制作 / 鲜花升级 / 种植收获 / 花种培育 / 动物互动
+- `union.fmlRace.taskTypePriority`：任务优先级；控件类型：`priorityGroup`；数据类型：`object`；默认值：`{"vipShop":0,"residentOrder":0,"customerOrder":0,"materialShop":0,"palaceOrder":0,"pearlHire":0,"friendSteal":0,"artSell":0,"artCraft":0,"flowerUpgrade":0,"plantHarvest":0,"flowerCultivate":0,"animalInteract":0}`；说明：设置每种任务类型的接取优先级。数字越小越优先；填 0 表示不接此类任务。优先级相同时分数高优先。；对象键：vipShop / residentOrder / customerOrder / materialShop / palaceOrder / pearlHire / friendSteal / artSell / artCraft / flowerUpgrade / plantHarvest / flowerCultivate / animalInteract；可选值：vip商店购买=`"vipShop"` / 居民订单=`"residentOrder"` / 顾客订单=`"customerOrder"` / 材料商店购买=`"materialShop"` / 宫廷订单=`"palaceOrder"` / 珍珠采集雇佣=`"pearlHire"` / 自动偷花=`"friendSteal"` / 花艺售卖=`"artSell"` / 花艺制作=`"artCraft"` / 鲜花升级=`"flowerUpgrade"` / 种植收获=`"plantHarvest"` / 花种培育=`"flowerCultivate"` / 动物互动=`"animalInteract"`
 - `union.fmlRace.autoUpgradeTask`：自动升级任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：领取任务后花费元宝自动升级，开启此项又开启了【放弃低分任务】的话，必须要按照「限制分数-未升级」的值乘以2大于等于「限制分数-升级后」的值，这个规则来设置，否则会出现元宝升级后把这个任务放弃的情况。
 - `union.fmlRace.deleteLowScoreTask`：删除低分任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：会长/副会长专属：自动删除低于指定分数的任务
 - `union.fmlRace.deleteTaskMaxScore`：删除分数上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：低于此分数的未领取任务将被自动删除
@@ -780,7 +780,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 - `activity.fishFun.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `activity.fishFun.autoClaimEnergy`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
-- `activity.fishFun.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次移动消耗体力越多；可选值：慢速 / 普通 / 快速
+- `activity.fishFun.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次移动消耗体力越多；可选值：慢速=`"slow"` / 普通=`"normal"` / 快速=`"fast"`
 - `activity.fishFun.showResult`：显示结果；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `activity.fishFun.autoRestart`：失败重启；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
@@ -788,7 +788,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 - `activity.flowerStory.enabled`：自动参与；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `activity.flowerStory.autoClaimEnergy`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
-- `activity.flowerStory.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次移动消耗体力越多；可选值：慢速 / 普通 / 快速
+- `activity.flowerStory.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次移动消耗体力越多；可选值：慢速=`"slow"` / 普通=`"normal"` / 快速=`"fast"`
 
 #### 红包雨
 
@@ -824,13 +824,13 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - `activity.cake.enabled`：自动投放；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `activity.cake.autoClaimEnergy`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
 - `activity.cake.useItems`：使用道具；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
-- `activity.cake.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要解锁足够积分才能使用高倍速；可选值：慢速 / 普通 / 快速
+- `activity.cake.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要解锁足够积分才能使用高倍速；可选值：慢速=`"slow"` / 普通=`"normal"` / 快速=`"fast"`
 
 #### 田园奇趣
 
 - `activity.merge.enabled`：自动合并；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `activity.merge.autoClaimEnergy`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
-- `activity.merge.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要消耗足够体力才能使用高倍速；可选值：慢速 / 普通 / 快速
+- `activity.merge.speed`：游戏倍速；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要消耗足够体力才能使用高倍速；可选值：慢速=`"slow"` / 普通=`"normal"` / 快速=`"fast"`
 
 #### 梳丝引线
 
@@ -838,7 +838,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - `activity.spool.autoClaimReward`：体力领取；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成后的体力奖励
 - `activity.spool.openBox`：开启宝箱；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动开启宝箱
 - `activity.spool.autoRestart`：自动重开；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后，死了就会重新开始继续玩
-- `activity.spool.speed`：游戏倍数；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要消耗足够体力才能使用高倍速；可选值：慢速 / 普通 / 快速
+- `activity.spool.speed`：游戏倍数；控件类型：`select`；数据类型：`string`；默认值：`"normal"`；说明：选择游戏倍速，倍速越高单次消耗体力越多；需要消耗足够体力才能使用高倍速；可选值：慢速=`"slow"` / 普通=`"normal"` / 快速=`"fast"`
 
 #### 龙舟竞渡
 
