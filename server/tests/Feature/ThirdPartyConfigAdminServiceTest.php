@@ -50,7 +50,7 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
         });
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('脚本池Token不能为空');
+        $this->expectExceptionMessage('连接池Token不能为空');
 
         $service->save([
             'third_party_enabled' => '1',

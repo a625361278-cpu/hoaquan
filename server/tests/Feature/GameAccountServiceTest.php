@@ -75,7 +75,7 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame('local_preview', $result['data']['account']['status']);
         $this->assertSame('local_unsynced', $result['data']['account']['sync_status']);
         $this->assertSame('any-player', $result['data']['account']['display_name']);
-        $this->assertSame('本地预览帐号已添加，尚未同步第三方接口', $result['msg']);
+        $this->assertSame('本地预览账号已添加，服务器同步未启用', $result['msg']);
     }
 
     public function testCreateGameAccountRequiresCredentialKey(): void
@@ -125,7 +125,7 @@ class GameAccountServiceTest extends TestCase
                 'server_name' => '本地预览区服',
                 'status' => 'local_preview',
                 'sync_status' => 'local_unsynced',
-                'remark' => '第三方接口未配置，本地预览帐号',
+                'remark' => '服务器未配置，本地预览账号',
                 'config_json' => '{}',
             ],
         ]);
@@ -150,7 +150,7 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame(0, $result['code']);
         $this->assertSame('local_unsynced', $result['data']['sync_status']);
         $this->assertSame($config, $result['data']['config']);
-        $this->assertSame('本地配置已保存，尚未同步第三方接口', $result['msg']);
+        $this->assertSame('本地配置已保存，服务器同步未启用', $result['msg']);
     }
 
     public function testImportConfigCopiesAnotherOwnedAccountConfigImmediately(): void
@@ -400,14 +400,14 @@ class GameAccountServiceTest extends TestCase
                 'server_name' => '',
                 'status' => 'local_preview',
                 'sync_status' => 'local_unsynced',
-                'remark' => '第三方接口未配置，本地预览帐号',
+                'remark' => '服务器未配置，本地预览账号',
                 'config_json' => '{}',
             ],
         ]);
         $service = new GameAccountService($repository, ['enabled' => false, 'credential_key' => 'test-key']);
 
         $this->expectException(\app\exception\ApiException::class);
-        $this->expectExceptionMessage('第三方接口未启用，不能同步配置');
+        $this->expectExceptionMessage('服务器未启用，请联系管理员');
 
         $service->start(7, 3);
     }
@@ -427,7 +427,7 @@ class GameAccountServiceTest extends TestCase
                 'status' => 'local_preview',
                 'sync_status' => 'local_unsynced',
                 'third_party_account_id' => '',
-                'remark' => '第三方接口未配置，本地预览帐号',
+                'remark' => '服务器未配置，本地预览账号',
                 'config_json' => '{}',
             ],
         ]);
@@ -446,7 +446,7 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame(3, $runtime->started[0]['account_id']);
         $this->assertSame('secret-password', $runtime->started[0]['game_password']);
         $this->assertSame([], $runtime->started[0]['config']);
-        $this->assertSame('启动任务已提交，等待第三方登录确认', $result['msg']);
+        $this->assertSame('启动任务已提交，等待服务器确认', $result['msg']);
     }
 
     public function testStartFailsWithoutIdleScriptConnectionAndKeepsAccountStopped(): void
@@ -479,7 +479,7 @@ class GameAccountServiceTest extends TestCase
             $service->start(7, 3);
             $this->fail('Expected start without idle script connection to fail.');
         } catch (\app\exception\ApiException $exception) {
-            $this->assertSame('脚本未就绪，请联系管理员', $exception->getMessage());
+            $this->assertSame('服务器未准备好，请联系管理员', $exception->getMessage());
             $this->assertSame('stopped', $repository->findById(3)['status']);
         }
     }
@@ -572,7 +572,7 @@ class GameAccountServiceTest extends TestCase
                 'server_name' => '本地预览区服',
                 'status' => 'local_preview',
                 'sync_status' => 'local_unsynced',
-                'remark' => '第三方接口未配置，本地预览帐号',
+                'remark' => '服务器未配置，本地预览账号',
                 'config_json' => json_encode($config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'updated_at' => '2026-07-02 12:00:00',
             ],

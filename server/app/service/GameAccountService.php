@@ -295,15 +295,15 @@ class GameAccountService
     private function assertThirdPartyScriptReady(): void
     {
         if (empty($this->thirdPartyConfig['enabled'])) {
-            throw new ApiException(I18n::t('api.third_party.disabled', [], $this->locale), 409);
+            throw new ApiException(I18n::t('api.game.server_disabled', [], $this->locale), 409);
         }
 
         if (($this->thirdPartyConfig['transport'] ?? ThirdPartyGateway::TRANSPORT_WEBSOCKET) !== ThirdPartyGateway::TRANSPORT_WEBSOCKET) {
-            throw new ApiException(I18n::t('api.third_party.websocket_required', [], $this->locale), 503);
+            throw new ApiException(I18n::t('api.game.server_config_invalid', [], $this->locale), 503);
         }
 
         if (trim((string)($this->thirdPartyConfig['script_token'] ?? '')) === '') {
-            throw new ApiException(I18n::t('api.third_party.script_token_missing', [], $this->locale), 503);
+            throw new ApiException(I18n::t('api.game.server_config_invalid', [], $this->locale), 503);
         }
     }
 

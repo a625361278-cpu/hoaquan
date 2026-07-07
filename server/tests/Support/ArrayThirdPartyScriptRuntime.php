@@ -17,7 +17,7 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
     public function reserveAccount(int $accountId, string $requestId, string $sessionId): array
     {
         if (!$this->hasIdleConnection) {
-            throw new ApiException('脚本未就绪，请联系管理员', 409);
+            throw new ApiException('服务器未准备好，请联系管理员', 409);
         }
 
         return [

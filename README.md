@@ -64,7 +64,7 @@ bash deploy/server_update.sh
 - 邀请奖励为邀请人 `balance + 1` 点，并写入 `ga_user_point_transactions`；同一邀请人每日奖励上限由 `ga_system_settings.invite_daily_limit` 控制，默认 `50`；同邀请人同 IP 每日奖励风控上限由 `invite_same_ip_daily_limit` 控制，默认 `3`。
 - `ga_user_point_transactions` 通过 `uniq_invite_reward_user(type, related_user_id)` 在数据库层限制同一个被邀请账号只能产生一次邀请奖励流水。
 - 第三方正式接入固定使用 WebSocket：第三方脚本主动连接我方 GatewayWorker，用户端启动接口会从空闲脚本连接中分配一个连接给当前账号，并等待真实 `started` 回包后才标记为运行中。
-- 第三方接口默认未启用，启动、加配额和配置同步请求都会明确失败；没有空闲脚本连接时启动会返回“脚本未就绪，请联系管理员”，账号不进入 `starting`。
+- 运行服务默认未启用，启动、加配额和配置同步请求都会明确失败；用户端启动未启用时返回“服务器未启用，请联系管理员”，没有空闲脚本连接时返回“服务器未准备好，请联系管理员”，账号不进入 `starting`。
 - 运行日志分为普通日志和事件卡片历史。普通日志按本次运行会话保存，启动新会话和主动停止后清空；事件卡片历史按账号保留，跨停止/重启保留。两类数据每个账号各最多保留 `2500` 条。
 - 日志写入按 1 万游戏账号设计：GatewayWorker 只把日志写入 64 个 Redis 分片队列，`game_log_writer` 默认 8 个进程按分片消费、内存聚合、批量落库。普通日志默认 10 秒或 50 行刷库一次，事件日志默认 2 秒或 20 条刷库一次；用户端读取结构不变，但普通日志可能有几秒延迟。
 - 用户注册和找回密码默认使用密保问题；`auth_verification_mode=email_code` 时才启用邮箱验证码。邮箱模式下 SMTP 未启用或配置不完整时，发送验证码会明确失败。
@@ -90,7 +90,7 @@ bash deploy/server_update.sh
 - 后台仪表盘的今日注册、7日注册、30日注册和总用户数均统计 `ga_users.created_at`，不使用后台用户表。
 - GameAssist 用户后台只允许查看、启用/禁用和重置密码；余额 `balance` 与到期日 `expire_at` 只读展示，不能通过普通用户管理表单修改。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
-- 后台“第三方配置”负责编辑第三方启用状态、脚本池 Token 和我方 WebSocket 地址；签名密钥为选填，仅用于历史第三方 HTTP 接口签名校验。后台“第三方连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
+- 后台“运行服务配置”负责编辑运行服务启用状态、连接池 Token 和我方 WebSocket 地址；签名密钥为选填，仅用于历史 HTTP 接口签名校验。后台“脚本连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
 
 ## 邀请与个人中心
 
@@ -114,10 +114,10 @@ bash deploy/server_update.sh
 - 有公告时返回 `id`、`title`、`content_blocks`、`published_at`；`content_blocks` 为纯文本块，颜色只允许 `default`、`red`、`green`、`blue`。
 - 已登录 token 直接打开首页不会重复触发“每次登录公告”；只有本次登录/注册成功后的首页会弹一次。
 
-## 第三方配置接口
+## 运行服务接口
 
 - 第三方正式通信已固定为 WebSocket，配置项 `third_party_transport` 仅保留旧配置兼容，不作为正式 HTTP 接入开关。
-- 第三方脚本主动连接我方地址：`ws://hoavienpro.com/ws/third-party/script?token=脚本池Token`。Caddy 需要把 `/ws/third-party/script` 代理到本机 GatewayWorker 端口，默认 `8792`，可通过 `GATEWAY_PORT` 调整；GatewayWorker 内部起始端口默认 `2500`，可通过 `GATEWAY_START_PORT` 调整；Register 默认 `127.0.0.1:1238`，可通过 `GATEWAY_REGISTER_ADDRESS` 调整。
+- 第三方脚本主动连接我方地址：`ws://hoavienpro.com/ws/third-party/script?token=连接池Token`。Caddy 需要把 `/ws/third-party/script` 代理到本机 GatewayWorker 端口，默认 `8792`，可通过 `GATEWAY_PORT` 调整；GatewayWorker 内部起始端口默认 `2500`，可通过 `GATEWAY_START_PORT` 调整；Register 默认 `127.0.0.1:1238`，可通过 `GATEWAY_REGISTER_ADDRESS` 调整。
 - 后台不再配置第三方 URL、URL 列表或单连接容量；旧 `third_party_ws_url`、`third_party_ws_urls`、`third_party_ws_connection_capacity` 可暂留数据库用于兼容旧数据，但启动逻辑不读取。
 - 常驻进程包括 GatewayWorker 的 Gateway、BusinessWorker、Register，以及 `server/config/process.php` 中的 `game_log_writer`。脚本连接状态写入 Redis 前缀 `gameassist:third_party_scripts:*`；日志写入 `gameassist:game_logs:queue:{shard}` 分片队列，`shard=account_id%64`，再由多 writer 聚合写入分段表。默认 `GAME_LOG_WRITER_COUNT=8`，可按服务器压力调整。
 - 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端校验账号、验证密码可解密、读取本地配置 JSON、原子占用一个空闲脚本连接、写入 `starting` 和日志会话，再向该脚本连接发送 `start` 包；接口成功只表示启动包已发出，不表示第三方登录成功。
@@ -126,7 +126,7 @@ bash deploy/server_update.sh
 - 第三方 WebSocket ready/start/stop/started/log/event/status/error/stopped 协议、完整配置 JSON 示例和字段说明见 [docs/third-party-game-config.md](docs/third-party-game-config.md)。一个连接同一时间只绑定一个账号，运行消息不再传 `account_id`；账号归属由服务端连接绑定关系判断。JSON Schema 见 [docs/third-party-game-config.schema.json](docs/third-party-game-config.schema.json)，它是可选机器校验文件，不是实际传输数据。
 - 配置页里的“指定花朵 / 指定花瓶 / 指定花艺”显示中越双语名称，但保存和第三方协议只传第三方提供的资产 ID；当前资产来源是 `VN鲜花(1).txt`、`VN花瓶.txt`、`VN花艺.txt` 整理后的前端选项表，源文件里的每个 ID 都必须保留进下拉，名称为空或待定的条目会继续显示 ID/待定名并记录在 `ASSET_OPTION_ISSUES`。
 - 第三方主动写日志：`POST /api/third-party/game-accounts/{id}/logs`，body 为 `{"logs":["..."]}` 或 `{"lines":["..."]}`。
-- 第三方接口需要先在后台“第三方配置”或 `ga_system_settings` 配置 `third_party_enabled=1`、`third_party_script_token` 和 `third_party_script_ws_url`。`third_party_sign_secret` 可为空；为空时不影响脚本池 WebSocket，只会导致需要 HTTP 签名校验的历史第三方 HTTP 接口不可用。
+- 运行服务需要先在后台“运行服务配置”或 `ga_system_settings` 配置 `third_party_enabled=1`、`third_party_script_token` 和 `third_party_script_ws_url`。`third_party_sign_secret` 可为空；为空时不影响脚本连接池 WebSocket，只会导致需要 HTTP 签名校验的历史接口不可用。
 - 请求头必须包含：
   - `X-Timestamp`：当前 Unix 时间戳，5 分钟内有效。
   - `X-Signature`：`hash_hmac('sha256', "{METHOD}\n{PATH}\n{timestamp}", third_party_sign_secret)`。

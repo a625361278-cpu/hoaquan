@@ -48,7 +48,7 @@ class ThirdPartyScriptRuntimeTest extends TestCase
         $runtime = new GatewayThirdPartyScriptRuntime(new ArrayThirdPartyScriptConnectionStore());
 
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('脚本未就绪，请联系管理员');
+        $this->expectExceptionMessage('服务器未准备好，请联系管理员');
 
         $runtime->startAccount(['id' => 3], 'request-1', 'session-1', 'secret-password', []);
     }
