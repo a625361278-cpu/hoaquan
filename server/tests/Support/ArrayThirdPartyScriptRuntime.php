@@ -10,6 +10,7 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
     public array $started = [];
     public array $stopped = [];
     public bool $failSend = false;
+    public bool $stopSent = true;
 
     public function __construct(public bool $hasIdleConnection = true)
     {
@@ -57,7 +58,7 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
     public function stopAccount(int $accountId, string $requestId): array
     {
         $runtime = [
-            'sent' => true,
+            'sent' => $this->stopSent,
             'client_id' => 'client-1',
             'request_id' => $requestId,
         ];

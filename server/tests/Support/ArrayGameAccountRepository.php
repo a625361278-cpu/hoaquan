@@ -10,6 +10,7 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
     private array $logs = [];
     private array $normalLogs = [];
     private array $events = [];
+    private array $taskStates = [];
 
     public function __construct(private array $accounts)
     {
@@ -164,6 +165,7 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
         ));
         unset($this->logs[$accountId]);
         unset($this->normalLogs[$accountId], $this->events[$accountId]);
+        unset($this->taskStates[$accountId]);
     }
 
     public function appendLogLines(int $accountId, array $lines, int $maxLines): void
@@ -273,5 +275,71 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
     public function clearEventLogs(int $accountId): void
     {
         $this->events[$accountId] = [];
+    }
+
+    public function taskState(int $accountId): ?array
+    {
+        return $this->taskStates[$accountId] ?? null;
+    }
+
+    public function saveTaskState(int $accountId, string $stateJson, string $stateHash, int $stateBytes, string $savedAt): array
+    {
+        $now = '2026-07-08 00:00:00';
+        $this->taskStates[$accountId] = [
+            'id' => $this->taskStates[$accountId]['id'] ?? count($this->taskStates) + 1,
+            'game_account_id' => $accountId,
+            'state_json' => $stateJson,
+            'state_hash' => $stateHash,
+            'state_bytes' => $stateBytes,
+            'saved_at' => $savedAt,
+            'created_at' => $this->taskStates[$accountId]['created_at'] ?? $now,
+            'updated_at' => $now,
+        ];
+
+        return $this->taskStates[$accountId];
+    }
+
+    public function saveTaskStates(array $states): array
+    {
+        $saved = 0;
+        $unchanged = 0;
+        $missing = 0;
+        $latestByAccount = [];
+        foreach ($states as $state) {
+            $accountId = (int)($state['game_account_id'] ?? 0);
+            if ($accountId > 0) {
+                $latestByAccount[$accountId] = $state;
+            }
+        }
+
+        foreach ($latestByAccount as $accountId => $state) {
+            if (!$this->findById($accountId)) {
+                $missing++;
+                continue;
+            }
+            if (isset($this->taskStates[$accountId]) && hash_equals((string)$this->taskStates[$accountId]['state_hash'], (string)($state['state_hash'] ?? ''))) {
+                $unchanged++;
+                continue;
+            }
+            $this->saveTaskState(
+                $accountId,
+                (string)($state['state_json'] ?? ''),
+                (string)($state['state_hash'] ?? ''),
+                (int)($state['state_bytes'] ?? 0),
+                (string)($state['saved_at'] ?? '2026-07-08 00:00:00')
+            );
+            $saved++;
+        }
+
+        return [
+            'saved' => $saved,
+            'unchanged' => $unchanged,
+            'missing' => $missing,
+        ];
+    }
+
+    public function deleteTaskState(int $accountId): void
+    {
+        unset($this->taskStates[$accountId]);
     }
 }

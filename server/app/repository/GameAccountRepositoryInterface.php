@@ -49,4 +49,12 @@ interface GameAccountRepositoryInterface
     public function countEventLogs(int $accountId): int;
 
     public function clearEventLogs(int $accountId): void;
+
+    public function taskState(int $accountId): ?array;
+
+    public function saveTaskState(int $accountId, string $stateJson, string $stateHash, int $stateBytes, string $savedAt): array;
+
+    public function saveTaskStates(array $states): array;
+
+    public function deleteTaskState(int $accountId): void;
 }

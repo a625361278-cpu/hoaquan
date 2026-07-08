@@ -23,12 +23,14 @@ class GameAccountService
     private array $thirdPartyConfig;
     private string $locale;
     private ThirdPartyScriptRuntimeInterface $scriptRuntime;
+    private GameAccountResourceService $resources;
 
     public function __construct(
         private GameAccountRepositoryInterface $accounts,
         array|string $thirdPartyConfigOrLocale = [],
         string $locale = I18n::DEFAULT_LOCALE,
-        ?ThirdPartyScriptRuntimeInterface $scriptRuntime = null
+        ?ThirdPartyScriptRuntimeInterface $scriptRuntime = null,
+        ?GameAccountResourceService $resources = null
     )
     {
         if (is_string($thirdPartyConfigOrLocale)) {
@@ -45,6 +47,7 @@ class GameAccountService
         ], $thirdPartyConfigOrLocale);
         $this->locale = I18n::normalizeLocale($locale);
         $this->scriptRuntime = $scriptRuntime ?? new GatewayThirdPartyScriptRuntime(locale: $this->locale);
+        $this->resources = $resources ?? new GameAccountResourceService();
     }
 
     public function listForUser(int $userId): array
@@ -173,6 +176,7 @@ class GameAccountService
         $reservation = $this->scriptRuntime->reserveAccount($accountId, $requestId, $logSessionId);
 
         try {
+            $this->resources->clear($accountId);
             $this->accounts->clearNormalLogLines($accountId, null);
             $updated = $this->accounts->updateRuntimeState($userId, $accountId, [
                 'status' => self::STARTING_STATUS,
@@ -220,6 +224,7 @@ class GameAccountService
         $runtime = $this->scriptRuntime->stopAccount($accountId, bin2hex(random_bytes(16)));
 
         if (!($runtime['sent'] ?? false)) {
+            $this->resources->clear($accountId);
             $updated = $this->accounts->updateRuntimeState($userId, $accountId, [
                 'status' => self::STOPPED_STATUS,
                 'sync_status' => self::LOCAL_UNSYNCED_STATUS,
@@ -245,6 +250,7 @@ class GameAccountService
             'auto_restart_next_at' => null,
             'auto_restart_last_error' => '',
         ]);
+        $this->resources->clear($accountId);
 
         return ApiResponse::success([
             'account' => $this->publicAccount($updated),
@@ -269,6 +275,7 @@ class GameAccountService
     public function delete(int $userId, int $accountId): array
     {
         $this->requireAccount($userId, $accountId);
+        $this->resources->clear($accountId);
         $this->accounts->deleteForUser($userId, $accountId);
         return ApiResponse::success([], I18n::t('api.game.deleted', [], $this->locale));
     }
@@ -297,7 +304,7 @@ class GameAccountService
             'auto_restart_next_at' => $account['auto_restart_next_at'] ?? null,
             'expire_time' => $account['expire_time'] ?? null,
             'has_config' => $this->hasSavedConfig((string)($account['config_json'] ?? '')),
-            'resources' => $this->zeroResources(),
+            'resources' => $this->resources->resourcesForAccount((int)$account['id']),
             'remark' => (string)($account['remark'] ?? ''),
             'created_at' => $account['created_at'] ?? null,
         ];
@@ -330,26 +337,6 @@ class GameAccountService
     private function cipher(): CredentialCipher
     {
         return new CredentialCipher((string)($this->thirdPartyConfig['credential_key'] ?? ''), $this->locale);
-    }
-
-    private function zeroResources(): array
-    {
-        return [
-            'level' => 0,
-            'water' => 0,
-            'diamond' => 0,
-            'gold' => 0,
-            'speedCard' => 0,
-            'hireBook' => 0,
-            'pearl' => 0,
-            'floralCoin' => 0,
-            'meowCoin' => 0,
-            'raceCoin' => '0/0',
-            'flowerFinish' => 0,
-            'satinFinish' => 0,
-            'decorateFinish' => 0,
-            'customerFinish' => 0,
-        ];
     }
 
     private function decodeConfig(string $json): array

@@ -5,7 +5,9 @@ namespace plugin\webman\gateway;
 use app\repository\DbGameAccountRepository;
 use app\repository\DbUserRepository;
 use app\service\GameAccountAutoRestartService;
+use app\service\GameAccountResourceService;
 use app\service\GameAccountService;
+use app\service\GameAccountTaskStateService;
 use app\service\GameLogQueue;
 use app\service\GatewayThirdPartyScriptRuntime;
 use app\service\ProfileService;
@@ -18,7 +20,9 @@ use Throwable;
 
 class Events
 {
-    private const MAX_MESSAGE_BYTES = 8192;
+    private const BASE_MESSAGE_BYTES = 8192;
+    private const DEFAULT_TASK_STATE_BYTES = 262144;
+    private const TASK_STATE_PROTOCOL_OVERHEAD_BYTES = 4096;
 
     public static function onWorkerStart($worker): void
     {
@@ -69,12 +73,19 @@ class Events
     public static function onMessage($clientId, $message): void
     {
         try {
-            if (strlen((string)$message) > self::MAX_MESSAGE_BYTES) {
+            $messageString = (string)$message;
+            $messageBytes = strlen($messageString);
+            if ($messageBytes > self::maxMessageBytes()) {
                 self::closeWithError($clientId, 'message too large');
                 return;
             }
 
-            $payload = json_decode((string)$message, true);
+            $payloadObject = json_decode($messageString);
+            $payload = json_decode($messageString, true);
+            if (!$payloadObject instanceof \stdClass) {
+                self::closeWithError($clientId, 'invalid json');
+                return;
+            }
             if (!is_array($payload)) {
                 self::closeWithError($clientId, 'invalid json');
                 return;
@@ -89,6 +100,10 @@ class Events
             }
 
             $type = (string)($payload['type'] ?? 'log');
+            if ($type !== 'task_state_save' && $messageBytes > self::BASE_MESSAGE_BYTES) {
+                self::closeWithError($clientId, 'message too large');
+                return;
+            }
             if (in_array($type, ['ping', 'pong', 'heartbeat'], true)) {
                 Gateway::sendToClient($clientId, self::json(['type' => 'pong', 'server_time' => time()]));
                 return;
@@ -105,7 +120,9 @@ class Events
                 'started' => self::markStarted($accountId, $payload, $sessionId),
                 'log' => self::appendLogPayload($accountId, $payload, $sessionId),
                 'event' => self::appendEventPayload($accountId, $payload),
-                'status' => self::appendStatusPayload($accountId, $payload, $sessionId),
+                'status' => self::saveStatusPayload($accountId, $payload),
+                'task_state_get' => self::sendTaskStatePayload($clientId, $accountId, $payload),
+                'task_state_save' => self::saveTaskStatePayload($clientId, $accountId, $payload, $payloadObject),
                 'error' => self::markError($clientId, $accountId, (string)($payload['message'] ?? '第三方脚本返回异常'), $sessionId),
                 'stopped' => self::markStopped($clientId, $accountId, (string)($state['state'] ?? ''), $sessionId),
                 default => self::appendLogLines($accountId, [self::json($payload)], $sessionId),
@@ -143,6 +160,7 @@ class Events
             'status' => GameAccountService::ERROR_STATUS,
             'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
         ]);
+        self::resources()->clear($accountId);
         self::appendLogLines($accountId, ['[ERROR] 第三方脚本连接断开'], (string)($state['session_id'] ?? ''));
     }
 
@@ -186,6 +204,7 @@ class Events
                 'auto_restart_last_error' => '',
             ]);
         }
+        self::resources()->clear($accountId);
         self::appendLogLines($accountId, ['[ERROR] ' . $message], $sessionId);
         self::store()->releaseClient($clientId);
         Gateway::closeClient($clientId);
@@ -225,6 +244,7 @@ class Events
             'auto_restart_last_error' => '',
         ]);
         self::accounts()->clearNormalLogLines($accountId, null);
+        self::resources()->clear($accountId);
     }
 
     private static function appendLogPayload(int $accountId, array $payload, string $sessionId): void
@@ -237,11 +257,15 @@ class Events
         self::appendLogLines($accountId, [self::formatLogPayload($payload)], $sessionId);
     }
 
-    private static function appendStatusPayload(int $accountId, array $payload, string $sessionId): void
+    private static function saveStatusPayload(int $accountId, array $payload): void
     {
-        $resources = $payload['resources'] ?? $payload;
-        unset($resources['type'], $resources['request_id'], $resources['session_id']);
-        self::appendLogLines($accountId, ['STATUS ' . self::json($resources)], $sessionId);
+        $result = self::resources()->saveStatusPayload($accountId, $payload);
+        if (($result['unknown_keys'] ?? []) !== []) {
+            Log::warning('Third-party status contains unknown resource fields', [
+                'account_id' => $accountId,
+                'unknown_keys' => $result['unknown_keys'],
+            ]);
+        }
     }
 
     private static function appendEventPayload(int $accountId, array $payload): void
@@ -253,6 +277,44 @@ class Events
         }
         $event = $payload['event'] ?? $payload;
         self::queue()->enqueueEvents($accountId, [$event]);
+    }
+
+    private static function sendTaskStatePayload(string $clientId, int $accountId, array $payload): void
+    {
+        if (array_key_exists('account_id', $payload)) {
+            self::closeWithError($clientId, 'account_id is not accepted in task state messages');
+            return;
+        }
+
+        $result = self::taskStates()->get($accountId);
+        Gateway::sendToClient($clientId, self::json([
+            'type' => 'task_state',
+            'request_id' => (string)($payload['request_id'] ?? ''),
+            'exists' => (bool)$result['exists'],
+            'state' => $result['state'],
+            'saved_at' => $result['saved_at'],
+        ]));
+    }
+
+    private static function saveTaskStatePayload(string $clientId, int $accountId, array $payload, \stdClass $payloadObject): void
+    {
+        if (array_key_exists('account_id', $payload)) {
+            self::closeWithError($clientId, 'account_id is not accepted in task state messages');
+            return;
+        }
+
+        if (!property_exists($payloadObject, 'state') || !$payloadObject->state instanceof \stdClass) {
+            self::closeWithError($clientId, 'task state must be a json object');
+            return;
+        }
+
+        $result = self::taskStates()->enqueueSave($accountId, $payloadObject->state);
+        Gateway::sendToClient($clientId, self::json([
+            'type' => 'task_state_queued',
+            'request_id' => (string)($payload['request_id'] ?? ''),
+            'queued_at' => $result['queued_at'],
+            'bytes' => (int)$result['bytes'],
+        ]));
     }
 
     private static function appendLogLines(int $accountId, array $lines, string $sessionId): void
@@ -302,6 +364,16 @@ class Events
         return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
+    private static function maxMessageBytes(): int
+    {
+        return max(self::BASE_MESSAGE_BYTES, self::taskStateMaxBytes() + self::TASK_STATE_PROTOCOL_OVERHEAD_BYTES);
+    }
+
+    private static function taskStateMaxBytes(): int
+    {
+        return max(1, (int)app_env('GAME_TASK_STATE_MAX_BYTES', (string)self::DEFAULT_TASK_STATE_BYTES));
+    }
+
     private static function store(): RedisThirdPartyScriptConnectionStore
     {
         return new RedisThirdPartyScriptConnectionStore();
@@ -315,6 +387,16 @@ class Events
     private static function queue(): GameLogQueue
     {
         return new GameLogQueue();
+    }
+
+    private static function taskStates(): GameAccountTaskStateService
+    {
+        return new GameAccountTaskStateService(self::accounts(), self::taskStateMaxBytes());
+    }
+
+    private static function resources(): GameAccountResourceService
+    {
+        return new GameAccountResourceService();
     }
 
     private static function autoRestarter(): GameAccountAutoRestartService

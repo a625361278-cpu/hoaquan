@@ -138,10 +138,3 @@
 | 110130 | 浅绯茨菇花灵 | `client.config.elf.110130` |
 | 110131 | 花笼星语花灵 | `client.config.elf.110131` |
 | 110132 | 花笼流芳花灵 | `client.config.elf.110132` |
-| 110136 | 杏黄蕨叶芍药花灵 | `client.config.elf.110136` |
-| 110138 | 柔白茨菇花灵 | `client.config.elf.110138` |
-| 110139 | 绀紫肖鸢尾花灵 | `client.config.elf.110139` |
-| 110140 | 橙星花福禄考花灵 | `client.config.elf.110140` |
-| 110141 | 紫晕石竹花花灵 | `client.config.elf.110141` |
-| 110143 | 花笼琼光花灵 | `client.config.elf.110143` |
-| 110144 | 曜绯帝王花花灵 | `client.config.elf.110144` |

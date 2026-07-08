@@ -133,11 +133,4 @@ export const ELF_OPTIONS = [
   { value: '110130', labelKey: 'client.config.elf.110130', labelZh: '浅绯茨菇花灵', labelVi: '' },
   { value: '110131', labelKey: 'client.config.elf.110131', labelZh: '花笼星语花灵', labelVi: '' },
   { value: '110132', labelKey: 'client.config.elf.110132', labelZh: '花笼流芳花灵', labelVi: '' },
-  { value: '110136', labelKey: 'client.config.elf.110136', labelZh: '杏黄蕨叶芍药花灵', labelVi: '' },
-  { value: '110138', labelKey: 'client.config.elf.110138', labelZh: '柔白茨菇花灵', labelVi: '' },
-  { value: '110139', labelKey: 'client.config.elf.110139', labelZh: '绀紫肖鸢尾花灵', labelVi: '' },
-  { value: '110140', labelKey: 'client.config.elf.110140', labelZh: '橙星花福禄考花灵', labelVi: '' },
-  { value: '110141', labelKey: 'client.config.elf.110141', labelZh: '紫晕石竹花花灵', labelVi: '' },
-  { value: '110143', labelKey: 'client.config.elf.110143', labelZh: '花笼琼光花灵', labelVi: '' },
-  { value: '110144', labelKey: 'client.config.elf.110144', labelZh: '曜绯帝王花花灵', labelVi: '' },
 ];

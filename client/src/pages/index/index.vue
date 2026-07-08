@@ -197,7 +197,7 @@ const resourceFields = [
   { key: 'level', labelKey: 'client.home.resource.level' },
   { key: 'water', labelKey: 'client.home.resource.water' },
   { key: 'diamond', labelKey: 'client.home.resource.diamond' },
-  { key: 'gold', labelKey: 'client.home.resource.gold' },
+  { key: 'coin', labelKey: 'client.home.resource.coin' },
   { key: 'speedCard', labelKey: 'client.home.resource.speed_card' },
   { key: 'hireBook', labelKey: 'client.home.resource.hire_book' },
   { key: 'pearl', labelKey: 'client.home.resource.pearl' },

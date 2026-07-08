@@ -50,6 +50,13 @@ return [
         'group' => app_env('WEBMAN_GROUP', ''),
         'reusePort' => false,
     ],
+    'game_task_state_writer' => [
+        'handler' => app\process\GameAccountTaskStateWriter::class,
+        'count' => max(1, (int)app_env('GAME_TASK_STATE_WRITER_COUNT', 4)),
+        'user' => app_env('WEBMAN_USER', ''),
+        'group' => app_env('WEBMAN_GROUP', ''),
+        'reusePort' => false,
+    ],
     'game_account_auto_restarter' => [
         'handler' => app\process\GameAccountAutoRestarter::class,
         'count' => 1,

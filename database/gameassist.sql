@@ -62,6 +62,20 @@ CREATE TABLE IF NOT EXISTS `ga_game_account_logs` (
   KEY `idx_game_account_id` (`game_account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游戏账号运行日志表';
 
+CREATE TABLE IF NOT EXISTS `ga_game_account_task_states` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '任务状态ID',
+  `game_account_id` int unsigned NOT NULL COMMENT '游戏账号ID',
+  `state_json` longtext NOT NULL COMMENT '第三方任务状态JSON',
+  `state_hash` char(64) NOT NULL COMMENT '任务状态SHA256',
+  `state_bytes` int unsigned NOT NULL COMMENT '任务状态字节数',
+  `saved_at` datetime NOT NULL COMMENT '第三方保存时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_task_state_account` (`game_account_id`),
+  KEY `idx_task_state_updated` (`updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游戏账号第三方任务状态表';
+
 CREATE TABLE IF NOT EXISTS `ga_system_settings` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '配置ID',
   `name` varchar(128) NOT NULL COMMENT '配置键',

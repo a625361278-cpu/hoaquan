@@ -3,8 +3,10 @@
 namespace tests\Feature;
 
 use app\service\GameAccountService;
+use app\service\GameAccountResourceService;
 use PHPUnit\Framework\TestCase;
 use tests\Support\ArrayGameAccountRepository;
+use tests\Support\ArrayGameAccountRuntimeResourceStore;
 use tests\Support\ArrayThirdPartyScriptRuntime;
 
 class GameAccountServiceTest extends TestCase
@@ -56,6 +58,48 @@ class GameAccountServiceTest extends TestCase
 
         $this->assertTrue($result['data']['items'][0]['has_config']);
         $this->assertFalse($result['data']['items'][1]['has_config']);
+    }
+
+    public function testGameAccountListReturnsRuntimeResourcesFromStatusSnapshot(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'running-player',
+                'game_username' => 'running-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'running',
+                'sync_status' => 'synced',
+                'remark' => '',
+                'config_json' => '{}',
+            ],
+        ]);
+        $store = new ArrayGameAccountRuntimeResourceStore();
+        $store->save(3, [
+            'level' => 14,
+            'water' => 1,
+            'diamond' => 754,
+            'coin' => 236000,
+        ]);
+        $service = new GameAccountService(
+            $repository,
+            ['enabled' => true],
+            \app\support\I18n::DEFAULT_LOCALE,
+            null,
+            new GameAccountResourceService($store)
+        );
+
+        $result = $service->listForUser(7);
+
+        $resources = $result['data']['items'][0]['resources'];
+        $this->assertSame(14, $resources['level']);
+        $this->assertSame(1, $resources['water']);
+        $this->assertSame(754, $resources['diamond']);
+        $this->assertSame(236000, $resources['coin']);
+        $this->assertSame(0, $resources['speedCard']);
     }
 
     public function testCreateGameAccountCreatesLocalPreviewWhenThirdPartyApiIsDisabled(): void
@@ -450,6 +494,47 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame('启动任务已提交，等待服务器确认', $result['msg']);
     }
 
+    public function testStartClearsPreviousRuntimeResourcesBeforeNewSession(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'running',
+                'sync_status' => 'synced',
+                'third_party_account_id' => '',
+                'remark' => '',
+                'config_json' => '{}',
+            ],
+        ]);
+        $store = new ArrayGameAccountRuntimeResourceStore();
+        $store->save(3, ['level' => 14, 'coin' => 236000]);
+        $service = new GameAccountService(
+            $repository,
+            [
+                'enabled' => true,
+                'transport' => 'websocket',
+                'script_token' => 'script-token',
+                'credential_key' => 'test-key',
+            ],
+            \app\support\I18n::DEFAULT_LOCALE,
+            new ArrayThirdPartyScriptRuntime(),
+            new GameAccountResourceService($store)
+        );
+
+        $result = $service->start(7, 3);
+
+        $this->assertSame('starting', $result['data']['account']['status']);
+        $this->assertSame([3], $store->cleared);
+        $this->assertNull($store->get(3));
+    }
+
     public function testStartFailsWithoutIdleScriptConnectionAndKeepsAccountStopped(): void
     {
         $repository = new ArrayGameAccountRepository([
@@ -517,6 +602,75 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame(0, (int)$repository->findById(3)['desired_running']);
         $this->assertSame(3, $runtime->stopped[0]['account_id']);
         $this->assertSame(1, $repository->countNormalLogLines(3, 'session-1'));
+    }
+
+    public function testStopClearsRuntimeResources(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'running',
+                'sync_status' => 'synced',
+                'third_party_account_id' => '',
+                'log_session_id' => 'session-1',
+                'remark' => '',
+                'config_json' => '{}',
+            ],
+        ]);
+        $store = new ArrayGameAccountRuntimeResourceStore();
+        $store->save(3, ['level' => 14]);
+        $service = new GameAccountService(
+            $repository,
+            ['enabled' => true],
+            \app\support\I18n::DEFAULT_LOCALE,
+            new ArrayThirdPartyScriptRuntime(),
+            new GameAccountResourceService($store)
+        );
+
+        $service->stop(7, 3);
+
+        $this->assertSame([3], $store->cleared);
+        $this->assertNull($store->get(3));
+    }
+
+    public function testDeleteClearsRuntimeResources(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'stopped',
+                'sync_status' => 'local_unsynced',
+                'third_party_account_id' => '',
+                'remark' => '',
+                'config_json' => '{}',
+            ],
+        ]);
+        $store = new ArrayGameAccountRuntimeResourceStore();
+        $store->save(3, ['level' => 14]);
+        $service = new GameAccountService(
+            $repository,
+            ['enabled' => true],
+            \app\support\I18n::DEFAULT_LOCALE,
+            null,
+            new GameAccountResourceService($store)
+        );
+
+        $service->delete(7, 3);
+
+        $this->assertSame([3], $store->cleared);
+        $this->assertNull($store->get(3));
     }
 
     public function testLogStorageKeepsLatest2500Lines(): void

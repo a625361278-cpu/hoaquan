@@ -504,6 +504,89 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 }
 ```
 
+`status` 用于同步当前账号卡片展示的运行资源快照，只能在连接已绑定游戏账号后发送，不传 `account_id`。服务端按本次消息保存最新快照，本次没有携带的字段在用户端显示默认值，不沿用上一包旧值。字段名以本表为准，不做旧字段兼容。
+
+| 字段 | 类型 | 默认值 | 用户端显示 |
+|---|---:|---:|---|
+| `level` | number/string | `0` | 等级 |
+| `water` | number/string | `0` | 水滴 |
+| `diamond` | number/string | `0` | 元宝 |
+| `coin` | number/string | `0` | 金币 |
+| `speedCard` | number/string | `0` | 加速卡 |
+| `hireBook` | number/string | `0` | 雇佣书 |
+| `pearl` | number/string | `0` | 珍珠 |
+| `floralCoin` | number/string | `0` | 花坊币 |
+| `meowCoin` | number/string | `0` | 喵币 |
+| `raceCoin` | number/string | `"0/0"` | 公会竞赛 |
+| `flowerFinish` | number/string | `0` | 居民订单 |
+| `satinFinish` | number/string | `0` | 绸缎订单 |
+| `decorateFinish` | number/string | `0` | 建材订单 |
+| `customerFinish` | number/string | `0` | 顾客订单 |
+
+运行资源快照保存在 Redis，不写 MySQL，不进入普通日志。用户手动启动新会话、停止、账号异常结束或删除账号时会清空快照；自动重连期间会保留上一份快照，直到第三方重新推送新的 `status`。
+
+### 第三方读取任务数据 task_state_get
+
+```json
+{
+  "type": "task_state_get",
+  "request_id": "state-read-1"
+}
+```
+
+任务数据读写只走当前已绑定账号的 WebSocket 连接，不走 HTTP，不传 `account_id`。服务端根据连接绑定关系定位账号。没有保存过任务数据时，服务端返回 `exists:false` 和空对象：
+
+```json
+{
+  "type": "task_state",
+  "request_id": "state-read-1",
+  "exists": false,
+  "state": {},
+  "saved_at": null
+}
+```
+
+已有任务数据时返回：
+
+```json
+{
+  "type": "task_state",
+  "request_id": "state-read-1",
+  "exists": true,
+  "state": {
+    "currentTask": "plant",
+    "cursor": 12
+  },
+  "saved_at": "2026-07-08 12:00:00"
+}
+```
+
+### 第三方保存任务数据 task_state_save
+
+```json
+{
+  "type": "task_state_save",
+  "request_id": "state-save-1",
+  "state": {
+    "currentTask": "plant",
+    "cursor": 12
+  }
+}
+```
+
+`state` 必须是 JSON 对象，默认最大 256KB，可通过服务端环境变量 `GAME_TASK_STATE_MAX_BYTES` 调整。服务端校验通过并写入 Redis 队列后立即返回：
+
+```json
+{
+  "type": "task_state_queued",
+  "request_id": "state-save-1",
+  "queued_at": "2026-07-08 12:00:00",
+  "bytes": 35
+}
+```
+
+任务状态由专用 writer 进程异步批量入库，同一账号短时间内多次保存只落最新快照；如果内容与库内完全一致，writer 会跳过重复写入。`task_state_queued` 只表示已接收并进入写库队列，不表示数据库已经完成落库。任务数据是每个游戏账号一份最新快照，停止、重启、自动重连都不清空；只有删除游戏账号时清空。空闲连接发送 `task_state_get` / `task_state_save`、携带 `account_id`、`state` 不是对象、JSON 超限或账号已删除，都会返回协议错误并关闭连接。
+
 ### 第三方返回 stopped
 
 ```json

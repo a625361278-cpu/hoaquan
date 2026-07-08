@@ -130,6 +130,21 @@ try {
         });
     }
 
+    if (!$schema->hasTable('ga_game_account_task_states')) {
+        $schema->create('ga_game_account_task_states', function ($table) {
+            $table->bigIncrements('id')->comment('任务状态ID');
+            $table->unsignedInteger('game_account_id')->comment('游戏账号ID');
+            $table->longText('state_json')->comment('第三方任务状态JSON');
+            $table->char('state_hash', 64)->comment('任务状态SHA256');
+            $table->unsignedInteger('state_bytes')->comment('任务状态字节数');
+            $table->dateTime('saved_at')->comment('第三方保存时间');
+            $table->dateTime('created_at')->useCurrent()->comment('创建时间');
+            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate()->comment('更新时间');
+            $table->unique('game_account_id', 'uniq_task_state_account');
+            $table->index('updated_at', 'idx_task_state_updated');
+        });
+    }
+
     if (!$schema->hasTable('ga_announcements')) {
         $schema->create('ga_announcements', function ($table) {
             $table->increments('id')->comment('公告ID');
@@ -235,6 +250,7 @@ try {
     echo 'ga_game_account_log_segments：已同步' . PHP_EOL;
     echo 'ga_game_account_event_segments：已同步' . PHP_EOL;
     echo 'ga_game_account_log_states：已同步' . PHP_EOL;
+    echo 'ga_game_account_task_states：已同步' . PHP_EOL;
     echo 'ga_announcements：已同步' . PHP_EOL;
     echo 'ga_user_point_transactions：已同步' . PHP_EOL;
     echo 'SMTP配置项：已同步' . PHP_EOL;

@@ -182,6 +182,7 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
         Db::table('ga_game_account_log_segments')->where('game_account_id', $accountId)->delete();
         Db::table('ga_game_account_event_segments')->where('game_account_id', $accountId)->delete();
         Db::table('ga_game_account_log_states')->where('game_account_id', $accountId)->delete();
+        Db::table('ga_game_account_task_states')->where('game_account_id', $accountId)->delete();
         Db::table('ga_game_accounts')
             ->where('user_id', $userId)
             ->where('id', $accountId)
@@ -387,6 +388,129 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
         Db::table('ga_game_account_log_states')
             ->where('game_account_id', $accountId)
             ->where('log_type', 'event')
+            ->delete();
+    }
+
+    public function taskState(int $accountId): ?array
+    {
+        $row = Db::table('ga_game_account_task_states')
+            ->where('game_account_id', $accountId)
+            ->first();
+
+        return $row ? (array)$row : null;
+    }
+
+    public function saveTaskState(int $accountId, string $stateJson, string $stateHash, int $stateBytes, string $savedAt): array
+    {
+        $now = date('Y-m-d H:i:s');
+        $exists = Db::table('ga_game_account_task_states')
+            ->where('game_account_id', $accountId)
+            ->exists();
+
+        $data = [
+            'state_json' => $stateJson,
+            'state_hash' => $stateHash,
+            'state_bytes' => $stateBytes,
+            'saved_at' => $savedAt,
+            'updated_at' => $now,
+        ];
+
+        if ($exists) {
+            Db::table('ga_game_account_task_states')
+                ->where('game_account_id', $accountId)
+                ->update($data);
+        } else {
+            Db::table('ga_game_account_task_states')->insert($data + [
+                'game_account_id' => $accountId,
+                'created_at' => $now,
+            ]);
+        }
+
+        return $this->taskState($accountId) ?? [];
+    }
+
+    public function saveTaskStates(array $states): array
+    {
+        if ($states === []) {
+            return ['saved' => 0, 'unchanged' => 0, 'missing' => 0];
+        }
+
+        $latestByAccount = [];
+        foreach ($states as $state) {
+            $accountId = (int)($state['game_account_id'] ?? 0);
+            if ($accountId <= 0) {
+                continue;
+            }
+            $latestByAccount[$accountId] = [
+                'game_account_id' => $accountId,
+                'state_json' => (string)($state['state_json'] ?? ''),
+                'state_hash' => (string)($state['state_hash'] ?? ''),
+                'state_bytes' => (int)($state['state_bytes'] ?? 0),
+                'saved_at' => (string)($state['saved_at'] ?? date('Y-m-d H:i:s')),
+            ];
+        }
+
+        if ($latestByAccount === []) {
+            return ['saved' => 0, 'unchanged' => 0, 'missing' => 0];
+        }
+
+        $accountIds = array_keys($latestByAccount);
+        $existingAccountIds = Db::table('ga_game_accounts')
+            ->whereIn('id', $accountIds)
+            ->pluck('id')
+            ->map(static fn ($id): int => (int)$id)
+            ->all();
+        $existingAccountMap = array_fill_keys($existingAccountIds, true);
+
+        $existingHashes = Db::table('ga_game_account_task_states')
+            ->whereIn('game_account_id', $existingAccountIds)
+            ->pluck('state_hash', 'game_account_id')
+            ->map(static fn ($hash): string => (string)$hash)
+            ->all();
+
+        $now = date('Y-m-d H:i:s');
+        $rows = [];
+        $unchanged = 0;
+        $missing = 0;
+        foreach ($latestByAccount as $accountId => $state) {
+            if (!isset($existingAccountMap[$accountId])) {
+                $missing++;
+                continue;
+            }
+            if (isset($existingHashes[$accountId]) && hash_equals((string)$existingHashes[$accountId], $state['state_hash'])) {
+                $unchanged++;
+                continue;
+            }
+            $rows[] = [
+                'game_account_id' => $accountId,
+                'state_json' => $state['state_json'],
+                'state_hash' => $state['state_hash'],
+                'state_bytes' => $state['state_bytes'],
+                'saved_at' => $state['saved_at'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if ($rows !== []) {
+            Db::table('ga_game_account_task_states')->upsert(
+                $rows,
+                ['game_account_id'],
+                ['state_json', 'state_hash', 'state_bytes', 'saved_at', 'updated_at']
+            );
+        }
+
+        return [
+            'saved' => count($rows),
+            'unchanged' => $unchanged,
+            'missing' => $missing,
+        ];
+    }
+
+    public function deleteTaskState(int $accountId): void
+    {
+        Db::table('ga_game_account_task_states')
+            ->where('game_account_id', $accountId)
             ->delete();
     }
 
