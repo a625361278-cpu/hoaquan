@@ -9,6 +9,10 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
     public const PREFIX = 'gameassist:third_party_scripts:';
     private const CONNECTION_TTL = 180;
 
+    public function __construct(private mixed $redis = null)
+    {
+    }
+
     private function idleKey(): string
     {
         return self::PREFIX . 'idle';
@@ -46,8 +50,8 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
         ];
 
         $this->writeConnection($clientId, $state);
-        Redis::sAdd($this->idleKey(), $clientId);
-        Redis::sRem($this->boundKey(), $clientId);
+        $this->redis()->sAdd($this->idleKey(), $clientId);
+        $this->redis()->sRem($this->boundKey(), $clientId);
         return $state;
     }
 
@@ -63,15 +67,19 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
             $state['script_version'] = (string)$metadata['script_version'];
         }
         $this->writeConnection($clientId, $state);
+        $accountId = (int)($state['account_id'] ?? 0);
+        if ($accountId > 0 && in_array((string)($state['state'] ?? ''), ['bound', 'stopping'], true)) {
+            $this->redis()->setEx($this->accountKey($accountId), self::CONNECTION_TTL, $clientId);
+        }
         return $state;
     }
 
     public function connection(string $clientId): ?array
     {
-        $payload = Redis::get($this->connectionKey($clientId));
+        $payload = $this->redis()->get($this->connectionKey($clientId));
         if (!$payload) {
-            Redis::sRem($this->idleKey(), $clientId);
-            Redis::sRem($this->boundKey(), $clientId);
+            $this->redis()->sRem($this->idleKey(), $clientId);
+            $this->redis()->sRem($this->boundKey(), $clientId);
             return null;
         }
 
@@ -81,22 +89,22 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
 
     public function connectionByAccount(int $accountId): ?array
     {
-        $clientId = Redis::get($this->accountKey($accountId));
+        $clientId = $this->redis()->get($this->accountKey($accountId));
         if (!$clientId) {
-            return null;
+            return $this->findBoundConnectionByAccount($accountId);
         }
 
         $state = $this->connection((string)$clientId);
         if (!$state) {
-            Redis::del($this->accountKey($accountId));
-            return null;
+            $this->redis()->del($this->accountKey($accountId));
+            return $this->findBoundConnectionByAccount($accountId);
         }
         return $state;
     }
 
     public function allocateIdle(int $accountId, string $sessionId, string $requestId): ?array
     {
-        while ($clientId = Redis::sPop($this->idleKey())) {
+        while ($clientId = $this->redis()->sPop($this->idleKey())) {
             $clientId = (string)$clientId;
             $state = $this->connection($clientId);
             if (!$state || ($state['state'] ?? '') !== 'idle') {
@@ -112,8 +120,8 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
             $state['last_seen'] = $now;
             $state['last_error'] = '';
             $this->writeConnection($clientId, $state);
-            Redis::setEx($this->accountKey($accountId), self::CONNECTION_TTL, $clientId);
-            Redis::sAdd($this->boundKey(), $clientId);
+            $this->redis()->setEx($this->accountKey($accountId), self::CONNECTION_TTL, $clientId);
+            $this->redis()->sAdd($this->boundKey(), $clientId);
             return $state;
         }
 
@@ -136,11 +144,11 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
     public function releaseClient(string $clientId): ?array
     {
         $state = $this->connection($clientId);
-        Redis::del($this->connectionKey($clientId));
-        Redis::sRem($this->idleKey(), $clientId);
-        Redis::sRem($this->boundKey(), $clientId);
+        $this->redis()->del($this->connectionKey($clientId));
+        $this->redis()->sRem($this->idleKey(), $clientId);
+        $this->redis()->sRem($this->boundKey(), $clientId);
         if ($state && (int)($state['account_id'] ?? 0) > 0) {
-            Redis::del($this->accountKey((int)$state['account_id']));
+            $this->redis()->del($this->accountKey((int)$state['account_id']));
         }
         return $state;
     }
@@ -191,12 +199,39 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
 
     private function writeConnection(string $clientId, array $state): void
     {
-        Redis::setEx($this->connectionKey($clientId), self::CONNECTION_TTL, json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $this->redis()->setEx($this->connectionKey($clientId), self::CONNECTION_TTL, json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 
     private function setMembers(string $key): array
     {
-        $members = Redis::sMembers($key);
+        $members = $this->redis()->sMembers($key);
         return is_array($members) ? $members : [];
+    }
+
+    private function findBoundConnectionByAccount(int $accountId): ?array
+    {
+        foreach ($this->setMembers($this->boundKey()) as $clientId) {
+            $clientId = (string)$clientId;
+            $state = $this->connection($clientId);
+            if (!$state) {
+                continue;
+            }
+            if ((int)($state['account_id'] ?? 0) !== $accountId) {
+                continue;
+            }
+            if (!in_array((string)($state['state'] ?? ''), ['bound', 'stopping'], true)) {
+                continue;
+            }
+
+            $this->redis()->setEx($this->accountKey($accountId), self::CONNECTION_TTL, $clientId);
+            return $state;
+        }
+
+        return null;
+    }
+
+    private function redis(): mixed
+    {
+        return $this->redis ?? Redis::class;
     }
 }
