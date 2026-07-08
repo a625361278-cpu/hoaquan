@@ -13,9 +13,9 @@ return [
         'constructor' => ['config' => [
             'lanIp'           => '127.0.0.1',
             'startPort'       => (int)app_env('GATEWAY_START_PORT', 2500),
-            'pingInterval'    => 25,
+            'pingInterval'    => 20,
             'pingNotResponseLimit' => 2,
-            'pingData'        => '{"type":"ping"}',
+            'pingData'        => '',
             'registerAddress' => (string)app_env('GATEWAY_REGISTER_ADDRESS', '127.0.0.1:1238'),
             'onConnect'       => function(){},
         ]]

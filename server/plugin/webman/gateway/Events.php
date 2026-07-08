@@ -32,7 +32,8 @@ class Events
     public static function onWebSocketConnect($clientId, $data): void
     {
         try {
-            $query = self::queryFromHandshake((string)$data);
+            $query = self::queryFromHandshake($data);
+            $server = self::serverFromHandshake($data);
             $locale = I18n::normalizeLocale((string)($query['locale'] ?? I18n::DEFAULT_LOCALE));
             $settings = new SystemSettingService();
             $config = $settings->thirdPartyConfig();
@@ -49,7 +50,7 @@ class Events
             }
 
             $metadata = [
-                'remote_ip' => (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+                'remote_ip' => (string)($server['REMOTE_ADDR'] ?? ($_SERVER['REMOTE_ADDR'] ?? '')),
                 'script_version' => (string)($query['version'] ?? ''),
             ];
             $state = self::store()->registerIdle($clientId, $metadata);
@@ -104,8 +105,7 @@ class Events
                 self::closeWithError($clientId, 'message too large');
                 return;
             }
-            if (in_array($type, ['ping', 'pong', 'heartbeat'], true)) {
-                Gateway::sendToClient($clientId, self::json(['type' => 'pong', 'server_time' => time()]));
+            if (in_array($type, ['heartbeat', 'ping', 'pong'], true)) {
                 return;
             }
 
@@ -347,7 +347,51 @@ class Events
         Gateway::closeClient($clientId);
     }
 
-    private static function queryFromHandshake(string $data): array
+    private static function queryFromHandshake(mixed $data): array
+    {
+        if (is_array($data)) {
+            $query = $data['get'] ?? [];
+            if (is_array($query) && $query !== []) {
+                return $query;
+            }
+
+            $server = $data['server'] ?? [];
+            if (is_array($server) && isset($server['QUERY_STRING'])) {
+                parse_str((string)$server['QUERY_STRING'], $parsed);
+                return is_array($parsed) ? $parsed : [];
+            }
+
+            return [];
+        }
+
+        if (is_object($data)) {
+            if (method_exists($data, 'get')) {
+                $query = $data->get();
+                if (is_array($query)) {
+                    return $query;
+                }
+            }
+            if (method_exists($data, 'queryString')) {
+                parse_str((string)$data->queryString(), $query);
+                return is_array($query) ? $query : [];
+            }
+
+            return [];
+        }
+
+        return self::queryFromHandshakeString((string)$data);
+    }
+
+    private static function serverFromHandshake(mixed $data): array
+    {
+        if (is_array($data) && is_array($data['server'] ?? null)) {
+            return $data['server'];
+        }
+
+        return [];
+    }
+
+    private static function queryFromHandshakeString(string $data): array
     {
         $requestLine = strtok($data, "\r\n") ?: '';
         if (!preg_match('#GET\s+([^ ]+)\s+HTTP#', $requestLine, $matches)) {

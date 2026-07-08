@@ -14,7 +14,8 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - 连接通过校验后会收到 `{"type":"ready","client_id":"...","state":"idle"}`。
 - 一个连接同一时间只服务一个游戏账号。账号停止后该连接会断开；脚本如需继续接单，需要重新连接。
 - 运行消息不再携带 `account_id`。账号归属由服务端连接绑定关系判断；未绑定连接发送业务消息会被关闭。
-- 心跳可发送 `{"type":"ping"}`、`{"type":"pong"}` 或 `{"type":"heartbeat","script_version":"1.0.0"}`，服务端会回 `pong` 并更新最近心跳。
+- 脚本保活只使用 JSON 心跳：`{"type":"heartbeat","script_version":"1.0.0"}`。建议每 15-20 秒发送一次，服务端只更新最近心跳和脚本版本，不返回业务回包；脚本不要等待 `pong`。
+- 如果连接约 60 秒没有收到任何消息，服务端会释放该连接；脚本需要重新连接并等待新的 `ready`。
 
 ## 启动载荷
 

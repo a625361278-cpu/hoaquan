@@ -19,12 +19,14 @@ ws://hoavienpro.com/ws/third-party/script?token=dca3ca0f25d79ade3d9ec388d1767e8b
   "server_time": 1783430400
 }
 
-脚本可发送 ping/pong/heartbeat 维持心跳：
+脚本使用 heartbeat 维持心跳，建议每 15-20 秒发送一次：
 
 {
   "type": "heartbeat",
   "script_version": "1.0.0"
 }
+
+服务端收到 heartbeat 后只更新最近心跳和脚本版本，不返回业务回包，脚本不要等待 pong。如果连接约 60 秒没有收到任何消息，服务端会释放该连接；脚本需要重新连接并等待新的 ready。
 
 二、后端发送：启动账号 start
 
