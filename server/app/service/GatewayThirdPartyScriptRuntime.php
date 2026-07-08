@@ -5,6 +5,7 @@ namespace app\service;
 use app\exception\ApiException;
 use app\support\I18n;
 use GatewayWorker\Lib\Gateway;
+use support\Log;
 use Throwable;
 
 class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
@@ -92,6 +93,14 @@ class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
             $this->connections->releaseClient($clientId);
             throw new ApiException(I18n::t('api.third_party.script_send_failed', ['error' => 'client offline'], $this->locale), 503);
         }
+
+        Log::info('Third-party start payload sent', [
+            'account_id' => $accountId,
+            'client_id' => $clientId,
+            'request_id' => (string)($reservation['request_id'] ?? ''),
+            'session_id' => (string)($reservation['session_id'] ?? ''),
+            'game_username' => (string)($account['game_username'] ?? ''),
+        ]);
 
         return [
             'client_id' => $clientId,

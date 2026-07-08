@@ -166,8 +166,19 @@ class Events
     private static function markStarted(int $accountId, array $payload, array $state): void
     {
         $sessionId = (string)($state['session_id'] ?? '');
+        $trace = self::startedTrace($payload, $state);
+        Log::info('Third-party started received', array_merge([
+            'account_id' => $accountId,
+            'client_id' => (string)($state['client_id'] ?? ''),
+        ], $trace));
+        self::appendLogLines($accountId, ['[INFO] 收到第三方 started：' . self::json($trace)], $sessionId);
+
         if (!self::startedContextMatches($payload, $state)) {
-            self::appendLogLines($accountId, ['[ERROR] 第三方 started 回包与当前启动会话不匹配，已忽略'], $sessionId);
+            Log::warning('Third-party started context mismatch', array_merge([
+                'account_id' => $accountId,
+                'client_id' => (string)($state['client_id'] ?? ''),
+            ], $trace));
+            self::appendLogLines($accountId, ['[ERROR] 第三方 started 回包与当前启动会话不匹配，已忽略：' . self::json($trace)], $sessionId);
             return;
         }
 
@@ -215,6 +226,17 @@ class Events
             && $expectedSessionId !== ''
             && hash_equals($expectedRequestId, $actualRequestId)
             && hash_equals($expectedSessionId, $actualSessionId);
+    }
+
+    private static function startedTrace(array $payload, array $state): array
+    {
+        return [
+            'expected_request_id' => (string)($state['request_id'] ?? ''),
+            'actual_request_id' => (string)($payload['request_id'] ?? ''),
+            'expected_session_id' => (string)($state['session_id'] ?? ''),
+            'actual_session_id' => (string)($payload['session_id'] ?? ''),
+            'role_id' => (string)($payload['role_id'] ?? ''),
+        ];
     }
 
     private static function canAcceptStarted(array $account): bool

@@ -6,6 +6,7 @@ use app\exception\ApiException;
 use app\repository\GameAccountRepositoryInterface;
 use app\support\ApiResponse;
 use app\support\I18n;
+use support\Log;
 
 class GameAccountService
 {
@@ -25,6 +26,7 @@ class GameAccountService
     private ThirdPartyScriptRuntimeInterface $scriptRuntime;
     private GameAccountResourceService $resources;
     private GameAccountQuotaService $quotaService;
+    private GameLogSinkInterface $logs;
 
     public function __construct(
         private GameAccountRepositoryInterface $accounts,
@@ -32,7 +34,8 @@ class GameAccountService
         string $locale = I18n::DEFAULT_LOCALE,
         ?ThirdPartyScriptRuntimeInterface $scriptRuntime = null,
         ?GameAccountResourceService $resources = null,
-        ?GameAccountQuotaService $quotaService = null
+        ?GameAccountQuotaService $quotaService = null,
+        ?GameLogSinkInterface $logs = null
     )
     {
         if (is_string($thirdPartyConfigOrLocale)) {
@@ -51,6 +54,7 @@ class GameAccountService
         $this->scriptRuntime = $scriptRuntime ?? new GatewayThirdPartyScriptRuntime(locale: $this->locale);
         $this->resources = $resources ?? new GameAccountResourceService();
         $this->quotaService = $quotaService ?? new GameAccountQuotaService(locale: $this->locale);
+        $this->logs = $logs ?? new GameLogQueue();
     }
 
     public function listForUser(int $userId): array
@@ -215,6 +219,15 @@ class GameAccountService
             ]);
             throw $e;
         }
+
+        $startTrace = [
+            'account_id' => $accountId,
+            'client_id' => (string)($runtime['client_id'] ?? ''),
+            'request_id' => (string)($runtime['request_id'] ?? ''),
+            'session_id' => (string)($runtime['session_id'] ?? ''),
+        ];
+        Log::info('Third-party start sent', $startTrace);
+        $this->logs->enqueueNormal($accountId, ['[INFO] 已下发 start：' . json_encode($startTrace, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)], $logSessionId);
 
         return ApiResponse::success([
             'account' => $this->publicAccount($updated),
