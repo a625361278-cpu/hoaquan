@@ -4,6 +4,7 @@ namespace plugin\admin\app\service;
 
 use app\support\I18n;
 use RuntimeException;
+use support\Db;
 
 class GameAssistUserAdminService
 {
@@ -47,6 +48,86 @@ class GameAssistUserAdminService
         }
 
         return password_hash($password, PASSWORD_DEFAULT);
+    }
+
+    public function grantQuota(int $userId, int $points, string $remark = '', ?int $adminId = null): array
+    {
+        if ($points <= 0) {
+            throw new RuntimeException($this->t('admin.gameassist.quota_positive'));
+        }
+
+        $balanceAfter = '';
+        Db::connection()->transaction(function () use ($userId, $points, $remark, $adminId, &$balanceAfter) {
+            $user = Db::table('ga_users')
+                ->where('id', $userId)
+                ->lockForUpdate()
+                ->first();
+            if (!$user) {
+                throw new RuntimeException($this->t('admin.gameassist.user_not_found'));
+            }
+
+            $balanceAfter = $this->formatCents($this->decimalToCents((string)($user->balance ?? '0.00')) + $points * 100);
+            $now = date('Y-m-d H:i:s');
+            $description = trim($remark) !== '' ? trim($remark) : $this->t('admin.gameassist.quota_default_remark');
+
+            Db::table('ga_users')
+                ->where('id', $userId)
+                ->update([
+                    'balance' => $balanceAfter,
+                    'updated_at' => $now,
+                ]);
+
+            Db::table('ga_user_point_transactions')->insert([
+                'user_id' => $userId,
+                'type' => 'admin_grant',
+                'amount' => $this->formatCents($points * 100),
+                'balance_after' => $balanceAfter,
+                'description' => $description,
+                'related_user_id' => null,
+                'related_role_id' => '',
+                'ip_address' => '',
+                'created_at' => $now,
+            ]);
+
+            Db::table('ga_admin_operation_logs')->insert([
+                'admin_id' => $adminId,
+                'action' => 'gameassist_user.grant_quota',
+                'target_type' => 'ga_users',
+                'target_id' => (string)$userId,
+                'payload' => json_encode([
+                    'points' => $points,
+                    'balance_after' => $balanceAfter,
+                    'remark' => $description,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'created_at' => $now,
+            ]);
+        });
+
+        return [
+            'id' => $userId,
+            'balance' => $balanceAfter,
+        ];
+    }
+
+    private function decimalToCents(string $value): int
+    {
+        $value = trim($value);
+        if (!preg_match('/^-?\d+(?:\.\d{1,2})?$/', $value)) {
+            throw new RuntimeException('用户配额余额格式异常：' . $value);
+        }
+
+        $negative = str_starts_with($value, '-');
+        $value = ltrim($value, '-');
+        [$yuan, $cents] = array_pad(explode('.', $value, 2), 2, '0');
+        $amount = ((int)$yuan) * 100 + (int)str_pad(substr($cents, 0, 2), 2, '0');
+        return $negative ? -$amount : $amount;
+    }
+
+    private function formatCents(int $cents): string
+    {
+        $sign = $cents < 0 ? '-' : '';
+        $cents = abs($cents);
+        return sprintf('%s%d.%02d', $sign, intdiv($cents, 100), $cents % 100);
     }
 
     private function t(string $key): string

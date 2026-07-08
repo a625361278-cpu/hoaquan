@@ -60,6 +60,25 @@ class GameAssistUserController extends Crud
         return $this->json(0);
     }
 
+    public function grantQuota(Request $request): Response
+    {
+        if ($request->method() !== 'POST') {
+            return raw_view('game-assist-user/grant-quota');
+        }
+
+        $id = (int)$request->post('id');
+        $points = $this->positiveInteger($request->post('points', ''));
+        $remark = (string)$request->post('remark', '');
+
+        try {
+            $result = $this->service->grantQuota($id, $points, $remark, admin_id());
+        } catch (RuntimeException $exception) {
+            throw new BusinessException($exception->getMessage(), 2);
+        }
+
+        return $this->json(0, 'ok', $result);
+    }
+
     protected function selectInput(Request $request): array
     {
         [$where, $format, $limit, $field, $order] = parent::selectInput($request);
@@ -91,5 +110,21 @@ class GameAssistUserController extends Crud
     protected function afterQuery($items)
     {
         return $this->service->sanitizeRows($items);
+    }
+
+    private function positiveInteger(mixed $value): int
+    {
+        if (is_int($value)) {
+            $points = $value;
+        } elseif (is_string($value) && preg_match('/^\d+$/', trim($value))) {
+            $points = (int)trim($value);
+        } else {
+            throw new BusinessException(I18n::t('admin.gameassist.quota_positive', [], I18n::localeFromRequest()), 2);
+        }
+
+        if ($points <= 0) {
+            throw new BusinessException(I18n::t('admin.gameassist.quota_positive', [], I18n::localeFromRequest()), 2);
+        }
+        return $points;
     }
 }

@@ -16,6 +16,8 @@ interface GameAccountRepositoryInterface
 
     public function listDesiredRunningAccounts(array $statuses, int $afterId, int $limit): array;
 
+    public function listExpiredActiveAccounts(array $statuses, string $now, int $limit): array;
+
     public function createLocalPreview(int $userId, array $data): array;
 
     public function saveLocalConfig(int $userId, int $accountId, array $config, string $syncStatus): array;

@@ -63,9 +63,13 @@ bash deploy/server_update.sh
 - 邀请奖励触发条件是被邀请的新用户添加游戏账号并启动成功。第三方 `started` 回包确认后，系统自动绑定角色并发放奖励；角色标识优先使用 `third_party_account_id`，其次使用 `role_id`、`display_name`、游戏登录账号。
 - 邀请奖励为邀请人 `balance + 1` 点，并写入 `ga_user_point_transactions`；同一邀请人每日奖励上限由 `ga_system_settings.invite_daily_limit` 控制，默认 `50`；同邀请人同 IP 每日奖励风控上限由 `invite_same_ip_daily_limit` 控制，默认 `3`。
 - `ga_user_point_transactions` 通过 `uniq_invite_reward_user(type, related_user_id)` 在数据库层限制同一个被邀请账号只能产生一次邀请奖励流水。
+- 用户 `ga_users.balance` 是可分配配额余额。用户给某个游戏账号延期时会立即扣余额并写入 `ga_game_accounts.expire_time`，不依赖账号是否启动；删除账号不退还已分配配额。
+- 游戏账号延期固定使用基础套餐 `10` 点兑换 `11` 天，额外配额 `N` 点增加 `N` 天；总扣点 `10 + N`，总天数 `11 + N`，延期起点为 `max(当前时间, 当前账号 expire_time)`。扣点流水写入 `ga_user_point_transactions(type=quota_consume)`。
 - 第三方正式接入固定使用 WebSocket：第三方脚本主动连接我方 GatewayWorker，用户端启动接口会从空闲脚本连接中分配一个连接给当前账号，并等待真实 `started` 回包后才标记为运行中。
-- 运行服务默认未启用，启动、加配额和配置同步请求都会明确失败；用户端启动未启用时返回“服务器未启用，请联系管理员”，没有空闲脚本连接时返回“服务器未准备好，请联系管理员”，账号不进入 `starting`。
+- 运行服务未启用或未准备好时，启动和配置同步请求都会明确失败；用户端启动未启用时返回“服务器未启用，请联系管理员”，没有空闲脚本连接时返回“服务器未准备好，请联系管理员”，账号不进入 `starting`。
+- 启动账号前必须满足 `expire_time > 当前时间`。未配置或已到期会明确失败，不进入 `starting`，不占用第三方脚本连接。
 - 玩家启动账号后会写入 `desired_running=1`。如果第三方连接异常断开或我方服务重启导致绑定丢失，账号进入 `reconnecting`，由 `game_account_auto_restarter` 在有空闲脚本连接时重新发送幂等 `start` 包；只有用户手动停止或第三方明确返回 `error` 时才清除运行意图。
+- `game_account_expiry_watcher` 会定期扫描已到期且仍处于 `starting/running/reconnecting` 的账号；有脚本绑定时发送 `stop` 并标记 `stopping + desired_running=0`，无绑定时标记 `stopped + desired_running=0`，同时写入“配额到期停止”日志，阻止自动重连继续拉起。
 - 运行日志分为普通日志和事件卡片历史。普通日志按本次运行会话保存，启动新会话和主动停止后清空；事件卡片历史按账号保留，跨停止/重启保留。两类数据每个账号各最多保留 `2500` 条。
 - 日志写入按 1 万游戏账号设计：GatewayWorker 只把日志写入 64 个 Redis 分片队列，`game_log_writer` 默认 8 个进程按分片消费、内存聚合、批量落库。普通日志默认 10 秒或 50 行刷库一次，事件日志默认 2 秒或 20 条刷库一次；用户端读取结构不变，但普通日志可能有几秒延迟。
 - 第三方任务数据通过当前已绑定账号的 WebSocket 连接读写，不提供 HTTP 接口，不传 `account_id`。保存消息先写入 Redis 队列，由 `game_task_state_writer` 聚合后批量入库；我方只保存每个游戏账号的最新 JSON 快照，停止、重启、自动重连不清空，删除游戏账号时清空；单账号默认上限 `256KB`，可通过 `GAME_TASK_STATE_MAX_BYTES` 调整。
@@ -90,7 +94,7 @@ bash deploy/server_update.sh
 - 管理员角色保留 `rules='*'`，用于访问 webman-admin 原生的数据库、权限管理、会员管理、通用设置等基础功能。
 - 后台“GameAssist用户”管理针对产品用户表 `ga_users`，不是后台账号或 webman-admin 的 `wa_users`。
 - 后台仪表盘的今日注册、7日注册、30日注册和总用户数均统计 `ga_users.created_at`，不使用后台用户表。
-- GameAssist 用户后台只允许查看、启用/禁用和重置密码；余额 `balance` 与到期日 `expire_at` 只读展示，不能通过普通用户管理表单修改。
+- GameAssist 用户后台允许查看、启用/禁用、重置密码和“添加配额”。添加配额只增加产品用户 `ga_users.balance`，必须填写正整数点数，可填写备注；成功后写入 `ga_user_point_transactions(type=admin_grant)` 和 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
 - 后台“运行服务配置”负责编辑运行服务启用状态、连接池 Token 和我方 WebSocket 地址；签名密钥为选填，仅用于历史 HTTP 接口签名校验。后台“脚本连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
 
@@ -121,10 +125,12 @@ bash deploy/server_update.sh
 - 第三方正式通信已固定为 WebSocket，配置项 `third_party_transport` 仅保留旧配置兼容，不作为正式 HTTP 接入开关。
 - 第三方脚本主动连接我方地址：`ws://hoavienpro.com/ws/third-party/script?token=连接池Token`。Caddy 需要把 `/ws/third-party/script` 代理到本机 GatewayWorker 端口，默认 `8792`，可通过 `GATEWAY_PORT` 调整；GatewayWorker 内部起始端口默认 `2500`，可通过 `GATEWAY_START_PORT` 调整；Register 默认 `127.0.0.1:1238`，可通过 `GATEWAY_REGISTER_ADDRESS` 调整。
 - 后台不再配置第三方 URL、URL 列表或单连接容量；旧 `third_party_ws_url`、`third_party_ws_urls`、`third_party_ws_connection_capacity` 可暂留数据库用于兼容旧数据，但启动逻辑不读取。
-- 常驻进程包括 GatewayWorker 的 Gateway、BusinessWorker、Register，以及 `server/config/process.php` 中的 `game_log_writer`、`game_task_state_writer` 和 `game_account_auto_restarter`。脚本连接状态写入 Redis 前缀 `gameassist:third_party_scripts:*`；日志写入 `gameassist:game_logs:queue:{shard}` 分片队列，`shard=account_id%64`，再由多 writer 聚合写入分段表。任务状态写入 `gameassist:game_task_states:queue:{shard}` 分片队列，再由任务状态 writer 聚合后批量 upsert。默认 `GAME_LOG_WRITER_COUNT=8`、`GAME_TASK_STATE_WRITER_COUNT=4`，可按服务器压力调整。
-- 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端校验账号、验证密码可解密、读取本地配置 JSON、原子占用一个空闲脚本连接、写入 `starting`、`desired_running=1` 和日志会话，再向该脚本连接发送 `start` 包；接口成功只表示启动包已发出，不表示第三方登录成功。
+- 常驻进程包括 GatewayWorker 的 Gateway、BusinessWorker、Register，以及 `server/config/process.php` 中的 `game_log_writer`、`game_task_state_writer`、`game_account_auto_restarter` 和 `game_account_expiry_watcher`。脚本连接状态写入 Redis 前缀 `gameassist:third_party_scripts:*`；日志写入 `gameassist:game_logs:queue:{shard}` 分片队列，`shard=account_id%64`，再由多 writer 聚合写入分段表。任务状态写入 `gameassist:game_task_states:queue:{shard}` 分片队列，再由任务状态 writer 聚合后批量 upsert。默认 `GAME_LOG_WRITER_COUNT=8`、`GAME_TASK_STATE_WRITER_COUNT=4`，可按服务器压力调整。
+- 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端先校验账号配额未到期，再验证密码可解密、读取本地配置 JSON、原子占用一个空闲脚本连接、写入 `starting`、`desired_running=1` 和日志会话，再向该脚本连接发送 `start` 包；接口成功只表示启动包已发出，不表示第三方登录成功。
 - 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端向已绑定脚本发送 `stop` 后本地状态进入 `stopping` 并写入 `desired_running=0`；收到脚本 `stopped` 或连接关闭确认后才改为 `stopped` 并清空本次普通日志，事件卡片历史不会清空。
 - 异常断线恢复：连接关闭但用户没有手动停止时，服务端不会把账号当作已停止，而是改为 `reconnecting`，保留原 `log_session_id` 和普通日志，等待空闲脚本连接后重发幂等 `start`。第三方应按 `game_username` 判断已有任务并重新绑定，不要重复启动；本协议不使用单独的 `resume` 消息。
+- 用户端增加配额：`POST /api/game-accounts/{id}/quota`，请求体 `extra_points` 默认为 `0`。接口在事务内扣除用户余额、更新账号到期时间并写扣点流水；取消前端弹窗不会请求接口，也不会产生任何数据变更。
+- 用户端删除账号会先尝试停止仍在运行态的第三方任务，再删除账号和相关日志/快照；已配置到账号的配额不返还到用户余额。
 - 运行资源状态：第三方在账号绑定后发送 `status` 包刷新账号卡片资源，字段名以协议为准，例如金币字段是 `coin`。服务端只保存最新 Redis 快照，不写 MySQL；手动启动新会话、停止、账号异常结束或删除账号会清空快照，自动重连期间保留上一份快照。
 - 第三方任务数据：脚本在收到 `start` 并进入绑定状态后，通过 WebSocket 发送 `task_state_get` 读取已落库历史快照，发送 `task_state_save` 保存最新任务 JSON。`task_state_save` 返回 `task_state_queued`，表示已进入写库队列；实际落库由 `game_task_state_writer` 异步批量处理。该数据由第三方维护，我方只负责按账号保存和在删除账号时清理。
 - 第三方读取游戏配置：`GET /api/third-party/game-accounts/{id}/config`。

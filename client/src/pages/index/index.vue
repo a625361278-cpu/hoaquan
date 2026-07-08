@@ -73,6 +73,65 @@
       </view>
     </view>
 
+    <view v-if="quotaDialog.visible" class="modal-mask">
+      <view class="quota-dialog">
+        <view class="dialog-head">
+          <text class="dialog-title">{{ t('client.quota.title', { name: quotaDialog.account?.display_name || '' }) }}</text>
+          <text class="close" @click="closeQuotaDialog">×</text>
+        </view>
+        <view class="quota-current">
+          <view>
+            <text>{{ t('client.quota.current_balance') }}：</text>
+            <text class="quota-balance">{{ user.balance || '0' }}</text>
+          </view>
+          <button class="quota-recharge" @click="goPointRecharge">{{ t('client.recharge.title') }}</button>
+        </view>
+        <text class="quota-line">{{ t('client.quota.current_expire') }}：{{ quotaDialog.account?.expire_time || t('client.home.expired') }}</text>
+        <text class="quota-line">{{ t('client.quota.choose_duration') }}：</text>
+
+        <view class="quota-package">
+          <view class="quota-package-main">
+            <text class="quota-package-title">{{ t('client.quota.package_title') }}</text>
+            <text class="quota-tag">{{ t('client.quota.package_badge') }}</text>
+          </view>
+          <text class="quota-cost">-{{ BASE_QUOTA_COST }}{{ t('client.quota.points_unit') }}</text>
+          <text class="quota-desc">{{ t('client.quota.package_desc') }}</text>
+        </view>
+
+        <view class="quota-extra-head">
+          <text>{{ t('client.quota.extra_label') }}：</text>
+          <text class="quota-total">{{ quotaTotalCost }} {{ t('client.quota.points_unit') }}</text>
+        </view>
+        <text class="quota-warning">{{ t('client.quota.notice', { base: BASE_QUOTA_COST, extra: quotaDialog.extraPoints, total: quotaTotalCost, days: quotaTotalDays }) }}</text>
+        <slider
+          class="quota-slider"
+          :value="quotaDialog.extraPoints"
+          :min="0"
+          :max="quotaExtraMax"
+          :step="1"
+          activeColor="#29b6f6"
+          backgroundColor="#e5e7eb"
+          @change="onQuotaSliderChange"
+        />
+        <view class="quota-extra-input">
+          <text>0</text>
+          <input v-model="quotaDialog.extraInput" class="quota-number" type="number" @input="onQuotaInputChange" />
+        </view>
+        <view class="quota-summary">
+          <text>{{ t('client.quota.package_points', { points: BASE_QUOTA_COST }) }}</text>
+          <text>{{ t('client.quota.extra_points', { points: quotaDialog.extraPoints }) }}</text>
+        </view>
+        <view class="quota-estimate">
+          <text>{{ t('client.quota.estimated_expire') }}：</text>
+          <text class="quota-estimate-time">{{ quotaEstimatedExpire }}</text>
+        </view>
+        <view class="dialog-actions">
+          <button class="dialog-secondary" @click="closeQuotaDialog">{{ t('admin.common.cancel') }}</button>
+          <button class="dialog-primary" :disabled="actionLoading" @click="submitQuota">{{ t('client.quota.confirm') }}</button>
+        </view>
+      </view>
+    </view>
+
     <view v-if="logs.visible" class="modal-mask">
       <view class="log-dialog">
         <view class="log-head">
@@ -184,6 +243,8 @@ const currentLocale = ref(getLocale());
 const activeMenuId = ref(null);
 const actionLoading = ref(false);
 const logsTailId = 'log-tail';
+const BASE_QUOTA_COST = 10;
+const BASE_QUOTA_DAYS = 11;
 let logTimer = null;
 let logSocket = null;
 
@@ -214,6 +275,13 @@ const passwordDialog = reactive({
   visible: false,
   account: null,
   password: '',
+});
+
+const quotaDialog = reactive({
+  visible: false,
+  account: null,
+  extraPoints: 0,
+  extraInput: '0',
 });
 
 const logs = reactive({
@@ -295,8 +363,8 @@ function resourceValue(item, key) {
 }
 
 function isExpired(item) {
-  if (!item.expire_time) return false;
-  return new Date(item.expire_time).getTime() < Date.now();
+  if (!item.expire_time) return true;
+  return new Date(String(item.expire_time).replace(/-/g, '/')).getTime() < Date.now();
 }
 
 function expireText(item) {
@@ -332,7 +400,10 @@ async function stopAccount(item) {
 
 async function addQuota(item) {
   activeMenuId.value = null;
-  await accountAction(`/api/game-accounts/${item.id}/quota`, 'POST');
+  quotaDialog.visible = true;
+  quotaDialog.account = item;
+  quotaDialog.extraPoints = 0;
+  quotaDialog.extraInput = '0';
 }
 
 async function accountAction(url, method) {
@@ -352,6 +423,75 @@ async function accountAction(url, method) {
 
 function replaceAccount(account) {
   gameAccounts.value = gameAccounts.value.map((item) => (item.id === account.id ? account : item));
+}
+
+const quotaTotalCost = computed(() => BASE_QUOTA_COST + quotaDialog.extraPoints);
+const quotaTotalDays = computed(() => BASE_QUOTA_DAYS + quotaDialog.extraPoints);
+const quotaExtraMax = computed(() => Math.max(0, Math.floor(Number(user.value.balance || 0)) - BASE_QUOTA_COST));
+const quotaEstimatedExpire = computed(() => {
+  if (!quotaDialog.account) return '';
+  const currentExpire = quotaDialog.account.expire_time
+    ? new Date(String(quotaDialog.account.expire_time).replace(/-/g, '/')).getTime()
+    : 0;
+  const base = Math.max(Date.now(), Number.isFinite(currentExpire) ? currentExpire : 0);
+  const estimated = new Date(base + quotaTotalDays.value * 24 * 60 * 60 * 1000);
+  return formatDateTime(estimated);
+});
+
+function closeQuotaDialog() {
+  quotaDialog.visible = false;
+  quotaDialog.account = null;
+  quotaDialog.extraPoints = 0;
+  quotaDialog.extraInput = '0';
+}
+
+function onQuotaSliderChange(event) {
+  setQuotaExtra(event.detail.value);
+}
+
+function onQuotaInputChange(event) {
+  setQuotaExtra(event.detail.value);
+}
+
+function setQuotaExtra(value) {
+  const parsed = Number.parseInt(String(value), 10);
+  const next = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  quotaDialog.extraPoints = Math.min(next, quotaExtraMax.value);
+  quotaDialog.extraInput = String(quotaDialog.extraPoints);
+}
+
+async function submitQuota() {
+  if (!quotaDialog.account) return;
+  if (Number(user.value.balance || 0) < quotaTotalCost.value) {
+    uni.showToast({ title: t('client.quota.insufficient'), icon: 'none' });
+    return;
+  }
+  actionLoading.value = true;
+  try {
+    const result = await request({
+      url: `/api/game-accounts/${quotaDialog.account.id}/quota`,
+      method: 'POST',
+      data: { extra_points: quotaDialog.extraPoints },
+    });
+    if (result.account) {
+      replaceAccount(result.account);
+    }
+    if (result.balance !== undefined) {
+      user.value = { ...user.value, balance: result.balance };
+    }
+    closeQuotaDialog();
+    await loadHome();
+    uni.showToast({ title: t('client.quota.success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: error.message, icon: 'none' });
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+function formatDateTime(date) {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function openPasswordDialog(item) {
@@ -596,6 +736,9 @@ function goProfile() {
 }
 
 function goPointRecharge() {
+  if (quotaDialog.visible) {
+    closeQuotaDialog();
+  }
   rechargeVisible.value = true;
 }
 
@@ -920,6 +1063,160 @@ function openPaymentWindow() {
   color: #fff;
 }
 
+.quota-dialog {
+  width: min(700rpx, 94vw);
+  max-height: 90vh;
+  padding: 28rpx;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.quota-current,
+.quota-package-main,
+.quota-extra-head,
+.quota-extra-input,
+.quota-summary,
+.quota-estimate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.quota-current {
+  margin-bottom: 12rpx;
+  color: #475467;
+  font-size: 24rpx;
+}
+
+.quota-balance,
+.quota-total {
+  color: #1677ff;
+  font-weight: 800;
+}
+
+.quota-recharge {
+  height: 52rpx;
+  line-height: 52rpx;
+  margin: 0;
+  padding: 0 18rpx;
+  border-radius: 8px;
+  background: #eef7ff;
+  color: #1677ff;
+  font-size: 22rpx;
+}
+
+.quota-line {
+  display: block;
+  margin-top: 8rpx;
+  color: #667085;
+  font-size: 23rpx;
+}
+
+.quota-package {
+  margin: 24rpx 0;
+  padding: 22rpx;
+  border: 1px solid #29b6f6;
+  border-radius: 8px;
+  background: #edfaff;
+}
+
+.quota-package-main {
+  gap: 14rpx;
+  justify-content: flex-start;
+}
+
+.quota-package-title {
+  color: #1f2937;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.quota-tag {
+  padding: 2rpx 8rpx;
+  border-radius: 4px;
+  background: #fff1f3;
+  color: #e02020;
+  font-size: 20rpx;
+  font-weight: 800;
+}
+
+.quota-cost {
+  display: block;
+  margin-top: 8rpx;
+  color: #e02020;
+  font-size: 22rpx;
+}
+
+.quota-desc {
+  display: block;
+  margin-top: 10rpx;
+  color: #667085;
+  font-size: 22rpx;
+}
+
+.quota-extra-head {
+  margin-top: 12rpx;
+  color: #475467;
+  font-size: 24rpx;
+}
+
+.quota-warning {
+  display: block;
+  margin: 16rpx 0;
+  padding: 18rpx;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fff5f6;
+  color: #e02020;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.quota-slider {
+  margin: 20rpx 0 12rpx;
+}
+
+.quota-extra-input {
+  color: #98a2b3;
+  font-size: 22rpx;
+}
+
+.quota-number {
+  width: 136rpx;
+  height: 62rpx;
+  padding: 0 14rpx;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  color: #1f2937;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.quota-summary {
+  margin-top: 18rpx;
+  padding-bottom: 18rpx;
+  border-bottom: 1px solid #edf2f7;
+  color: #98a2b3;
+  font-size: 22rpx;
+}
+
+.quota-estimate {
+  margin-top: 18rpx;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8rpx;
+  color: #667085;
+  font-size: 23rpx;
+}
+
+.quota-estimate-time {
+  color: #12b76a;
+  font-weight: 800;
+}
+
 .log-dialog {
   width: min(1200px, 96vw);
   height: min(740px, 92vh);
@@ -1162,6 +1459,19 @@ function openPaymentWindow() {
   .log-cats {
     height: 150rpx;
     white-space: nowrap;
+  }
+
+  .quota-dialog {
+    width: calc(100vw - 32rpx);
+    max-height: 88vh;
+    padding: 24rpx;
+  }
+
+  .quota-current,
+  .quota-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12rpx;
   }
 }
 </style>

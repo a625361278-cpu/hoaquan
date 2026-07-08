@@ -93,6 +93,22 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
         return array_slice($rows, 0, max(0, $limit));
     }
 
+    public function listExpiredActiveAccounts(array $statuses, string $now, int $limit): array
+    {
+        $rows = array_values(array_filter(
+            $this->accounts,
+            static fn (array $account): bool => in_array((string)($account['status'] ?? ''), $statuses, true)
+                && trim((string)($account['expire_time'] ?? '')) !== ''
+                && (string)$account['expire_time'] <= $now
+        ));
+
+        usort($rows, static function (array $a, array $b): int {
+            return strcmp((string)($a['expire_time'] ?? ''), (string)($b['expire_time'] ?? ''))
+                ?: ((int)$a['id'] <=> (int)$b['id']);
+        });
+        return array_slice($rows, 0, max(0, $limit));
+    }
+
     public function createLocalPreview(int $userId, array $data): array
     {
         $account = [

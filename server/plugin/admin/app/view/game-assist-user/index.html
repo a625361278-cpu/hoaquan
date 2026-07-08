@@ -82,6 +82,7 @@
         </script>
 
         <script type="text/html" id="table-bar">
+            <button class="pear-btn pear-btn-xs pear-btn-primary tool-btn" lay-event="grantQuota" permission="app.admin.game-assist-user.grantQuota"><?=admin_t('admin.gameassist.grant_quota')?></button>
             <button class="pear-btn pear-btn-xs tool-btn" lay-event="resetPassword" permission="app.admin.game-assist-user.resetPassword"><?=admin_t('admin.gameassist.reset_password')?></button>
         </script>
 
@@ -94,6 +95,7 @@
             const SELECT_API = "/app/admin/game-assist-user/select";
             const UPDATE_API = "/app/admin/game-assist-user/update";
             const RESET_PASSWORD_URL = "/app/admin/game-assist-user/reset-password";
+            const GRANT_QUOTA_URL = "/app/admin/game-assist-user/grant-quota";
 
             layui.use(["laydate"], function() {
                 layui.laydate.render({
@@ -128,7 +130,7 @@
                     },
                     {title: "<?=admin_t('admin.gameassist.created_at')?>", field: "created_at", minWidth: 170},
                     {title: "<?=admin_t('admin.gameassist.updated_at')?>", field: "updated_at", minWidth: 170},
-                    {title: "<?=admin_t('admin.gameassist.operation')?>", toolbar: "#table-bar", align: "center", fixed: "right", width: 120}
+                    {title: "<?=admin_t('admin.gameassist.operation')?>", toolbar: "#table-bar", align: "center", fixed: "right", width: 190}
                 ];
 
                 function render()
@@ -163,7 +165,15 @@
                 });
 
                 table.on("tool(data-table)", function(obj) {
-                    if (obj.event === "resetPassword") {
+                    if (obj.event === "grantQuota") {
+                        layer.open({
+                            type: 2,
+                            title: "<?=admin_t('admin.gameassist.grant_quota')?>",
+                            shade: 0.1,
+                            area: [common.isModile() ? "100%" : "460px", common.isModile() ? "100%" : "310px"],
+                            content: GRANT_QUOTA_URL + "?" + PRIMARY_KEY + "=" + obj.data[PRIMARY_KEY]
+                        });
+                    } else if (obj.event === "resetPassword") {
                         layer.open({
                             type: 2,
                             title: "<?=admin_t('admin.gameassist.reset_password')?>",

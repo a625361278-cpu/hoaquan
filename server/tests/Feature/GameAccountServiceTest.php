@@ -171,6 +171,7 @@ class GameAccountServiceTest extends TestCase
                 'sync_status' => 'local_unsynced',
                 'remark' => '服务器未配置，本地预览账号',
                 'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
             ],
         ]);
         $service = new GameAccountService($repository, ['enabled' => false]);
@@ -446,6 +447,7 @@ class GameAccountServiceTest extends TestCase
                 'sync_status' => 'local_unsynced',
                 'remark' => '服务器未配置，本地预览账号',
                 'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
             ],
         ]);
         $service = new GameAccountService($repository, ['enabled' => false, 'credential_key' => 'test-key']);
@@ -473,6 +475,7 @@ class GameAccountServiceTest extends TestCase
                 'third_party_account_id' => '',
                 'remark' => '服务器未配置，本地预览账号',
                 'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
             ],
         ]);
         $runtime = new ArrayThirdPartyScriptRuntime();
@@ -511,6 +514,7 @@ class GameAccountServiceTest extends TestCase
                 'third_party_account_id' => '',
                 'remark' => '',
                 'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
             ],
         ]);
         $store = new ArrayGameAccountRuntimeResourceStore();
@@ -552,6 +556,7 @@ class GameAccountServiceTest extends TestCase
                 'third_party_account_id' => '',
                 'remark' => '',
                 'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
             ],
         ]);
         $service = new GameAccountService($repository, [
@@ -566,6 +571,84 @@ class GameAccountServiceTest extends TestCase
             $this->fail('Expected start without idle script connection to fail.');
         } catch (\app\exception\ApiException $exception) {
             $this->assertSame('服务器未准备好，请联系管理员', $exception->getMessage());
+            $this->assertSame('stopped', $repository->findById(3)['status']);
+        }
+    }
+
+    public function testStartFailsWhenAccountHasNoQuotaExpiryWithoutReservingRuntime(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'stopped',
+                'sync_status' => 'local_unsynced',
+                'third_party_account_id' => '',
+                'remark' => '',
+                'config_json' => '{}',
+                'expire_time' => null,
+            ],
+        ]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime);
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('游戏账号配额未配置或已到期');
+
+        try {
+            $service->start(7, 3);
+        } finally {
+            $this->assertSame([], $runtime->started);
+            $this->assertSame('stopped', $repository->findById(3)['status']);
+        }
+    }
+
+    public function testStartFailsWhenQuotaExpiredWithoutChangingState(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'stopped',
+                'sync_status' => 'local_unsynced',
+                'third_party_account_id' => '',
+                'remark' => '',
+                'config_json' => '{}',
+                'expire_time' => '2000-01-01 00:00:00',
+            ],
+        ]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime);
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('游戏账号配额未配置或已到期');
+
+        try {
+            $service->start(7, 3);
+        } finally {
+            $this->assertSame([], $runtime->started);
             $this->assertSame('stopped', $repository->findById(3)['status']);
         }
     }
@@ -655,6 +738,7 @@ class GameAccountServiceTest extends TestCase
                 'third_party_account_id' => '',
                 'remark' => '',
                 'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
             ],
         ]);
         $store = new ArrayGameAccountRuntimeResourceStore();

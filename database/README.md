@@ -23,7 +23,15 @@
 
 邀请功能使用 `ga_users.invite_code`、`ga_users.invited_by_user_id`、`ga_users.bound_role_id`、`ga_users.invite_rewarded_at` 和 `ga_user_point_transactions`。注册时只记录邀请关系；被邀请用户添加游戏账号并启动成功，第三方返回 `started` 后，系统自动绑定角色并给邀请人增加 1 点、写入点数流水。
 
+配额功能使用同一个 `ga_users.balance` 余额池。邀请奖励和后台赠送都会增加余额；用户把配额分配到游戏账号时会立即扣除余额并更新 `ga_game_accounts.expire_time`，账号不启动也按自然时间消耗，删除游戏账号不退回余额。
+
+账号延期规则固定为基础套餐 `10` 点兑换 `11` 天，额外配额 `N` 点增加 `N` 天；延期起点为 `max(当前时间, 当前账号 expire_time)`。扣点写入 `ga_user_point_transactions(type=quota_consume)`，后台赠送写入 `ga_user_point_transactions(type=admin_grant)`。
+
 `ga_user_point_transactions` 有唯一索引 `uniq_invite_reward_user(type, related_user_id)`，用于从数据库层保证同一个被邀请账号不会重复产生邀请奖励流水。
+
+后台“GameAssist用户/添加配额”只允许给产品用户 `ga_users.balance` 增加正整数点数，成功后还会写入 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`，用于审计管理员操作。
+
+`server/config/process.php` 注册的 `game_account_expiry_watcher` 会扫描 `ga_game_accounts.expire_time <= 当前时间` 且仍处于 `starting/running/reconnecting` 的账号，发送停止或标记停止，并清除 `desired_running`，避免到期账号被自动重连重新拉起。
 
 `ga_system_settings.invite_daily_limit` 控制同一邀请人每日奖励上限，默认 `50`；`invite_same_ip_daily_limit` 控制同邀请人同 IP 每日奖励风控上限，默认 `3`。同步数据库脚本会自动补齐这些配置项。
 

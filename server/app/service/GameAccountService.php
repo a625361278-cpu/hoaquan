@@ -24,13 +24,15 @@ class GameAccountService
     private string $locale;
     private ThirdPartyScriptRuntimeInterface $scriptRuntime;
     private GameAccountResourceService $resources;
+    private GameAccountQuotaService $quotaService;
 
     public function __construct(
         private GameAccountRepositoryInterface $accounts,
         array|string $thirdPartyConfigOrLocale = [],
         string $locale = I18n::DEFAULT_LOCALE,
         ?ThirdPartyScriptRuntimeInterface $scriptRuntime = null,
-        ?GameAccountResourceService $resources = null
+        ?GameAccountResourceService $resources = null,
+        ?GameAccountQuotaService $quotaService = null
     )
     {
         if (is_string($thirdPartyConfigOrLocale)) {
@@ -48,6 +50,7 @@ class GameAccountService
         $this->locale = I18n::normalizeLocale($locale);
         $this->scriptRuntime = $scriptRuntime ?? new GatewayThirdPartyScriptRuntime(locale: $this->locale);
         $this->resources = $resources ?? new GameAccountResourceService();
+        $this->quotaService = $quotaService ?? new GameAccountQuotaService(locale: $this->locale);
     }
 
     public function listForUser(int $userId): array
@@ -169,6 +172,7 @@ class GameAccountService
     public function start(int $userId, int $accountId): array
     {
         $account = $this->requireAccount($userId, $accountId);
+        $this->assertQuotaActive($account);
         $this->assertThirdPartyScriptReady();
         $gamePassword = $this->cipher()->decrypt((string)($account['game_password_cipher'] ?? ''));
         $logSessionId = bin2hex(random_bytes(12));
@@ -274,16 +278,26 @@ class GameAccountService
 
     public function delete(int $userId, int $accountId): array
     {
-        $this->requireAccount($userId, $accountId);
+        $account = $this->requireAccount($userId, $accountId);
+        if ($this->isActiveRuntimeStatus((string)($account['status'] ?? ''))) {
+            $this->scriptRuntime->stopAccount($accountId, bin2hex(random_bytes(16)));
+        }
         $this->resources->clear($accountId);
         $this->accounts->deleteForUser($userId, $accountId);
         return ApiResponse::success([], I18n::t('api.game.deleted', [], $this->locale));
     }
 
-    public function addQuota(int $userId, int $accountId): array
+    public function addQuota(int $userId, int $accountId, int $extraPoints = 0): array
     {
         $this->requireAccount($userId, $accountId);
-        throw new ApiException(I18n::t('api.game.quota_unconfigured', [], $this->locale), 503);
+        $result = $this->quotaService->extendAccount($userId, $accountId, $extraPoints);
+        return ApiResponse::success([
+            'account' => $this->publicAccount($result['account']),
+            'balance' => $result['balance'],
+            'cost_points' => $result['cost_points'],
+            'add_days' => $result['add_days'],
+            'expire_time' => $result['expire_time'],
+        ], I18n::t('api.game.quota_extended', [], $this->locale));
     }
 
     private function publicAccount(array $account): array
@@ -332,6 +346,27 @@ class GameAccountService
         if (trim((string)($this->thirdPartyConfig['script_token'] ?? '')) === '') {
             throw new ApiException(I18n::t('api.game.server_config_invalid', [], $this->locale), 503);
         }
+    }
+
+    private function assertQuotaActive(array $account): void
+    {
+        $expireTime = trim((string)($account['expire_time'] ?? ''));
+        if ($expireTime === '') {
+            throw new ApiException(I18n::t('api.game.quota_expired', [], $this->locale), 409);
+        }
+
+        $expireTimestamp = strtotime($expireTime);
+        if ($expireTimestamp === false) {
+            throw new \RuntimeException('游戏账号到期时间格式异常：' . $expireTime);
+        }
+        if ($expireTimestamp <= time()) {
+            throw new ApiException(I18n::t('api.game.quota_expired', [], $this->locale), 409);
+        }
+    }
+
+    private function isActiveRuntimeStatus(string $status): bool
+    {
+        return in_array($status, [self::STARTING_STATUS, self::RUNNING_STATUS, self::RECONNECTING_STATUS, self::STOPPING_STATUS], true);
     }
 
     private function cipher(): CredentialCipher

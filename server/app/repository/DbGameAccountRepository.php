@@ -89,6 +89,24 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
             ->all();
     }
 
+    public function listExpiredActiveAccounts(array $statuses, string $now, int $limit): array
+    {
+        if ($statuses === [] || $limit <= 0) {
+            return [];
+        }
+
+        return Db::table('ga_game_accounts')
+            ->whereIn('status', $statuses)
+            ->whereNotNull('expire_time')
+            ->where('expire_time', '<=', $now)
+            ->orderBy('expire_time')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get()
+            ->map(static fn ($row): array => (array)$row)
+            ->all();
+    }
+
     public function createLocalPreview(int $userId, array $data): array
     {
         $now = date('Y-m-d H:i:s');

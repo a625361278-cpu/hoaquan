@@ -82,6 +82,10 @@ class GameAccountAutoRestartService
                 $result['skipped']++;
                 continue;
             }
+            if ($this->isExpired($account)) {
+                $result['skipped']++;
+                continue;
+            }
 
             if ($this->connections->connectionByAccount($accountId)) {
                 $result['skipped']++;
@@ -118,7 +122,7 @@ class GameAccountAutoRestartService
         foreach ($rows as $account) {
             $accountId = (int)($account['id'] ?? 0);
             $result['next_cursor'] = max($result['next_cursor'], $accountId);
-            if ($accountId <= 0 || $this->connections->connectionByAccount($accountId)) {
+            if ($accountId <= 0 || $this->isExpired($account) || $this->connections->connectionByAccount($accountId)) {
                 continue;
             }
 
@@ -233,6 +237,20 @@ class GameAccountAutoRestartService
     private function now(): int
     {
         return (int)($this->nowProvider)();
+    }
+
+    private function isExpired(array $account): bool
+    {
+        $expireTime = trim((string)($account['expire_time'] ?? ''));
+        if ($expireTime === '') {
+            return false;
+        }
+
+        $expireTimestamp = strtotime($expireTime);
+        if ($expireTimestamp === false) {
+            throw new \RuntimeException('游戏账号到期时间格式异常：' . $expireTime);
+        }
+        return $expireTimestamp <= $this->now();
     }
 
     private function dateTime(int $timestamp): string

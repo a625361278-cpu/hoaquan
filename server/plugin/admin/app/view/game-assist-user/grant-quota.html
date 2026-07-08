@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="<?=admin_html_lang()?>">
+    <head>
+        <meta charset="utf-8">
+        <title><?=admin_t('admin.gameassist.grant_quota')?></title>
+        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    </head>
+    <body class="pear-container">
+        <form class="layui-form" lay-filter="grant-quota-form">
+            <input type="hidden" name="id" value="<?=htmlspecialchars((string)request()->get('id', ''), ENT_QUOTES)?>">
+            <div class="layui-form-item">
+                <label class="layui-form-label"><?=admin_t('admin.gameassist.quota_points')?></label>
+                <div class="layui-input-block">
+                    <input type="number" name="points" min="1" step="1" lay-verify="required|positiveInteger" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label"><?=admin_t('admin.gameassist.quota_remark')?></label>
+                <div class="layui-input-block">
+                    <textarea name="remark" class="layui-textarea" placeholder="<?=admin_t('admin.gameassist.quota_remark_placeholder')?>"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="pear-btn pear-btn-primary" lay-submit lay-filter="submit-quota"><?=admin_t('admin.common.submit')?></button>
+                    <button type="button" class="pear-btn" id="cancel-btn"><?=admin_t('admin.common.cancel')?></button>
+                </div>
+            </div>
+        </form>
+
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/pear/pear.js"></script>
+        <script>
+            layui.use(["form", "jquery", "popup"], function() {
+                const form = layui.form;
+                const $ = layui.jquery;
+
+                form.verify({
+                    positiveInteger: function(value) {
+                        if (!/^[1-9]\d*$/.test(value)) {
+                            return "<?=admin_t('admin.gameassist.quota_positive')?>";
+                        }
+                    }
+                });
+
+                form.on("submit(submit-quota)", function(data) {
+                    const load = layer.load();
+                    $.post("/app/admin/game-assist-user/grant-quota", data.field, function(res) {
+                        layer.close(load);
+                        if (res.code) {
+                            return layui.popup.failure(res.msg);
+                        }
+                        layui.popup.success("<?=admin_t('admin.common.operation_success')?>", function() {
+                            parent.refreshTable && parent.refreshTable();
+                            const index = parent.layer.getFrameIndex(window.name);
+                            parent.layer.close(index);
+                        });
+                    });
+                    return false;
+                });
+
+                $("#cancel-btn").on("click", function() {
+                    const index = parent.layer.getFrameIndex(window.name);
+                    parent.layer.close(index);
+                });
+            });
+        </script>
+    </body>
+</html>

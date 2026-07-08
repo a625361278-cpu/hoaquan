@@ -199,6 +199,20 @@ try {
         });
     }
 
+    if (!$schema->hasTable('ga_admin_operation_logs')) {
+        $schema->create('ga_admin_operation_logs', function ($table) {
+            $table->bigIncrements('id')->comment('日志ID');
+            $table->unsignedInteger('admin_id')->nullable()->comment('管理员ID');
+            $table->string('action', 128)->comment('动作');
+            $table->string('target_type', 64)->default('')->comment('对象类型');
+            $table->string('target_id', 64)->default('')->comment('对象ID');
+            $table->json('payload')->nullable()->comment('操作内容');
+            $table->dateTime('created_at')->useCurrent()->comment('创建时间');
+            $table->index('admin_id', 'idx_admin_id');
+            $table->index('action', 'idx_action');
+        });
+    }
+
     $settings = [
         'third_party_enabled' => ['0', '第三方接口是否启用：0否，1是'],
         'third_party_base_url' => ['', '第三方接口地址'],
@@ -253,6 +267,7 @@ try {
     echo 'ga_game_account_task_states：已同步' . PHP_EOL;
     echo 'ga_announcements：已同步' . PHP_EOL;
     echo 'ga_user_point_transactions：已同步' . PHP_EOL;
+    echo 'ga_admin_operation_logs：已同步' . PHP_EOL;
     echo 'SMTP配置项：已同步' . PHP_EOL;
     echo '认证方式配置项：已同步' . PHP_EOL;
     echo '邀请奖励配置项：已同步' . PHP_EOL;

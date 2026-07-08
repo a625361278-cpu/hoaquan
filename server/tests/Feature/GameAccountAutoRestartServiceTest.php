@@ -82,6 +82,27 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $this->assertSame(['basic' => ['debug' => true]], $runtime->started[0]['config']);
     }
 
+    public function testReconnectSkipsExpiredAccountWithoutSendingStart(): void
+    {
+        $repository = $this->repository([
+            'status' => GameAccountService::RECONNECTING_STATUS,
+            'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
+            'log_session_id' => 'session-1',
+            'desired_running' => 1,
+            'auto_restart_attempts' => 2,
+            'auto_restart_next_at' => '2026-07-07 10:00:00',
+            'expire_time' => '2026-07-07 09:59:59',
+        ]);
+        $runtime = new ArrayThirdPartyScriptRuntime(true);
+        $service = $this->service($repository, runtime: $runtime);
+
+        $result = $service->runDue(10);
+
+        $this->assertSame(1, $result['skipped']);
+        $this->assertSame([], $runtime->started);
+        $this->assertSame(GameAccountService::RECONNECTING_STATUS, $repository->findById(3)['status']);
+    }
+
     public function testReconcileSchedulesDesiredRunningAccountWithoutConnectionBinding(): void
     {
         $repository = $this->repository([

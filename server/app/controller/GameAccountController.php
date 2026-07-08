@@ -87,7 +87,12 @@ class GameAccountController extends BaseApiController
     public function quota(Request $request, int $id): Response
     {
         $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
-        return ApiResponse::json($this->gameAccountService($request)->addQuota($userId, $id));
+        $input = $this->jsonInput($request);
+        return ApiResponse::json($this->gameAccountService($request)->addQuota(
+            $userId,
+            $id,
+            $this->nonNegativeInteger($input['extra_points'] ?? 0, I18n::localeFromRequest($request))
+        ));
     }
 
     public function logs(Request $request, int $id): Response
@@ -123,5 +128,21 @@ class GameAccountController extends BaseApiController
     private function gameAccountLogService(Request $request): GameAccountLogService
     {
         return new GameAccountLogService(new DbGameAccountRepository(), I18n::localeFromRequest($request));
+    }
+
+    private function nonNegativeInteger(mixed $value, string $locale): int
+    {
+        if (is_int($value)) {
+            $intValue = $value;
+        } elseif (is_string($value) && preg_match('/^\d+$/', trim($value))) {
+            $intValue = (int)trim($value);
+        } else {
+            throw new ApiException(I18n::t('api.game.quota_extra_invalid', [], $locale), 422);
+        }
+
+        if ($intValue < 0) {
+            throw new ApiException(I18n::t('api.game.quota_extra_invalid', [], $locale), 422);
+        }
+        return $intValue;
     }
 }
