@@ -36,6 +36,15 @@ class RedisThirdPartyScriptConnectionStoreTest extends TestCase
         $this->assertSame(180, $redis->ttl($this->accountKey(3)));
     }
 
+    public function testDefaultRedisClientIsAConnectionObject(): void
+    {
+        $store = new RedisThirdPartyScriptConnectionStore();
+        $reflection = new \ReflectionMethod($store, 'redis');
+        $reflection->setAccessible(true);
+
+        $this->assertIsObject($reflection->invoke($store));
+    }
+
     private function accountKey(int $accountId): string
     {
         return RedisThirdPartyScriptConnectionStore::PREFIX . 'accounts:' . $accountId;

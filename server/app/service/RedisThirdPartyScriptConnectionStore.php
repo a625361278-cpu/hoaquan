@@ -232,6 +232,6 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
 
     private function redis(): mixed
     {
-        return $this->redis ?? Redis::class;
+        return $this->redis ?? Redis::connection();
     }
 }
