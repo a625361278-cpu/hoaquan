@@ -4,11 +4,11 @@ Hoa Quán 第三方 WebSocket 对接协议说明
 
 第三方脚本主动连接我方 WebSocket 地址：
 
-ws://hoavienpro.com/ws/third-party/script?token=dca3ca0f25d79ade3d9ec388d1767e8bbdb49f243160e0b7
+ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 连接通过校验后，服务端会返回 ready 消息，表示该脚本连接进入空闲池。用户启动游戏账号时，服务端会从空闲池分配一个连接，发送启动包，第三方根据包内账号、密码和配置启动游戏任务。
 
-所有消息均使用 JSON 字符串。一个连接同一时间只服务一个游戏账号，运行消息不再携带 account_id；账号归属由服务端连接绑定关系判断。未通过 Token 校验、未绑定状态发送业务消息、超大消息或非法 JSON 都会被明确拒绝并关闭连接。当前游戏只有一个区服，启动包不传 server_id、server_name，第三方也不需要返回区服字段。
+所有消息均使用 UTF-8 JSON 字符串。一个连接同一时间只服务一个游戏账号，运行消息不再携带 account_id；账号归属由服务端连接绑定关系判断。未通过 Token 校验、未绑定状态发送业务消息、超大消息或非法 JSON 都会被明确拒绝并关闭连接。当前游戏只有一个区服，启动包不传 server_id、server_name，第三方也不需要返回区服字段。第三方日志来源如果是 GBK/ANSI 等本地编码，发送前必须转换为 UTF-8；服务端不会静默猜测编码。
 
 连接成功 ready 示例：
 
@@ -33,6 +33,8 @@ ws://hoavienpro.com/ws/third-party/script?token=dca3ca0f25d79ade3d9ec388d1767e8b
 request_id 是本次请求编号，由后端发送，第三方回 started/error/stopped 时建议原样带回。它不是游戏账号、区服或角色 ID。session_id 是本次运行日志会话 ID。
 
 start 是幂等的“启动或重新绑定”指令。网络断开、我方服务重启或第三方脚本重连后，只要玩家没有手动停止账号，服务端会在有空闲脚本连接时再次发送 start。第三方需要用 game_username 判断该游戏任务是否已经在运行：如果已经在运行，不要重复启动任务，只需要把新的 WebSocket 连接绑定到该任务并返回 started；如果未运行，则正常启动后返回 started。本协议不另设 resume 消息。
+
+服务端只接受 request_id/session_id 与当前连接绑定值一致的 started 回包；如果玩家已停止、账号配额已过期或旧启动回包迟到，服务端会忽略该回包并写入系统日志。
 
 示例：
 
@@ -452,10 +454,11 @@ config：对象，用户保存的完整游戏配置，字段见下文。
   "type": "started",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
   "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
+  "role_id": "role-123",
   "display_name": "role-name"
 }
 
-启动成功时返回。display_name 可选，用于显示角色名。
+启动成功时返回。role_id 是稳定唯一的游戏角色标识，用于平台用户绑定和邀请奖励去重，建议每次 started 都返回；允许常见账号/角色标识字符，最长 128 个字符，不能包含空白或控制字符。缺少 role_id 时，服务端会使用本次启动包中的 game_username 作为绑定 ID。display_name 可选，只用于显示角色名，不参与奖励和唯一身份判断。
 
 四、第三方返回：失败 error
 

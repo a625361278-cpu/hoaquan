@@ -195,7 +195,7 @@
   "api.profile.inviter_not_found": "Tai khoan nguoi moi bat thuong, lan nay chi hoan thanh lien ket nhan vat",
   "api.profile.role_already_bound": "Tai khoan hien da lien ket nhan vat, khong the huy hoac chuyen",
   "api.profile.role_bind_success": "Lien ket nhan vat thanh cong",
-  "api.profile.role_id_invalid": "ID nhan vat chi duoc dung 3-128 chu cai, so, gach duoi hoac gach ngang",
+  "api.profile.role_id_invalid": "ID nhan vat khong duoc de trong, toi da 128 ky tu va khong chua khoang trang hoac ky tu dieu khien",
   "api.profile.role_not_found": "ID nhan vat khong ton tai, vui long them va dong bo nhan vat truoc khi lien ket",
   "api.profile.role_used": "ID nhan vat nay da duoc tai khoan khac lien ket",
   "api.profile.self_invite_ignored": "Tu moi khong hop le, lan nay chi hoan thanh lien ket nhan vat",

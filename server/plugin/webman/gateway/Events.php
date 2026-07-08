@@ -115,9 +115,8 @@ class Events
                 return;
             }
             $sessionId = (string)($state['session_id'] ?? '');
-
             match ($type) {
-                'started' => self::markStarted($accountId, $payload, $sessionId),
+                'started' => self::markStarted($accountId, $payload, $state),
                 'log' => self::appendLogPayload($accountId, $payload, $sessionId),
                 'event' => self::appendEventPayload($accountId, $payload),
                 'status' => self::saveStatusPayload($accountId, $payload),
@@ -164,18 +163,30 @@ class Events
         self::appendLogLines($accountId, ['[ERROR] 第三方脚本连接断开'], (string)($state['session_id'] ?? ''));
     }
 
-    private static function markStarted(int $accountId, array $payload, string $sessionId): void
+    private static function markStarted(int $accountId, array $payload, array $state): void
     {
+        $sessionId = (string)($state['session_id'] ?? '');
+        if (!self::startedContextMatches($payload, $state)) {
+            self::appendLogLines($accountId, ['[ERROR] 第三方 started 回包与当前启动会话不匹配，已忽略'], $sessionId);
+            return;
+        }
+
         $account = self::accounts()->findById($accountId);
         if (!$account) {
             return;
         }
+        if (!self::canAcceptStarted($account)) {
+            self::appendLogLines($accountId, ['[WARN] 第三方 started 回包已过期或账号不再允许运行，已忽略'], $sessionId);
+            return;
+        }
+
+        $roleId = self::startedRoleId($account, $payload);
 
         $updated = self::accounts()->updateRuntimeState((int)$account['user_id'], $accountId, [
             'status' => GameAccountService::RUNNING_STATUS,
             'sync_status' => 'synced',
             'display_name' => (string)($payload['display_name'] ?? ($account['display_name'] ?? '')),
-            'third_party_account_id' => (string)($payload['third_party_account_id'] ?? $payload['role_id'] ?? ($account['third_party_account_id'] ?? '')),
+            'third_party_account_id' => $roleId,
             'desired_running' => 1,
             'auto_restart_attempts' => 0,
             'auto_restart_next_at' => null,
@@ -183,12 +194,54 @@ class Events
         ]);
 
         try {
-            (new ProfileService(new DbUserRepository(), new SystemSettingService()))->bindStartedAccount($updated, $payload);
+            (new ProfileService(new DbUserRepository(), new SystemSettingService()))->bindStartedAccount($updated, array_merge($payload, [
+                'role_id' => $roleId,
+            ]));
         } catch (Throwable $e) {
             Log::error('Failed to bind role after script started', ['account_id' => $accountId, 'error' => $e->getMessage()]);
             self::appendLogLines($accountId, ['[ERROR] 启动成功后自动绑定角色失败：' . $e->getMessage()], $sessionId);
         }
         self::appendLogLines($accountId, ['[INFO] 第三方启动成功'], $sessionId);
+    }
+
+    private static function startedContextMatches(array $payload, array $state): bool
+    {
+        $expectedRequestId = (string)($state['request_id'] ?? '');
+        $expectedSessionId = (string)($state['session_id'] ?? '');
+        $actualRequestId = (string)($payload['request_id'] ?? '');
+        $actualSessionId = (string)($payload['session_id'] ?? '');
+
+        return $expectedRequestId !== ''
+            && $expectedSessionId !== ''
+            && hash_equals($expectedRequestId, $actualRequestId)
+            && hash_equals($expectedSessionId, $actualSessionId);
+    }
+
+    private static function canAcceptStarted(array $account): bool
+    {
+        if (!in_array((string)($account['status'] ?? ''), [GameAccountService::STARTING_STATUS, GameAccountService::RECONNECTING_STATUS], true)) {
+            return false;
+        }
+        if ((int)($account['desired_running'] ?? 0) !== 1) {
+            return false;
+        }
+
+        $expireTime = (string)($account['expire_time'] ?? '');
+        if ($expireTime === '') {
+            return false;
+        }
+        $expireTimestamp = strtotime($expireTime);
+        return $expireTimestamp !== false && $expireTimestamp > time();
+    }
+
+    private static function startedRoleId(array $account, array $payload): string
+    {
+        $roleId = trim((string)($payload['role_id'] ?? ''));
+        if ($roleId !== '') {
+            return $roleId;
+        }
+
+        return trim((string)($account['game_username'] ?? ''));
     }
 
     private static function markError(string $clientId, int $accountId, string $message, string $sessionId): void

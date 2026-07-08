@@ -195,7 +195,7 @@
   "api.profile.inviter_not_found": "邀请人账号异常，本次只完成角色绑定",
   "api.profile.role_already_bound": "当前账号已绑定角色，不可解绑或转移",
   "api.profile.role_bind_success": "角色绑定成功",
-  "api.profile.role_id_invalid": "角色ID只能使用3-128位字母、数字、下划线或横线",
+  "api.profile.role_id_invalid": "角色ID不能为空，最长128个字符，且不能包含空白或控制字符",
   "api.profile.role_not_found": "角色ID不存在，请先添加并同步该游戏角色后再绑定",
   "api.profile.role_used": "该角色ID已被其他账号绑定",
   "api.profile.self_invite_ignored": "自我邀请无效，本次只完成角色绑定",

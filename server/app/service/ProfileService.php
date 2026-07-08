@@ -11,6 +11,7 @@ use support\Db;
 class ProfileService
 {
     private const INVITE_REWARD_AMOUNT = '1.00';
+    private const ROLE_ID_PATTERN = '/^[^\p{C}\s]{1,128}$/u';
 
     public function __construct(
         private DbUserRepository $users,
@@ -58,23 +59,20 @@ class ProfileService
     private function bindRoleForUser(int $userId, string $roleId, string $ipAddress = ''): array
     {
         $roleId = trim($roleId);
-        if (!preg_match('/^[A-Za-z0-9_\-]{3,128}$/', $roleId)) {
+        if (!preg_match(self::ROLE_ID_PATTERN, $roleId)) {
             throw new ApiException($this->t('api.profile.role_id_invalid'), 422);
         }
 
         $user = $this->requireUser($userId);
         if (!empty($user['bound_role_id'])) {
-            if ((string)$user['bound_role_id'] === $roleId) {
-                return ApiResponse::success([
-                    'role_binding' => [
-                        'role_id' => $roleId,
-                        'bound_at' => $user['role_bound_at'] ?? null,
-                    ],
-                    'rewarded' => false,
-                    'reward_message' => '',
-                ], $this->t('api.profile.role_bind_success'));
-            }
-            throw new ApiException($this->t('api.profile.role_already_bound'), 409);
+            return ApiResponse::success([
+                'role_binding' => [
+                    'role_id' => (string)$user['bound_role_id'],
+                    'bound_at' => $user['role_bound_at'] ?? null,
+                ],
+                'rewarded' => false,
+                'reward_message' => '',
+            ], $this->t('api.profile.role_bind_success'));
         }
         if ($this->roleBoundByOtherUser($userId, $roleId)) {
             throw new ApiException($this->t('api.profile.role_used'), 409);
@@ -100,6 +98,9 @@ class ProfileService
             $freshUser = $this->requireUser($userId);
             $inviterId = (int)($freshUser['invited_by_user_id'] ?? 0);
             if ($inviterId <= 0 || !empty($freshUser['invite_rewarded_at'])) {
+                return;
+            }
+            if ($this->roleRewardedBefore($roleId)) {
                 return;
             }
             if ($inviterId === $userId) {
@@ -166,17 +167,7 @@ class ProfileService
 
     private function startedRoleId(array $account, array $payload): string
     {
-        $roleId = trim((string)($payload['third_party_account_id'] ?? ''));
-        if ($roleId !== '') {
-            return $roleId;
-        }
-
         $roleId = trim((string)($payload['role_id'] ?? ''));
-        if ($roleId !== '') {
-            return $roleId;
-        }
-
-        $roleId = trim((string)($payload['display_name'] ?? ''));
         if ($roleId !== '') {
             return $roleId;
         }
@@ -241,6 +232,14 @@ class ProfileService
         return Db::table('ga_users')
             ->where('bound_role_id', $roleId)
             ->where('id', '<>', $userId)
+            ->exists();
+    }
+
+    private function roleRewardedBefore(string $roleId): bool
+    {
+        return Db::table('ga_user_point_transactions')
+            ->where('type', 'invite_reward')
+            ->where('related_role_id', $roleId)
             ->exists();
     }
 

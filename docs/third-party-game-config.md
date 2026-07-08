@@ -16,6 +16,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 - 运行消息不再携带 `account_id`。账号归属由服务端连接绑定关系判断；未绑定连接发送业务消息会被关闭。
 - 脚本保活只使用 JSON 心跳：`{"type":"heartbeat","script_version":"1.0.0"}`。建议每 15-20 秒发送一次，服务端只更新最近心跳和脚本版本，不返回业务回包；脚本不要等待 `pong`。
 - 如果连接约 60 秒没有收到任何消息，服务端会释放该连接；脚本需要重新连接并等待新的 `ready`。
+- 所有 WebSocket JSON 文本必须使用 UTF-8。第三方日志来源如果是 GBK/ANSI 等本地编码，发送前必须转换为 UTF-8；服务端不会静默猜测编码。
 
 ## 启动载荷
 
@@ -24,6 +25,8 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 `request_id` 是本次请求编号，不是游戏账号、区服或角色 ID；第三方回 `started/error/stopped` 时建议原样带回。`session_id` 是本次运行日志会话 ID。当前游戏只有一个区服，启动包不传 `server_id`、`server_name`。
 
 `start` 是幂等的“启动或重新绑定”指令。网络断开、我方服务重启或第三方脚本重连后，只要玩家没有手动停止账号，服务端会在有空闲脚本连接时再次发送 `start`。第三方需要用 `game_username` 判断该游戏任务是否已经在运行：如果已经在运行，不要重复启动任务，只需要把新的 WebSocket 连接绑定到该任务并返回 `started`；如果未运行，则正常启动后返回 `started`。本协议不另设 `resume` 消息。
+
+服务端只接受 `request_id/session_id` 与当前连接绑定值一致的 `started` 回包；如果玩家已停止、账号配额已过期或旧启动回包迟到，服务端会忽略该回包并写入系统日志。
 
 ```json
 {
@@ -445,9 +448,12 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
   "type": "started",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
   "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
+  "role_id": "role-123",
   "display_name": "role-name"
 }
 ```
+
+`role_id` 是稳定唯一的游戏角色标识，用于平台用户绑定和邀请奖励去重，建议每次 `started` 都返回。允许常见账号/角色标识字符，最长 128 个字符，不能包含空白或控制字符。缺少 `role_id` 时，服务端会使用本次启动包中的 `game_username` 作为绑定 ID。`display_name` 只用于展示角色名，不参与奖励和唯一身份判断。
 
 ### 第三方返回 error
 
