@@ -1111,7 +1111,7 @@ function openPaymentWindow() {
 }
 
 .recharge-dialog {
-  width: min(720rpx, 94vw);
+  width: min(900rpx, 94vw);
   max-height: 90vh;
   padding: 32rpx;
   overflow-y: auto;
@@ -1148,6 +1148,7 @@ function openPaymentWindow() {
 }
 
 .recharge-steps {
+  flex-wrap: wrap;
   gap: 14rpx;
   margin-bottom: 30rpx;
   color: #8aa5c8;
@@ -1155,10 +1156,10 @@ function openPaymentWindow() {
 }
 
 .recharge-step {
-  flex-shrink: 0;
+  min-width: max-content;
+  flex: 0 1 auto;
   gap: 8rpx;
   color: #7b9bc8;
-  white-space: nowrap;
 }
 
 .recharge-step.active {
@@ -1177,7 +1178,7 @@ function openPaymentWindow() {
 
 .recharge-step-line {
   height: 1px;
-  min-width: 90rpx;
+  min-width: 70rpx;
   flex: 1;
   background: #e5e7eb;
 }
@@ -1192,9 +1193,9 @@ function openPaymentWindow() {
 
 .recharge-package-card {
   position: relative;
-  width: 168rpx;
-  min-height: 134rpx;
-  padding: 22rpx 16rpx;
+  width: 210rpx;
+  min-height: 160rpx;
+  padding: 22rpx 18rpx;
   border: 2px solid #1677ff;
   border-radius: 8px;
   display: flex;
@@ -1207,7 +1208,7 @@ function openPaymentWindow() {
 
 .recharge-price {
   color: #1f2937;
-  font-size: 28rpx;
+  font-size: 30rpx;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -1217,12 +1218,16 @@ function openPaymentWindow() {
   color: #475467;
   font-size: 22rpx;
   font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .recharge-limit {
   margin-top: 12rpx;
   color: #18b84f;
   font-size: 22rpx;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .recharge-selected {
@@ -1284,7 +1289,8 @@ function openPaymentWindow() {
 }
 
 .recharge-pay-button {
-  width: 240rpx;
+  min-width: 260rpx;
+  padding: 0 28rpx;
   background: #22c55e;
   color: #fff;
   box-shadow: 0 10rpx 22rpx rgba(34, 197, 94, 0.22);
@@ -1755,7 +1761,8 @@ function openPaymentWindow() {
 
   .recharge-steps {
     align-items: stretch;
-    gap: 10rpx;
+    flex-wrap: nowrap;
+    gap: 8rpx;
     font-size: 21rpx;
   }
 
@@ -1763,12 +1770,18 @@ function openPaymentWindow() {
     min-width: 0;
     flex: 1;
     white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .recharge-step-line {
-    min-width: 28rpx;
-    flex: 0 0 28rpx;
+    min-width: 18rpx;
+    flex: 0 0 18rpx;
     margin-top: 18rpx;
+  }
+
+  .recharge-package-card {
+    width: 220rpx;
+    min-height: 172rpx;
   }
 
   .recharge-pay-method {
