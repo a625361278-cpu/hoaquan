@@ -692,7 +692,7 @@
                     "type": "string"
                   },
                   "default": [],
-                  "description": "指定花灵使用的花灵 ID，ID 来自原站当前花灵选项"
+                  "description": "指定花灵使用的花灵 ID，ID 来自当前花灵选项"
                 },
                 "applyAid": {
                   "type": "boolean",

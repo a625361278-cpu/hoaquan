@@ -2,7 +2,7 @@
 
 本表用于第三方按 ID 识别游戏配置 `plant.elves.selectedIds` 字段。该字段传字符串数组，例如 `["110001", "110002"]`。
 
-说明：花灵中文名来自当前原站配置选项；已收到的越南语翻译已回填到 `server/resource/translations/vi/messages.json`。仍缺翻译的花灵会保留在 `docs/vi-messages-pending-translation.json`，补翻译时请使用 `i18n_key` 对应 key。
+说明：花灵中文名来自当前配置选项；已收到的越南语翻译已回填到 `server/resource/translations/vi/messages.json`。仍缺翻译的花灵会保留在 `docs/vi-messages-pending-translation.json`，补翻译时请使用 `i18n_key` 对应 key。
 
 | ID | 中文名 | i18n key |
 | --- | --- | --- |

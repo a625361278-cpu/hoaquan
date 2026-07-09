@@ -106,7 +106,7 @@ layui.define(['jquery', 'element', 'layer', 'loading'], function (exports) {
 	}
 
 	/**
-		* 规格化 layer.open 选项，兼容原版 Drawer 所有选项
+		* 规格化 layer.open 选项，兼容 Drawer 所有选项
 		* @param {LayerOption} option layer.open 的选项
 		* @returns 规格化后的 layer.open 选项
 		*/

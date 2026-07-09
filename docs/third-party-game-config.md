@@ -733,7 +733,7 @@ ws://example.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 #### 花灵
 
 - `plant.elves.plant`：自动种花灵；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：优先种植指定花灵，否则选择当期双倍加成花灵种植（8朵主花+其余辅花），需要打开种植系统自动收获和自动种植，每日花灵达到收获上限后恢复到原有种植模式
-- `plant.elves.selectedIds`：指定花灵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：数组内为花灵 ID，ID 来自原站当前花灵选项，不传显示名。
+- `plant.elves.selectedIds`：指定花灵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：数组内为花灵 ID，ID 来自当前花灵选项，不传显示名。
 - `plant.elves.applyAid`：自动申请协助；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `plant.elves.recvAid`：自动领取协助加成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：当协助人数达到5人时自动领取协助加成
 - `plant.elves.helpFriend`：自动协助好友；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
