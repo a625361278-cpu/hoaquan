@@ -203,7 +203,7 @@ class Util
      */
     static function controllerToUrlPath($controller_class)
     {
-        $key = strtolower($controller_class);
+        $key = (string)$controller_class;
         $action = '';
         if (strpos($key, '@')) {
             [$key, $action] = explode( '@', $key, 2);
@@ -214,26 +214,42 @@ class Util
             return false;
         }
         $base = '';
-        if (strpos($key, "$prefix\\") === 0) {
+        if (stripos($key, "$prefix\\") === 0) {
             if (count($paths) < 4) {
                 return false;
             }
             array_shift($paths);
             $plugin = array_shift($paths);
-            $base = "/app/$plugin/";
+            $base = '/app/' . static::camelToUrlSegment($plugin) . '/';
         }
         array_shift($paths);
         foreach ($paths as $index => $path) {
-            if ($path === 'controller') {
+            if (strtolower($path) === 'controller') {
                 unset($paths[$index]);
             }
         }
         $suffix = 'controller';
+        $paths = array_map(static fn($path) => static::classPathToUrlSegment((string)$path), array_values($paths));
         $code = $base . implode('/', $paths);
         if (substr($code, -strlen($suffix)) === $suffix) {
             $code = substr($code, 0, -strlen($suffix));
         }
-        return $action ? "$code/$action" : $code;
+        return $action ? $code . '/' . static::camelToUrlSegment($action) : $code;
+    }
+
+    private static function classPathToUrlSegment(string $segment): string
+    {
+        $suffix = 'Controller';
+        if (substr($segment, -strlen($suffix)) === $suffix) {
+            $segment = substr($segment, 0, -strlen($suffix));
+        }
+        return static::camelToUrlSegment($segment);
+    }
+
+    private static function camelToUrlSegment(string $segment): string
+    {
+        $segment = preg_replace('/(?<!^)[A-Z]/', '-$0', $segment) ?? $segment;
+        return strtolower($segment);
     }
 
     /**

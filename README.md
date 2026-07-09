@@ -145,6 +145,7 @@ php start.php status
 - 后台登录页、侧边栏和浏览器标签图标统一使用 `gameassist-logo.svg`。
 - 后台菜单来自 `plugin/admin/config/menu.php`，通过 `server/scripts/sync_admin.php` 同步到 `wa_rules`。
 - 管理员角色保留 `rules='*'`，用于访问 webman-admin 原生的数据库、权限管理、会员管理、通用设置等基础功能。
+- 后台按钮权限码按真实后台 URL 生成，例如 `GameAssistUserController@grantQuota` 对应 `app.admin.game-assist-user.grant-quota`；角色只要拥有“会员管理 / GameAssist用户”菜单权限，就能看到该页面内的“添加配额”等操作按钮，后端仍按菜单或具体动作权限校验。
 - 后台“GameAssist用户”管理针对产品用户表 `ga_users`，不是后台账号或 webman-admin 的 `wa_users`。
 - 后台仪表盘的今日注册、7日注册、30日注册和总用户数均统计 `ga_users.created_at`，不使用后台用户表。
 - GameAssist 用户后台允许查看、启用/禁用、重置密码和“添加配额”。添加配额只增加产品用户 `ga_users.balance`，必须填写正整数点数，可填写备注；成功后写入 `ga_user_point_transactions(type=admin_grant)` 和 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`。
