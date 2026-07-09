@@ -29,13 +29,13 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
 
         $service->save([
             'third_party_enabled' => '1',
-            'third_party_script_ws_url' => 'ws://hoavienpro.com/ws/third-party/script',
+            'third_party_script_ws_url' => 'ws://example.com/ws/third-party/script',
             'third_party_script_token' => 'script-token',
             'third_party_sign_secret' => '',
         ]);
 
         $this->assertSame('1', $settings->saved['third_party_enabled']);
-        $this->assertSame('ws://hoavienpro.com/ws/third-party/script', $settings->saved['third_party_script_ws_url']);
+        $this->assertSame('ws://example.com/ws/third-party/script', $settings->saved['third_party_script_ws_url']);
         $this->assertSame('script-token', $settings->saved['third_party_script_token']);
         $this->assertSame('', $settings->saved['third_party_sign_secret']);
         $this->assertSame('websocket', $settings->saved['third_party_transport']);
@@ -54,7 +54,7 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
 
         $service->save([
             'third_party_enabled' => '1',
-            'third_party_script_ws_url' => 'ws://hoavienpro.com/ws/third-party/script',
+            'third_party_script_ws_url' => 'ws://example.com/ws/third-party/script',
             'third_party_script_token' => '',
             'third_party_sign_secret' => '',
         ]);
@@ -67,7 +67,7 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
             {
                 return [
                     'third_party_enabled' => '1',
-                    'third_party_script_ws_url' => 'ws://hoavienpro.com/ws/third-party/script',
+                    'third_party_script_ws_url' => 'ws://example.com/ws/third-party/script',
                     'third_party_script_token' => 'script-token',
                     'third_party_sign_secret' => '',
                 ];
@@ -77,9 +77,9 @@ class ThirdPartyConfigAdminServiceTest extends TestCase
         $config = $service->config();
 
         $this->assertTrue($config['enabled']);
-        $this->assertSame('ws://hoavienpro.com/ws/third-party/script', $config['script_ws_url']);
+        $this->assertSame('ws://example.com/ws/third-party/script', $config['script_ws_url']);
         $this->assertSame('script-token', $config['script_token']);
-        $this->assertSame('ws://hoavienpro.com/ws/third-party/script?token=script-token', $config['script_full_url']);
+        $this->assertSame('ws://example.com/ws/third-party/script?token=script-token', $config['script_full_url']);
         $this->assertSame('', $config['sign_secret']);
     }
 }

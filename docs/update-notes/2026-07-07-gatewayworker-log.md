@@ -6,7 +6,7 @@
 
 ## 核心变更
 
-- 第三方脚本主动连接 `ws://hoavienpro.com/ws/third-party/script?token=脚本池Token`，通过 Token 校验后进入空闲连接池。
+- 第三方脚本主动连接 `ws://example.com/ws/third-party/script?token=脚本池Token`，通过 Token 校验后进入空闲连接池。
 - 用户启动账号时，后端从空闲脚本连接中分配一个连接，一个连接同一时间只绑定一个游戏账号。
 - 运行消息不再携带 `account_id`，账号归属由服务端连接绑定关系判断。
 - 日志系统改为 64 个 Redis 分片队列，`shard = account_id % 64`，同一账号固定进入同一分片。

@@ -25,8 +25,8 @@ class ThirdPartyConfigAdminService
         return [
             'enabled' => ($settings['third_party_enabled'] ?? '0') === '1',
             'script_token' => $token,
-            'script_ws_url' => (string)($settings['third_party_script_ws_url'] ?? 'ws://hoavienpro.com/ws/third-party/script'),
-            'script_full_url' => $this->fullScriptUrl((string)($settings['third_party_script_ws_url'] ?? 'ws://hoavienpro.com/ws/third-party/script'), $token),
+            'script_ws_url' => (string)($settings['third_party_script_ws_url'] ?? ''),
+            'script_full_url' => $this->fullScriptUrl((string)($settings['third_party_script_ws_url'] ?? ''), $token),
             'sign_secret' => (string)($settings['third_party_sign_secret'] ?? ''),
         ];
     }

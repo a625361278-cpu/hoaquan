@@ -4,7 +4,7 @@ Hoa Quán 第三方 WebSocket 对接协议说明
 
 第三方脚本主动连接我方 WebSocket 地址：
 
-ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
+ws://example.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 连接通过校验后，服务端会返回 ready 消息，表示该脚本连接进入空闲池。用户启动游戏账号时，服务端会从空闲池分配一个连接，发送启动包，第三方根据包内账号、密码和配置启动游戏任务。
 

@@ -1028,7 +1028,7 @@
   "admin.third_party_config.script_token_required": "连接池Token不能为空",
   "admin.third_party_config.script_url_required": "我方WebSocket地址不能为空",
   "admin.third_party_config.script_ws_url": "我方WebSocket地址",
-  "admin.third_party_config.script_ws_url_help": "提供给脚本主动连接，例如 ws://hoavienpro.com/ws/third-party/script。",
+  "admin.third_party_config.script_ws_url_help": "提供给脚本主动连接，例如 ws://example.com/ws/third-party/script。",
   "admin.third_party_config.sign_secret": "签名密钥",
   "admin.third_party_config.sign_secret_help": "选填，仅用于历史HTTP接口签名校验；脚本连接池WebSocket使用连接池Token。",
   "admin.third_party_config.title": "运行服务配置",

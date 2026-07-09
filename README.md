@@ -49,23 +49,14 @@ npm run dev:h5
 
 ## 服务器部署
 
-当前正式域名是 `hoavienpro.com`，线上项目目录是 `/data/www/hoavienpro`。服务器不是直接依赖 Git 工作区更新，更新时不要覆盖远端 `server/.env`、`server/runtime`、`server/vendor` 等生产文件。H5 前端在本地构建后上传，后端源码上传到同一项目目录。
+公开 README 不记录正式域名、服务器 IP、线上目录、后台地址、真实账号密码或第三方连接池 Token。生产环境的具体路径和凭据应只保存在受控的内部部署文档或运维密码管理工具中。
 
-当前线上路径：
+通用部署要求：
 
-- 后端入口：`/data/www/hoavienpro/server/start.php`
-- H5 静态目录：`/data/www/hoavienpro/client/dist/build/h5`
-- Caddy 站点域名：`hoavienpro.com`
-- GatewayWorker WebSocket：`/ws/third-party/script` 反向代理到本机 `8792`
-- 用户端日志 WebSocket：`/ws/game-accounts/{id}/logs` 反向代理到本机 `8791`
-
-线上后台登录：
-
-- 后台地址：`http://hoavienpro.com/app/admin/`
-- 初始化管理员账号：`admin`
-- 初始化默认密码：`admin123`
-- 账号来源：`database/gameassist.sql` 会向 `wa_admins` 写入 `admin` 管理员，密码以 bcrypt 哈希保存。
-- 线上当前密码不能从仓库反推出；如果生产环境已经改过密码，以线上数据库 `wa_admins` 的实际哈希或后台重置结果为准，不把未经验证的密码当成线上事实。
+- 不要覆盖生产 `server/.env`，里面包含数据库、Redis、密钥、SMTP 和第三方连接池配置。
+- 不要上传 `client/node_modules`、`server/vendor`、`server/runtime`、`.git`、`.codex-remote-attachments`。
+- 前端 H5 在本地构建后上传产物；服务器只负责运行后端常驻进程和托管静态文件。
+- Web 服务需要把 `/api/*`、`/app/admin*` 反向代理到后端 HTTP 服务，把 `/ws/game-accounts/*` 和 `/ws/third-party/script*` 代理到对应 WebSocket 服务。
 
 常规更新流程：
 
@@ -77,7 +68,7 @@ npm run build:h5
 上传本地源码和 `client/dist/build/h5` 后，在服务器执行：
 
 ```bash
-cd /data/www/hoavienpro/server
+cd /path/to/project/server
 composer dump-autoload -o
 php scripts/sync_database.php
 php scripts/sync_admin.php
@@ -89,14 +80,15 @@ php start.php status
 
 通用部署文档仍保留：
 
-- 当前线上更新 SOP：[docs/deploy-hoavienpro.md](docs/deploy-hoavienpro.md)
 - CentOS / Caddy 部署参考：[docs/deploy-centos.md](docs/deploy-centos.md)
 - 代码拷贝部署参考：[docs/code-copy-deploy.md](docs/code-copy-deploy.md)
-- `deploy/server_update.sh` 只适用于服务器本身就是 Git 工作区的旧式部署，不是当前 `hoavienpro.com` 的默认更新方式。
+- 专属生产环境 SOP 不提交到仓库；如需保留，可放在本地 `.local/` 目录或公司内部文档系统。
+- `deploy/server_update.sh` 只适用于服务器本身就是 Git 工作区的旧式部署，不代表所有生产环境都应使用该方式。
 
 ## 文档维护口径
 
 - `README.md` 记录项目真实架构、部署方式、维护边界和内部运行口径。
+- 公开仓库文档不得写入正式域名、服务器 IP、线上路径、真实后台地址、真实密码、连接池 Token 等环境私有信息。
 - [docs/third-party-game-config.md](docs/third-party-game-config.md) 和 [docs/协议说明.txt](docs/协议说明.txt) 面向第三方，只写对外协议字段、消息格式和配置数据结构；不要把 Redis、数据库表、队列、进程数等内部实现写进第三方协议说明。
 - 游戏配置 schema、中文语言包、越南语待翻译文件和第三方协议说明需要保持字段一致；如果配置项、控件类型或资产 ID 变化，要同步检查这些文件。
 
@@ -132,8 +124,8 @@ php start.php status
 
 ## 本地账号
 
-- 后台：`admin / admin123`
-- 用户端：`player001 / 123456`
+- 初始化脚本会创建本地开发账号，便于本机调试。
+- 生产部署后必须立即修改或禁用默认初始化账号，不要把真实后台账号密码写入仓库文档。
 - 用户端默认通过“用户名 + 密码 + 密保问题 + 密保答案”注册真实账号，注册数据写入 `ga_users`，密保答案只保存哈希。
 - 用户端默认通过“用户名 + 密保答案”重置密码，重置成功后需要重新登录；旧账号未设置密保问题时会明确提示联系管理员处理。
 
@@ -177,7 +169,7 @@ php start.php status
 ## 运行服务接口
 
 - 第三方正式通信已固定为 WebSocket，配置项 `third_party_transport` 仅保留旧配置兼容，不作为正式 HTTP 接入开关。
-- 第三方脚本主动连接我方地址：`ws://hoavienpro.com/ws/third-party/script?token=连接池Token`。Caddy 需要把 `/ws/third-party/script` 代理到本机 GatewayWorker 端口，默认 `8792`，可通过 `GATEWAY_PORT` 调整；GatewayWorker 内部起始端口默认 `2500`，可通过 `GATEWAY_START_PORT` 调整；Register 默认 `127.0.0.1:1238`，可通过 `GATEWAY_REGISTER_ADDRESS` 调整。
+- 第三方脚本主动连接我方地址：`ws(s)://<your-domain>/ws/third-party/script?token=连接池Token`。Web 服务需要把 `/ws/third-party/script` 代理到 GatewayWorker 端口，默认 `8792`，可通过 `GATEWAY_PORT` 调整；GatewayWorker 内部起始端口默认 `2500`，可通过 `GATEWAY_START_PORT` 调整；Register 默认 `127.0.0.1:1238`，可通过 `GATEWAY_REGISTER_ADDRESS` 调整。
 - 第三方脚本保活使用 JSON `heartbeat`，建议每 15-20 秒发送一次；服务端只更新连接最近心跳，不返回业务 `pong`。GatewayWorker 不主动发送 JSON ping，连接约 60 秒无任何消息会被释放。
 - 运行服务需要先在后台“运行服务配置”或 `ga_system_settings` 配置 `third_party_enabled=1`、`third_party_script_token` 和 `third_party_script_ws_url`。`third_party_sign_secret` 可为空；为空时不影响脚本连接池 WebSocket，只影响历史 HTTP 签名接口。
 - 后台不再配置第三方 URL、URL 列表或单连接容量；旧 `third_party_ws_url`、`third_party_ws_urls`、`third_party_ws_connection_capacity` 可暂留数据库用于兼容旧数据，但启动逻辑不读取。

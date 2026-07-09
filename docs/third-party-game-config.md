@@ -7,7 +7,7 @@
 第三方脚本先主动连接我方 WebSocket：
 
 ```text
-ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
+ws://example.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 ```
 
 - `SCRIPT_POOL_TOKEN` 由后台“第三方配置”的脚本池 Token 提供。

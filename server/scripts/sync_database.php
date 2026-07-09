@@ -230,7 +230,7 @@ try {
         'third_party_ws_urls' => ['', '旧版第三方WebSocket连接池地址列表，已停用'],
         'third_party_ws_connection_capacity' => ['10', '旧版单连接账号容量，已停用'],
         'third_party_script_token' => [bin2hex(random_bytes(24)), '第三方脚本池连接Token'],
-        'third_party_script_ws_url' => [app_env('THIRD_PARTY_SCRIPT_WS_URL', 'ws://hoavienpro.com/ws/third-party/script'), '我方第三方脚本WebSocket地址'],
+        'third_party_script_ws_url' => [app_env('THIRD_PARTY_SCRIPT_WS_URL', ''), '我方第三方脚本WebSocket地址'],
         'third_party_transport' => ['websocket', '第三方通信方式：websocket或http'],
         'game_account_credential_key' => [app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''), '游戏账号密码加密密钥'],
         'auth_verification_mode' => ['security_question', '认证方式：security_question密保问题，email_code邮箱验证码'],

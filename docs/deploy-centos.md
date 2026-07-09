@@ -135,7 +135,7 @@ php scripts/sync_admin.php
 默认后台账号：
 
 ```text
-admin / admin123
+初始化管理员账号用于本地调试；生产部署后必须立即修改默认密码。
 ```
 
 首次上线后建议尽快登录后台修改密码。
@@ -294,7 +294,7 @@ server {
 如果使用 Caddy，保持路径原样反向代理即可：
 
 ```caddyfile
-hoavienpro.com {
+example.com {
     root * /data/www/hoaquan/client/dist/build/h5
     file_server
     try_files {path} /index.html

@@ -49,7 +49,7 @@ class SystemSettingService
             'enabled' => ($settings['third_party_enabled'] ?? '0') === '1',
             'base_url' => $settings['third_party_base_url'] ?? '',
             'script_token' => (string)($settings['third_party_script_token'] ?? ''),
-            'script_ws_url' => (string)($settings['third_party_script_ws_url'] ?? app_env('THIRD_PARTY_SCRIPT_WS_URL', 'ws://hoavienpro.com/ws/third-party/script')),
+            'script_ws_url' => (string)($settings['third_party_script_ws_url'] ?? app_env('THIRD_PARTY_SCRIPT_WS_URL', '')),
             'transport' => $settings['third_party_transport'] ?? 'websocket',
             'sign_secret' => $settings['third_party_sign_secret'] ?? '',
             'credential_key' => ($settings['game_account_credential_key'] ?? '') ?: app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''),
