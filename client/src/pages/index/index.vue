@@ -193,15 +193,47 @@
     </view>
 
     <view v-if="rechargeVisible" class="modal-mask">
-      <view class="small-dialog">
-        <view class="dialog-head">
-          <text class="dialog-title">{{ t('client.recharge.title') }}</text>
+      <view class="recharge-dialog">
+        <view class="recharge-head">
+          <view class="recharge-title-wrap">
+            <text class="recharge-title-icon">▣</text>
+            <text class="dialog-title">{{ t('client.recharge.title') }}</text>
+          </view>
           <text class="close" @click="closeRecharge">×</text>
         </view>
-        <text class="recharge-note">{{ t('client.recharge.package') }}</text>
-        <view class="dialog-actions">
-          <button class="dialog-secondary" @click="closeRecharge">{{ t('client.recharge.cancel') }}</button>
-          <button class="dialog-primary" @click="openPaymentWindow">{{ t('client.recharge.pay') }}</button>
+        <view class="recharge-steps">
+          <view class="recharge-step active">
+            <text class="recharge-step-icon">▣</text>
+            <text>{{ t('client.recharge.select_package') }}</text>
+          </view>
+          <view class="recharge-step-line"></view>
+          <view class="recharge-step">
+            <text class="recharge-step-icon">◉</text>
+            <text>{{ t('client.recharge.scan') }}</text>
+          </view>
+          <view class="recharge-step-line"></view>
+          <view class="recharge-step muted">
+            <text class="recharge-step-icon">✓</text>
+            <text>{{ t('client.recharge.pay_done') }}</text>
+          </view>
+        </view>
+
+        <text class="recharge-section-title">{{ t('client.recharge.package') }}</text>
+        <view class="recharge-package-card">
+          <text class="recharge-price">{{ RECHARGE_PRICE }}</text>
+          <text class="recharge-quota">{{ t('client.recharge.quota') }}</text>
+          <text class="recharge-limit">{{ t('client.recharge.limit') }}</text>
+          <text class="recharge-selected">✓</text>
+        </view>
+
+        <view class="recharge-pay-method">
+          <text>{{ t('client.recharge.pay_method') }}</text>
+          <text class="recharge-pending">{{ t('client.recharge.pending') }}</text>
+        </view>
+
+        <view class="recharge-actions">
+          <button class="recharge-cancel" @click="closeRecharge">{{ t('client.recharge.cancel') }}</button>
+          <button class="recharge-pay-button" @click="openPaymentWindow">{{ t('client.recharge.pay', { amount: RECHARGE_PRICE }) }}</button>
         </view>
       </view>
     </view>
@@ -246,6 +278,7 @@ const actionLoading = ref(false);
 const logsTailId = 'log-tail';
 const BASE_QUOTA_COST = 10;
 const BASE_QUOTA_DAYS = 11;
+const RECHARGE_PRICE = '149000';
 let logTimer = null;
 let logSocket = null;
 
@@ -1077,6 +1110,186 @@ function openPaymentWindow() {
   color: #fff;
 }
 
+.recharge-dialog {
+  width: min(720rpx, 94vw);
+  max-height: 90vh;
+  padding: 32rpx;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.recharge-head,
+.recharge-title-wrap,
+.recharge-steps,
+.recharge-step,
+.recharge-pay-method,
+.recharge-actions {
+  display: flex;
+  align-items: center;
+}
+
+.recharge-head {
+  justify-content: space-between;
+  margin-bottom: 22rpx;
+}
+
+.recharge-title-wrap {
+  min-width: 0;
+  gap: 10rpx;
+}
+
+.recharge-title-icon {
+  flex-shrink: 0;
+  color: #1f2937;
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.recharge-steps {
+  gap: 14rpx;
+  margin-bottom: 30rpx;
+  color: #8aa5c8;
+  font-size: 23rpx;
+}
+
+.recharge-step {
+  flex-shrink: 0;
+  gap: 8rpx;
+  color: #7b9bc8;
+  white-space: nowrap;
+}
+
+.recharge-step.active {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.recharge-step.muted {
+  color: #98a2b3;
+}
+
+.recharge-step-icon {
+  flex-shrink: 0;
+  font-size: 24rpx;
+}
+
+.recharge-step-line {
+  height: 1px;
+  min-width: 90rpx;
+  flex: 1;
+  background: #e5e7eb;
+}
+
+.recharge-section-title {
+  display: block;
+  margin-bottom: 14rpx;
+  color: #1f2937;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.recharge-package-card {
+  position: relative;
+  width: 168rpx;
+  min-height: 134rpx;
+  padding: 22rpx 16rpx;
+  border: 2px solid #1677ff;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.recharge-price {
+  color: #1f2937;
+  font-size: 28rpx;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.recharge-quota {
+  margin-top: 12rpx;
+  color: #475467;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.recharge-limit {
+  margin-top: 12rpx;
+  color: #18b84f;
+  font-size: 22rpx;
+}
+
+.recharge-selected {
+  position: absolute;
+  right: -12rpx;
+  bottom: -12rpx;
+  width: 34rpx;
+  height: 34rpx;
+  border-radius: 50%;
+  background: #45c02d;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 800;
+  line-height: 34rpx;
+  text-align: center;
+}
+
+.recharge-pay-method {
+  justify-content: space-between;
+  margin-top: 28rpx;
+  padding: 24rpx 0;
+  border-bottom: 1px solid #edf2f7;
+  color: #344054;
+  font-size: 24rpx;
+}
+
+.recharge-pending {
+  min-width: 160rpx;
+  height: 56rpx;
+  padding: 0 24rpx;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  color: #667085;
+  line-height: 56rpx;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.recharge-actions {
+  justify-content: flex-end;
+  gap: 18rpx;
+  margin-top: 22rpx;
+}
+
+.recharge-cancel,
+.recharge-pay-button {
+  height: 64rpx;
+  line-height: 64rpx;
+  margin: 0;
+  border-radius: 8px;
+  font-size: 24rpx;
+}
+
+.recharge-cancel {
+  width: 150rpx;
+  background: #fff;
+  color: #1f2937;
+  border: 1px solid #d0d5dd;
+}
+
+.recharge-pay-button {
+  width: 240rpx;
+  background: #22c55e;
+  color: #fff;
+  box-shadow: 0 10rpx 22rpx rgba(34, 197, 94, 0.22);
+}
+
 .quota-dialog {
   width: min(700rpx, 94vw);
   max-height: 90vh;
@@ -1527,6 +1740,55 @@ function openPaymentWindow() {
     align-items: flex-start;
     flex-direction: column;
     gap: 12rpx;
+  }
+
+  .recharge-dialog {
+    width: calc(100vw - 32rpx);
+    max-height: 88vh;
+    padding: 24rpx;
+  }
+
+  .recharge-head {
+    align-items: flex-start;
+    gap: 16rpx;
+  }
+
+  .recharge-steps {
+    align-items: stretch;
+    gap: 10rpx;
+    font-size: 21rpx;
+  }
+
+  .recharge-step {
+    min-width: 0;
+    flex: 1;
+    white-space: normal;
+  }
+
+  .recharge-step-line {
+    min-width: 28rpx;
+    flex: 0 0 28rpx;
+    margin-top: 18rpx;
+  }
+
+  .recharge-pay-method {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14rpx;
+  }
+
+  .recharge-pending {
+    width: 100%;
+  }
+
+  .recharge-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .recharge-cancel,
+  .recharge-pay-button {
+    width: 100%;
   }
 }
 </style>
