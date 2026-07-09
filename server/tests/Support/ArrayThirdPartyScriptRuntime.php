@@ -29,7 +29,7 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
         ];
     }
 
-    public function sendStartCommand(array $reservation, array $account, string $gamePassword, array $config): array
+    public function sendStartCommand(array $reservation, array $account, string $gamePassword, array $config, array $taskState = []): array
     {
         if ($this->failSend) {
             throw new ApiException('send failed', 503);
@@ -41,6 +41,7 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
             'session_id' => (string)$reservation['session_id'],
             'game_password' => $gamePassword,
             'config' => $config,
+            'task_state' => $taskState,
         ];
         return $reservation;
     }
@@ -49,10 +50,10 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
     {
     }
 
-    public function startAccount(array $account, string $requestId, string $sessionId, string $gamePassword, array $config): array
+    public function startAccount(array $account, string $requestId, string $sessionId, string $gamePassword, array $config, array $taskState = []): array
     {
         $reservation = $this->reserveAccount((int)$account['id'], $requestId, $sessionId);
-        return $this->sendStartCommand($reservation, $account, $gamePassword, $config);
+        return $this->sendStartCommand($reservation, $account, $gamePassword, $config, $taskState);
     }
 
     public function stopAccount(int $accountId, string $requestId): array

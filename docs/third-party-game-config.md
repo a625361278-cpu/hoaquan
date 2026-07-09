@@ -20,7 +20,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 ## 启动载荷
 
-正式第三方接入固定使用 WebSocket。用户点击启动后，服务端会从空闲脚本连接中分配一个连接，并向该连接发送下面的 `start` 包。`game_password` 只在启动通信中传递，不写入 `config`。
+正式第三方接入固定使用 WebSocket。用户点击启动后，服务端会从空闲脚本连接中分配一个连接，并向该连接发送下面的 `start` 包。`game_password` 只在启动通信中传递，不写入 `config`；`task_state` 是第三方最近一次已接收的任务数据快照，不写入 `config`。
 
 `request_id` 是本次请求编号，不是游戏账号、区服或角色 ID；第三方回 `started/error/stopped` 时建议原样带回。`session_id` 是本次运行日志会话 ID。当前游戏只有一个区服，启动包不传 `server_id`、`server_name`。
 
@@ -35,6 +35,14 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
   "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
   "game_username": "game_account_001",
   "game_password": "plain-password-used-only-during-start",
+  "task_state": {
+    "exists": true,
+    "state": {
+      "currentTask": "plant",
+      "cursor": 12
+    },
+    "saved_at": "2026-07-09 12:00:00"
+  },
   "config": {
     "basic": {
       "reputation": {
@@ -511,7 +519,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 }
 ```
 
-`status` 用于同步当前账号卡片展示的运行资源快照，只能在连接已绑定游戏账号后发送，不传 `account_id`。服务端按本次消息保存最新快照，本次没有携带的字段在用户端显示默认值，不沿用上一包旧值。字段名以本表为准，不做旧字段兼容。
+`status` 用于同步当前账号卡片展示的运行资源快照，只能在连接已绑定游戏账号后发送，不传 `account_id`。服务端按本次消息保存最新快照，本次没有携带的字段在用户端显示默认值，不沿用上一包旧值。金币推荐字段为 `coin`；当前兼容第三方实际上报的 `gold`，服务端会按 `coin` 保存。如果同一包同时传 `coin` 和 `gold` 且值不同，服务端会按协议错误处理。
 
 | 字段 | 类型 | 默认值 | 用户端显示 |
 |---|---:|---:|---|
@@ -519,6 +527,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 | `water` | number/string | `0` | 水滴 |
 | `diamond` | number/string | `0` | 元宝 |
 | `coin` | number/string | `0` | 金币 |
+| `gold` | number/string | `0` | 金币；兼容别名，推荐改用 `coin` |
 | `speedCard` | number/string | `0` | 加速卡 |
 | `hireBook` | number/string | `0` | 雇佣书 |
 | `pearl` | number/string | `0` | 珍珠 |
@@ -541,7 +550,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 }
 ```
 
-任务数据读写只走当前已绑定账号的 WebSocket 连接，不走 HTTP，不传 `account_id`。服务端根据连接绑定关系定位账号。没有保存过任务数据时，服务端返回 `exists:false` 和空对象：
+任务数据读写只走当前已绑定账号的 WebSocket 连接，不走 HTTP，不传 `account_id`。服务端根据连接绑定关系定位账号。`task_state_get` 和后端下发的 `start.task_state` 都优先返回最近一次已接收的 `task_state_save` 快照；如果该快照尚未落库，也会先返回它。没有保存过任务数据时，服务端返回 `exists:false` 和空对象：
 
 ```json
 {
@@ -592,7 +601,7 @@ ws://hoavienpro.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 }
 ```
 
-任务状态由专用 writer 进程异步批量入库，同一账号短时间内多次保存只落最新快照；如果内容与库内完全一致，writer 会跳过重复写入。`task_state_queued` 只表示已接收并进入写库队列，不表示数据库已经完成落库。任务数据是每个游戏账号一份最新快照，停止、重启、自动重连都不清空；只有删除游戏账号时清空。空闲连接发送 `task_state_get` / `task_state_save`、携带 `account_id`、`state` 不是对象、JSON 超限或账号已删除，都会返回协议错误并关闭连接。
+任务状态由专用 writer 进程异步批量入库，同一账号短时间内多次保存只落最新快照；如果内容与库内完全一致，writer 会跳过重复写入。`task_state_queued` 表示已接收、已写入 Redis 最新快照并进入写库队列，不表示数据库已经完成落库。任务数据是每个游戏账号一份最新快照，停止、重启、自动重连都不清空；只有删除游戏账号时清空。空闲连接发送 `task_state_get` / `task_state_save`、携带 `account_id`、`state` 不是对象、JSON 超限或账号已删除，都会返回协议错误并关闭连接。
 
 ### 第三方返回 stopped
 

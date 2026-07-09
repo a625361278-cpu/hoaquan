@@ -17,10 +17,12 @@ class GameAccountAutoRestartService
         private ThirdPartyScriptConnectionStoreInterface $connections,
         private GameLogSinkInterface $logs,
         private string $credentialKey,
-        private mixed $nowProvider = null
+        private mixed $nowProvider = null,
+        private ?GameAccountTaskStateService $taskStates = null
     )
     {
         $this->nowProvider ??= static fn (): int => time();
+        $this->taskStates ??= new GameAccountTaskStateService($this->accounts);
     }
 
     public function scheduleReconnect(int $accountId, string $reason, string $sessionId = ''): void
@@ -162,7 +164,8 @@ class GameAccountAutoRestartService
                 $reservation,
                 $account,
                 $gamePassword,
-                $this->decodeConfig((string)($account['config_json'] ?? '{}'))
+                $this->decodeConfig((string)($account['config_json'] ?? '{}')),
+                $this->taskStates->get($accountId)
             );
         } catch (Throwable $e) {
             $this->runtime->releaseReservation($reservation);

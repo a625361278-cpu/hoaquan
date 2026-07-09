@@ -8,13 +8,14 @@ use app\service\GameAccountTaskStateService;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use tests\Support\ArrayGameAccountRepository;
+use tests\Support\ArrayGameAccountTaskStatePendingStore;
 use tests\Support\ArrayGameAccountTaskStateQueue;
 
 class GameAccountTaskStateServiceTest extends TestCase
 {
     public function testGetReturnsExplicitEmptyStateWhenNeverSaved(): void
     {
-        $service = new GameAccountTaskStateService($this->repository(), 1024);
+        $service = new GameAccountTaskStateService($this->repository(), 1024, pendingStore: new ArrayGameAccountTaskStatePendingStore());
 
         $result = $service->get(3);
 
@@ -28,7 +29,8 @@ class GameAccountTaskStateServiceTest extends TestCase
     {
         $repository = $this->repository();
         $queue = new ArrayGameAccountTaskStateQueue();
-        $service = new GameAccountTaskStateService($repository, 1024, $queue);
+        $pending = new ArrayGameAccountTaskStatePendingStore();
+        $service = new GameAccountTaskStateService($repository, 1024, $queue, $pending);
 
         $queueResult = $service->enqueueSave(3, (object)[
             'task' => 'plant',
@@ -38,9 +40,10 @@ class GameAccountTaskStateServiceTest extends TestCase
 
         $this->assertGreaterThan(0, $queueResult['bytes']);
         $this->assertSame(1, $queue->stats()['total_pending']);
-        $this->assertFalse($service->get(3)['exists']);
+        $this->assertTrue($service->get(3)['exists']);
+        $this->assertSame('plant', $service->get(3)['state']->task);
 
-        $writer = new GameAccountTaskStateWriter($queue, $repository);
+        $writer = new GameAccountTaskStateWriter($queue, $repository, $service);
         $writer->drainQueues();
         $writer->flushDueBuffers(true);
         $readResult = $service->get(3);
@@ -49,12 +52,43 @@ class GameAccountTaskStateServiceTest extends TestCase
         $this->assertSame('plant', $readResult['state']->task);
         $this->assertSame(7, $readResult['state']->progress);
         $this->assertFalse($readResult['state']->flags->done);
+        $this->assertNull($pending->get(3));
+    }
+
+    public function testPendingSnapshotTakesPrecedenceOverPersistedStateAndHashClearIsStrict(): void
+    {
+        $repository = $this->repository();
+        $queue = new ArrayGameAccountTaskStateQueue();
+        $pending = new ArrayGameAccountTaskStatePendingStore();
+        $service = new GameAccountTaskStateService($repository, 1024, $queue, $pending);
+        $service->persistSnapshots([[
+            'game_account_id' => 3,
+            'state_json' => '{"step":1}',
+            'state_hash' => hash('sha256', '{"step":1}'),
+            'state_bytes' => strlen('{"step":1}'),
+            'saved_at' => '2026-07-08 12:00:00',
+        ]]);
+
+        $service->enqueueSave(3, (object)['step' => 2]);
+        $result = $service->get(3);
+
+        $this->assertTrue($result['exists']);
+        $this->assertSame(2, $result['state']->step);
+        $service->clearPendingIfHashMatches(3, hash('sha256', '{"step":1}'));
+        $this->assertSame(2, $service->get(3)['state']->step);
+
+        $writer = new GameAccountTaskStateWriter($queue, $repository, $service);
+        $writer->drainQueues();
+        $writer->flushDueBuffers(true);
+
+        $this->assertNull($pending->get(3));
+        $this->assertSame(2, $service->get(3)['state']->step);
     }
 
     public function testPersistSnapshotsSkipsUnchangedState(): void
     {
         $repository = $this->repository();
-        $service = new GameAccountTaskStateService($repository, 1024);
+        $service = new GameAccountTaskStateService($repository, 1024, pendingStore: new ArrayGameAccountTaskStatePendingStore());
         $json = '{"step":1}';
         $snapshot = [
             'game_account_id' => 3,
@@ -75,7 +109,7 @@ class GameAccountTaskStateServiceTest extends TestCase
 
     public function testSaveRejectsOversizedState(): void
     {
-        $service = new GameAccountTaskStateService($this->repository(), 16, new ArrayGameAccountTaskStateQueue());
+        $service = new GameAccountTaskStateService($this->repository(), 16, new ArrayGameAccountTaskStateQueue(), new ArrayGameAccountTaskStatePendingStore());
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('task state too large');
@@ -86,7 +120,7 @@ class GameAccountTaskStateServiceTest extends TestCase
     public function testSaveRejectsDeletedAccountAndDoesNotCreateOrphanState(): void
     {
         $repository = $this->repository();
-        $service = new GameAccountTaskStateService($repository, 1024, new ArrayGameAccountTaskStateQueue());
+        $service = new GameAccountTaskStateService($repository, 1024, new ArrayGameAccountTaskStateQueue(), new ArrayGameAccountTaskStatePendingStore());
 
         $repository->deleteForUser(7, 3);
 
@@ -102,7 +136,7 @@ class GameAccountTaskStateServiceTest extends TestCase
     public function testDeletingAccountClearsTaskState(): void
     {
         $repository = $this->repository();
-        $service = new GameAccountTaskStateService($repository, 1024);
+        $service = new GameAccountTaskStateService($repository, 1024, pendingStore: new ArrayGameAccountTaskStatePendingStore());
 
         $service->persistSnapshots([[
             'game_account_id' => 3,

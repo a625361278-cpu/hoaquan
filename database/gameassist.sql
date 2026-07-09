@@ -51,17 +51,6 @@ CREATE TABLE IF NOT EXISTS `ga_game_accounts` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='预留游戏账号表';
 
-CREATE TABLE IF NOT EXISTS `ga_game_account_logs` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '日志ID',
-  `game_account_id` int unsigned NOT NULL COMMENT '游戏账号ID',
-  `line_no` bigint unsigned NOT NULL COMMENT '账号内日志行号',
-  `message` text NOT NULL COMMENT '日志内容',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uniq_account_line` (`game_account_id`, `line_no`),
-  KEY `idx_game_account_id` (`game_account_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游戏账号运行日志表';
-
 CREATE TABLE IF NOT EXISTS `ga_game_account_task_states` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '任务状态ID',
   `game_account_id` int unsigned NOT NULL COMMENT '游戏账号ID',

@@ -10,6 +10,7 @@
     "session_id",
     "game_username",
     "game_password",
+    "task_state",
     "config"
   ],
   "properties": {
@@ -37,6 +38,33 @@
       "type": "string",
       "minLength": 1,
       "description": "后端解密后的游戏密码，仅用于启动通信"
+    },
+    "task_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exists",
+        "state",
+        "saved_at"
+      ],
+      "description": "该账号最近一次已接收的第三方任务数据快照，优先包含尚未落库但已进入队列的最新 task_state_save",
+      "properties": {
+        "exists": {
+          "type": "boolean",
+          "description": "是否存在历史任务数据"
+        },
+        "state": {
+          "type": "object",
+          "description": "第三方保存的任务状态对象；不存在历史数据时为空对象"
+        },
+        "saved_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "任务状态被服务端接收的时间；不存在历史数据时为 null"
+        }
+      }
     },
     "config": {
       "type": "object",

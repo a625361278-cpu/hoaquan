@@ -25,6 +25,7 @@ class GameAccountService
     private ThirdPartyScriptRuntimeInterface $scriptRuntime;
     private GameAccountResourceService $resources;
     private GameAccountQuotaService $quotaService;
+    private GameAccountTaskStateService $taskStates;
 
     public function __construct(
         private GameAccountRepositoryInterface $accounts,
@@ -32,7 +33,8 @@ class GameAccountService
         string $locale = I18n::DEFAULT_LOCALE,
         ?ThirdPartyScriptRuntimeInterface $scriptRuntime = null,
         ?GameAccountResourceService $resources = null,
-        ?GameAccountQuotaService $quotaService = null
+        ?GameAccountQuotaService $quotaService = null,
+        ?GameAccountTaskStateService $taskStates = null
     )
     {
         if (is_string($thirdPartyConfigOrLocale)) {
@@ -51,6 +53,7 @@ class GameAccountService
         $this->scriptRuntime = $scriptRuntime ?? new GatewayThirdPartyScriptRuntime(locale: $this->locale);
         $this->resources = $resources ?? new GameAccountResourceService();
         $this->quotaService = $quotaService ?? new GameAccountQuotaService(locale: $this->locale);
+        $this->taskStates = $taskStates ?? new GameAccountTaskStateService($this->accounts);
     }
 
     public function listForUser(int $userId): array
@@ -175,6 +178,7 @@ class GameAccountService
         $this->assertQuotaActive($account);
         $this->assertThirdPartyScriptReady();
         $gamePassword = $this->cipher()->decrypt((string)($account['game_password_cipher'] ?? ''));
+        $taskState = $this->taskStates->get($accountId);
         $logSessionId = bin2hex(random_bytes(12));
         $requestId = bin2hex(random_bytes(16));
         $reservation = $this->scriptRuntime->reserveAccount($accountId, $requestId, $logSessionId);
@@ -201,7 +205,8 @@ class GameAccountService
                 $reservation,
                 $account,
                 $gamePassword,
-                $this->decodeConfig((string)($account['config_json'] ?? '{}'))
+                $this->decodeConfig((string)($account['config_json'] ?? '{}')),
+                $taskState
             );
         } catch (\Throwable $e) {
             $this->accounts->updateRuntimeState($userId, $accountId, [
@@ -283,6 +288,7 @@ class GameAccountService
             $this->scriptRuntime->stopAccount($accountId, bin2hex(random_bytes(16)));
         }
         $this->resources->clear($accountId);
+        $this->taskStates->clearPending($accountId);
         $this->accounts->deleteForUser($userId, $accountId);
         return ApiResponse::success([], I18n::t('api.game.deleted', [], $this->locale));
     }

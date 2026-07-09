@@ -196,7 +196,6 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
 
     public function deleteForUser(int $userId, int $accountId): void
     {
-        Db::table('ga_game_account_logs')->where('game_account_id', $accountId)->delete();
         Db::table('ga_game_account_log_segments')->where('game_account_id', $accountId)->delete();
         Db::table('ga_game_account_event_segments')->where('game_account_id', $accountId)->delete();
         Db::table('ga_game_account_log_states')->where('game_account_id', $accountId)->delete();

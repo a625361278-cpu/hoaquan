@@ -130,7 +130,7 @@ class GameAccountResourceServiceTest extends TestCase
         $this->assertSame(14, $result['resources']['level']);
     }
 
-    public function testGoldIsNotAcceptedAsCoinAlias(): void
+    public function testGoldIsAcceptedAsCoinAlias(): void
     {
         $store = new ArrayGameAccountRuntimeResourceStore();
         $service = new GameAccountResourceService($store);
@@ -140,9 +140,35 @@ class GameAccountResourceServiceTest extends TestCase
             'gold' => 236000,
         ]);
 
-        $this->assertSame(['gold'], $result['unknown_keys']);
-        $this->assertSame([], $store->snapshots[3]['resources']);
-        $this->assertSame(0, $result['resources']['coin']);
+        $this->assertSame([], $result['unknown_keys']);
+        $this->assertSame(['coin' => 236000], $store->snapshots[3]['resources']);
+        $this->assertSame(236000, $result['resources']['coin']);
+    }
+
+    public function testMatchingGoldAndCoinAreAccepted(): void
+    {
+        $service = new GameAccountResourceService(new ArrayGameAccountRuntimeResourceStore());
+
+        $result = $service->saveStatusPayload(3, [
+            'type' => 'status',
+            'coin' => 236000,
+            'gold' => 236000,
+        ]);
+
+        $this->assertSame([], $result['unknown_keys']);
+        $this->assertSame(236000, $result['resources']['coin']);
+    }
+
+    public function testConflictingGoldAndCoinAreRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('status fields coin and gold conflict');
+
+        GameAccountResourceService::normalizeStatusPayload([
+            'type' => 'status',
+            'coin' => 236000,
+            'gold' => 123,
+        ]);
     }
 
     public function testStatusPayloadRejectsAccountIdAndStructuredKnownField(): void

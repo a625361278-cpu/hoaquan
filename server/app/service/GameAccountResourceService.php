@@ -89,6 +89,13 @@ class GameAccountResourceService
         }
 
         unset($source['type'], $source['request_id'], $source['session_id'], $source['script_version']);
+        if (array_key_exists('gold', $source)) {
+            if (array_key_exists('coin', $source) && (string)$source['coin'] !== (string)$source['gold']) {
+                throw new InvalidArgumentException('status fields coin and gold conflict');
+            }
+            $source['coin'] = $source['gold'];
+            unset($source['gold']);
+        }
 
         $resources = [];
         $unknownKeys = [];

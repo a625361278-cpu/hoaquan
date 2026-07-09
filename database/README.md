@@ -29,9 +29,15 @@
 
 `ga_users.bound_role_id` 持久保存已绑定角色，删除游戏账号不会清除该绑定，避免同一平台用户重复换角色刷奖励。`ga_user_point_transactions` 有唯一索引 `uniq_invite_reward_user(type, related_user_id)`，用于从数据库层保证同一个被邀请账号不会重复产生邀请奖励流水；邀请奖励流水的 `related_role_id` 用于判断同一个游戏 `role_id` 全平台最多奖励一次。
 
+`ga_user_point_transactions` 必须使用 InnoDB。邀请奖励会在同一个事务里同时更新邀请人余额、写点数流水、标记被邀请用户已奖励；如果历史库仍是 MyISAM，事务回滚和并发一致性都无法保证。`php scripts/sync_database.php` 会把该表引擎校正为 InnoDB。
+
 后台“GameAssist用户/添加配额”只允许给产品用户 `ga_users.balance` 增加正整数点数，成功后还会写入 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`，用于审计管理员操作。
 
 `server/config/process.php` 注册的 `game_account_expiry_watcher` 会扫描 `ga_game_accounts.expire_time <= 当前时间` 且仍处于 `starting/running/reconnecting` 的账号，发送停止或标记停止，并清除 `desired_running`，避免到期账号被自动重连重新拉起。
+
+运行普通日志不再写入旧表 `ga_game_account_logs`。真实普通日志按段存储在 `ga_game_account_log_segments`，事件卡片按段存储在 `ga_game_account_event_segments`，日志游标存储在 `ga_game_account_log_states`。`php scripts/sync_database.php` 会在旧 `ga_game_account_logs` 为空时删除它；如果非空会中止并提示人工确认，避免静默丢历史数据。
+
+第三方任务数据使用 `ga_game_account_task_states` 保存每个游戏账号的最新落库快照；`task_state_save` 进入 Redis 队列时还会记录一份 pending 最新快照，供 `start.task_state` 和 `task_state_get` 优先读取，writer 落库后按 hash 精确清理 pending 快照。
 
 `ga_system_settings.invite_daily_limit` 控制同一邀请人每日奖励上限，默认 `50`；`invite_same_ip_daily_limit` 控制同邀请人同 IP 每日奖励风控上限，默认 `3`。同步数据库脚本会自动补齐这些配置项。
 

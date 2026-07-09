@@ -5,8 +5,10 @@ namespace tests\Feature;
 use app\service\CredentialCipher;
 use app\service\GameAccountAutoRestartService;
 use app\service\GameAccountService;
+use app\service\GameAccountTaskStateService;
 use PHPUnit\Framework\TestCase;
 use tests\Support\ArrayGameAccountRepository;
+use tests\Support\ArrayGameAccountTaskStatePendingStore;
 use tests\Support\ArrayGameLogQueue;
 use tests\Support\ArrayThirdPartyScriptConnectionStore;
 use tests\Support\ArrayThirdPartyScriptRuntime;
@@ -69,6 +71,13 @@ class GameAccountAutoRestartServiceTest extends TestCase
             'auto_restart_next_at' => '2026-07-07 10:00:00',
             'config_json' => '{"basic":{"debug":true}}',
         ]);
+        $repository->saveTaskState(
+            3,
+            '{"step":5}',
+            hash('sha256', '{"step":5}'),
+            strlen('{"step":5}'),
+            '2026-07-09 12:00:00'
+        );
         $runtime = new ArrayThirdPartyScriptRuntime(true);
         $service = $this->service($repository, runtime: $runtime);
 
@@ -81,6 +90,8 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $this->assertSame('session-1', $runtime->started[0]['session_id']);
         $this->assertSame('secret-password', $runtime->started[0]['game_password']);
         $this->assertSame(['basic' => ['debug' => true]], $runtime->started[0]['config']);
+        $this->assertTrue($runtime->started[0]['task_state']['exists']);
+        $this->assertSame(5, $runtime->started[0]['task_state']['state']->step);
     }
 
     public function testReconnectSkipsExpiredAccountWithoutSendingStart(): void
@@ -161,7 +172,8 @@ class GameAccountAutoRestartServiceTest extends TestCase
             $connections ?? new ArrayThirdPartyScriptConnectionStore(),
             $queue ?? new ArrayGameLogQueue(),
             'test-key',
-            static fn (): int => 1783428000
+            static fn (): int => 1783428000,
+            new GameAccountTaskStateService($repository, 1024, pendingStore: new ArrayGameAccountTaskStatePendingStore())
         );
     }
 

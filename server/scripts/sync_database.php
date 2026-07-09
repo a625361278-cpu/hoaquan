@@ -10,6 +10,18 @@ require_once __DIR__ . '/../support/bootstrap.php';
 
 use support\Db;
 
+function ensureTableEngine(string $table, string $engine): void
+{
+    $row = Db::selectOne(
+        'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+        [$table]
+    );
+    $current = strtoupper((string)($row->ENGINE ?? ''));
+    if ($current !== '' && $current !== strtoupper($engine)) {
+        Db::statement("ALTER TABLE `{$table}` ENGINE={$engine}");
+    }
+}
+
 try {
     $schema = Db::schema();
 
@@ -65,16 +77,12 @@ try {
         });
     }
 
-    if (!$schema->hasTable('ga_game_account_logs')) {
-        $schema->create('ga_game_account_logs', function ($table) {
-            $table->bigIncrements('id')->comment('日志ID');
-            $table->unsignedInteger('game_account_id')->comment('游戏账号ID');
-            $table->unsignedBigInteger('line_no')->comment('账号内日志行号');
-            $table->text('message')->comment('日志内容');
-            $table->dateTime('created_at')->useCurrent()->comment('创建时间');
-            $table->unique(['game_account_id', 'line_no'], 'uniq_account_line');
-            $table->index('game_account_id', 'idx_game_account_id');
-        });
+    if ($schema->hasTable('ga_game_account_logs')) {
+        $legacyLogCount = (int)Db::table('ga_game_account_logs')->count();
+        if ($legacyLogCount > 0) {
+            throw new RuntimeException("废弃日志表 ga_game_account_logs 仍有 {$legacyLogCount} 行，请先人工确认迁移或清理后再同步");
+        }
+        $schema->drop('ga_game_account_logs');
     }
 
     if (!$schema->hasTable('ga_game_account_log_segments')) {
@@ -198,6 +206,7 @@ try {
             $table->unique(['type', 'related_user_id'], 'uniq_invite_reward_user');
         });
     }
+    ensureTableEngine('ga_user_point_transactions', 'InnoDB');
 
     if (!$schema->hasTable('ga_admin_operation_logs')) {
         $schema->create('ga_admin_operation_logs', function ($table) {
@@ -260,13 +269,13 @@ try {
     echo 'ga_users密保字段：已同步' . PHP_EOL;
     echo 'ga_game_accounts：预览账号与配置列已同步' . PHP_EOL;
     echo 'ga_game_accounts自动重连字段：已同步' . PHP_EOL;
-    echo 'ga_game_account_logs：已同步' . PHP_EOL;
+    echo 'ga_game_account_logs：废弃表已移除或不存在' . PHP_EOL;
     echo 'ga_game_account_log_segments：已同步' . PHP_EOL;
     echo 'ga_game_account_event_segments：已同步' . PHP_EOL;
     echo 'ga_game_account_log_states：已同步' . PHP_EOL;
     echo 'ga_game_account_task_states：已同步' . PHP_EOL;
     echo 'ga_announcements：已同步' . PHP_EOL;
-    echo 'ga_user_point_transactions：已同步' . PHP_EOL;
+    echo 'ga_user_point_transactions：已同步，表引擎已校正为InnoDB' . PHP_EOL;
     echo 'ga_admin_operation_logs：已同步' . PHP_EOL;
     echo 'SMTP配置项：已同步' . PHP_EOL;
     echo '认证方式配置项：已同步' . PHP_EOL;

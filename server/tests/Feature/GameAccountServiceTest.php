@@ -4,8 +4,10 @@ namespace tests\Feature;
 
 use app\service\GameAccountService;
 use app\service\GameAccountResourceService;
+use app\service\GameAccountTaskStateService;
 use PHPUnit\Framework\TestCase;
 use tests\Support\ArrayGameAccountRepository;
+use tests\Support\ArrayGameAccountTaskStatePendingStore;
 use tests\Support\ArrayGameAccountRuntimeResourceStore;
 use tests\Support\ArrayThirdPartyScriptRuntime;
 
@@ -493,8 +495,52 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame(3, $runtime->started[0]['account_id']);
         $this->assertSame('secret-password', $runtime->started[0]['game_password']);
         $this->assertSame([], $runtime->started[0]['config']);
+        $this->assertFalse($runtime->started[0]['task_state']['exists']);
         $this->assertSame(1, (int)$repository->findById(3)['desired_running']);
         $this->assertSame('启动任务已提交，等待服务器确认', $result['msg']);
+    }
+
+    public function testStartSendsLatestTaskStateSnapshot(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'stopped',
+                'sync_status' => 'local_unsynced',
+                'third_party_account_id' => '',
+                'remark' => '',
+                'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
+            ],
+        ]);
+        $taskStates = $this->taskStates($repository);
+        $taskStates->persistSnapshots([[
+            'game_account_id' => 3,
+            'state_json' => '{"step":2}',
+            'state_hash' => hash('sha256', '{"step":2}'),
+            'state_bytes' => strlen('{"step":2}'),
+            'saved_at' => '2026-07-09 12:00:00',
+        ]]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $taskStates);
+
+        $service->start(7, 3);
+
+        $this->assertTrue($runtime->started[0]['task_state']['exists']);
+        $this->assertSame(2, $runtime->started[0]['task_state']['state']->step);
+        $this->assertSame('2026-07-09 12:00:00', $runtime->started[0]['task_state']['saved_at']);
     }
 
     public function testStartClearsPreviousRuntimeResourcesBeforeNewSession(): void
@@ -529,7 +575,8 @@ class GameAccountServiceTest extends TestCase
             ],
             \app\support\I18n::DEFAULT_LOCALE,
             new ArrayThirdPartyScriptRuntime(),
-            new GameAccountResourceService($store)
+            new GameAccountResourceService($store),
+            taskStates: $this->taskStates($repository)
         );
 
         $result = $service->start(7, 3);
@@ -564,7 +611,7 @@ class GameAccountServiceTest extends TestCase
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, new ArrayThirdPartyScriptRuntime(false));
+        ], \app\support\I18n::DEFAULT_LOCALE, new ArrayThirdPartyScriptRuntime(false), taskStates: $this->taskStates($repository));
 
         try {
             $service->start(7, 3);
@@ -601,7 +648,7 @@ class GameAccountServiceTest extends TestCase
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, $runtime);
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository));
 
         $this->expectException(\app\exception\ApiException::class);
         $this->expectExceptionMessage('游戏账号配额未配置或已到期');
@@ -640,7 +687,7 @@ class GameAccountServiceTest extends TestCase
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, $runtime);
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository));
 
         $this->expectException(\app\exception\ApiException::class);
         $this->expectExceptionMessage('游戏账号配额未配置或已到期');
@@ -826,5 +873,10 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame($config, $result['data']['config']);
         $this->assertSame('local_unsynced', $result['data']['sync_status']);
         $this->assertSame('2026-07-02 12:00:00', $result['data']['updated_at']);
+    }
+
+    private function taskStates(ArrayGameAccountRepository $repository): GameAccountTaskStateService
+    {
+        return new GameAccountTaskStateService($repository, 1024, pendingStore: new ArrayGameAccountTaskStatePendingStore());
     }
 }

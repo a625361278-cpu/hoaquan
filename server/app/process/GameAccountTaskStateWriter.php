@@ -6,6 +6,7 @@ use app\repository\DbGameAccountRepository;
 use app\repository\GameAccountRepositoryInterface;
 use app\service\GameAccountTaskStateQueue;
 use app\service\GameAccountTaskStateQueueInterface;
+use app\service\GameAccountTaskStateService;
 use support\Log;
 use Throwable;
 use Workerman\Timer;
@@ -29,10 +30,12 @@ class GameAccountTaskStateWriter
 
     public function __construct(
         private ?GameAccountTaskStateQueueInterface $queue = null,
-        private ?GameAccountRepositoryInterface $accounts = null
+        private ?GameAccountRepositoryInterface $accounts = null,
+        private ?GameAccountTaskStateService $taskStates = null
     ) {
         $this->queue ??= new GameAccountTaskStateQueue();
         $this->accounts ??= new DbGameAccountRepository();
+        $this->taskStates ??= new GameAccountTaskStateService($this->accounts);
         $this->setWorkerIdentity(0, 1);
     }
 
@@ -139,6 +142,12 @@ class GameAccountTaskStateWriter
         $buffers = $this->buffers;
         try {
             $result = $this->accounts->saveTaskStates(array_values($buffers));
+            foreach ($buffers as $buffer) {
+                $this->taskStates->clearPendingIfHashMatches(
+                    (int)$buffer['game_account_id'],
+                    (string)$buffer['state_hash']
+                );
+            }
             $this->buffers = [];
             $this->lastFlushAt = time();
             if ((int)($result['missing'] ?? 0) > 0) {

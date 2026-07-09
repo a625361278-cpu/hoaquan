@@ -29,7 +29,7 @@ class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
         };
     }
 
-    public function startAccount(array $account, string $requestId, string $sessionId, string $gamePassword, array $config): array
+    public function startAccount(array $account, string $requestId, string $sessionId, string $gamePassword, array $config, array $taskState = []): array
     {
         $accountId = (int)($account['id'] ?? 0);
         if ($accountId <= 0) {
@@ -37,7 +37,7 @@ class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
         }
 
         $reservation = $this->reserveAccount($accountId, $requestId, $sessionId);
-        return $this->sendStartCommand($reservation, $account, $gamePassword, $config);
+        return $this->sendStartCommand($reservation, $account, $gamePassword, $config, $taskState);
     }
 
     public function reserveAccount(int $accountId, string $requestId, string $sessionId): array
@@ -54,7 +54,7 @@ class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
         ];
     }
 
-    public function sendStartCommand(array $reservation, array $account, string $gamePassword, array $config): array
+    public function sendStartCommand(array $reservation, array $account, string $gamePassword, array $config, array $taskState = []): array
     {
         $accountId = (int)($account['id'] ?? 0);
         if ($accountId <= 0) {
@@ -73,6 +73,7 @@ class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
             'game_username' => (string)($account['game_username'] ?? ''),
             'game_password' => $gamePassword,
             'config' => $config,
+            'task_state' => $this->normalizeTaskState($taskState),
         ];
 
         try {
@@ -142,5 +143,14 @@ class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
     private function encode(array $payload): string
     {
         return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function normalizeTaskState(array $taskState): array
+    {
+        return [
+            'exists' => (bool)($taskState['exists'] ?? false),
+            'state' => $taskState['state'] ?? new \stdClass(),
+            'saved_at' => $taskState['saved_at'] ?? null,
+        ];
     }
 }
