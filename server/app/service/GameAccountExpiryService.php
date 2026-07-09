@@ -58,13 +58,6 @@ class GameAccountExpiryService
             ]);
 
             $this->logs->enqueueNormal($accountId, ['[WARN] 配额到期，已发送停止指令'], $sessionId);
-            $this->logs->enqueueEvents($accountId, [[
-                'category' => 'system',
-                'level' => 'warning',
-                'title' => '配额到期',
-                'message' => '配额到期，已停止游戏账号',
-                'time' => $nowText,
-            ]]);
             $result[$status === GameAccountService::STOPPING_STATUS ? 'stopping' : 'stopped']++;
         }
 

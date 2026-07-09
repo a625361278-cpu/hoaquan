@@ -36,6 +36,7 @@ class GameAccountExpiryServiceTest extends TestCase
         $this->assertSame(0, (int)$account['desired_running']);
         $this->assertSame(3, $runtime->stopped[0]['account_id']);
         $this->assertStringContainsString('配额到期', $logs->normal[0]['lines'][0]);
+        $this->assertSame([], $logs->events);
     }
 
     public function testExpiredAccountWithoutRuntimeBindingIsMarkedStopped(): void

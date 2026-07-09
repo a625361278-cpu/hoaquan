@@ -50,13 +50,6 @@ class GameAccountAutoRestartService
 
         $message = '[WARN] ' . $reason . '，等待自动重连';
         $this->logs->enqueueNormal($accountId, [$message], $sessionId);
-        $this->logs->enqueueEvents($accountId, [[
-            'category' => 'system',
-            'level' => 'warning',
-            'title' => '连接断开',
-            'message' => $reason . '，等待自动重连',
-            'time' => $this->dateTime($this->now()),
-        ]]);
     }
 
     public function runDue(int $limit = self::DEFAULT_LIMIT): array
@@ -204,13 +197,6 @@ class GameAccountAutoRestartService
                 'auto_restart_last_error' => $error,
             ]);
             $this->logs->enqueueNormal($accountId, ['[ERROR] 自动重连失败次数过多，已停止重试：' . $error], $sessionId);
-            $this->logs->enqueueEvents($accountId, [[
-                'category' => 'system',
-                'level' => 'error',
-                'title' => '自动重连失败',
-                'message' => '自动重连失败次数过多，已停止重试：' . $error,
-                'time' => $this->dateTime($this->now()),
-            ]]);
             return;
         }
 

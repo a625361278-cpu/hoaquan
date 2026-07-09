@@ -122,7 +122,7 @@ class Events
                 'status' => self::saveStatusPayload($accountId, $payload),
                 'task_state_get' => self::sendTaskStatePayload($clientId, $accountId, $payload),
                 'task_state_save' => self::saveTaskStatePayload($clientId, $accountId, $payload, $payloadObject),
-                'error' => self::markError($clientId, $accountId, (string)($payload['message'] ?? '第三方脚本返回异常'), $sessionId),
+                'error' => self::markError($clientId, $accountId, (string)($payload['message'] ?? '游戏运行异常'), $sessionId),
                 'stopped' => self::markStopped($clientId, $accountId, (string)($state['state'] ?? ''), $sessionId),
                 default => self::appendLogLines($accountId, [self::json($payload)], $sessionId),
             };
@@ -151,7 +151,7 @@ class Events
         }
 
         if ((int)($account['desired_running'] ?? 0) === 1) {
-            self::autoRestarter()->scheduleReconnect($accountId, '第三方脚本连接断开', (string)($state['session_id'] ?? ''));
+            self::autoRestarter()->scheduleReconnect($accountId, '运行连接断开', (string)($state['session_id'] ?? ''));
             return;
         }
 
@@ -160,25 +160,19 @@ class Events
             'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
         ]);
         self::resources()->clear($accountId);
-        self::appendLogLines($accountId, ['[ERROR] 第三方脚本连接断开'], (string)($state['session_id'] ?? ''));
+        self::appendLogLines($accountId, ['[ERROR] 运行连接断开'], (string)($state['session_id'] ?? ''));
     }
 
     private static function markStarted(int $accountId, array $payload, array $state): void
     {
         $sessionId = (string)($state['session_id'] ?? '');
-        $trace = self::startedTrace($payload, $state);
-        Log::info('Third-party started received', array_merge([
-            'account_id' => $accountId,
-            'client_id' => (string)($state['client_id'] ?? ''),
-        ], $trace));
-        self::appendLogLines($accountId, ['[INFO] 收到第三方 started：' . self::json($trace)], $sessionId);
 
         if (!self::startedContextMatches($payload, $state)) {
             Log::warning('Third-party started context mismatch', array_merge([
                 'account_id' => $accountId,
                 'client_id' => (string)($state['client_id'] ?? ''),
-            ], $trace));
-            self::appendLogLines($accountId, ['[ERROR] 第三方 started 回包与当前启动会话不匹配，已忽略：' . self::json($trace)], $sessionId);
+            ], self::startedContextTrace($payload, $state)));
+            self::appendLogLines($accountId, ['[WARN] 启动确认已失效，已忽略过期回包'], $sessionId);
             return;
         }
 
@@ -187,7 +181,7 @@ class Events
             return;
         }
         if (!self::canAcceptStarted($account)) {
-            self::appendLogLines($accountId, ['[WARN] 第三方 started 回包已过期或账号不再允许运行，已忽略'], $sessionId);
+            self::appendLogLines($accountId, ['[WARN] 启动确认已失效，已忽略过期回包'], $sessionId);
             return;
         }
 
@@ -210,9 +204,9 @@ class Events
             ]));
         } catch (Throwable $e) {
             Log::error('Failed to bind role after script started', ['account_id' => $accountId, 'error' => $e->getMessage()]);
-            self::appendLogLines($accountId, ['[ERROR] 启动成功后自动绑定角色失败：' . $e->getMessage()], $sessionId);
+            self::appendLogLines($accountId, ['[ERROR] 启动成功后角色绑定失败：' . $e->getMessage()], $sessionId);
         }
-        self::appendLogLines($accountId, ['[INFO] 第三方启动成功'], $sessionId);
+        self::appendLogLines($accountId, ['[INFO] 启动游戏成功'], $sessionId);
     }
 
     private static function startedContextMatches(array $payload, array $state): bool
@@ -228,7 +222,7 @@ class Events
             && hash_equals($expectedSessionId, $actualSessionId);
     }
 
-    private static function startedTrace(array $payload, array $state): array
+    private static function startedContextTrace(array $payload, array $state): array
     {
         return [
             'expected_request_id' => (string)($state['request_id'] ?? ''),
@@ -296,7 +290,7 @@ class Events
 
         $account = self::accounts()->findById($accountId);
         if ($account && (int)($account['desired_running'] ?? 0) === 1) {
-            self::autoRestarter()->scheduleReconnect($accountId, '第三方脚本异常停止', $sessionId);
+            self::autoRestarter()->scheduleReconnect($accountId, '运行异常停止', $sessionId);
             return;
         }
 

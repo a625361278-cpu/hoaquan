@@ -25,7 +25,7 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $queue = new ArrayGameLogQueue();
         $service = $this->service($repository, queue: $queue);
 
-        $service->scheduleReconnect(3, '第三方脚本连接断开', 'session-1');
+        $service->scheduleReconnect(3, '运行连接断开', 'session-1');
 
         $account = $repository->findById(3);
         $this->assertSame(GameAccountService::RECONNECTING_STATUS, $account['status']);
@@ -34,6 +34,7 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $this->assertSame(1, $repository->countNormalLogLines(3, 'session-1'));
         $this->assertSame('session-1', $queue->normal[0]['session_id']);
         $this->assertStringContainsString('等待自动重连', $queue->normal[0]['lines'][0]);
+        $this->assertSame([], $queue->events);
     }
 
     public function testReconnectWaitsForIdleConnectionWithoutIncreasingAttempts(): void
@@ -120,6 +121,7 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $this->assertSame(1, $result['scheduled']);
         $this->assertSame(GameAccountService::RECONNECTING_STATUS, $account['status']);
         $this->assertStringContainsString('连接丢失', $queue->normal[0]['lines'][0]);
+        $this->assertSame([], $queue->events);
     }
 
     public function testReconnectStopsRetryingAfterMaximumSendFailures(): void
@@ -133,7 +135,8 @@ class GameAccountAutoRestartServiceTest extends TestCase
         ]);
         $runtime = new ArrayThirdPartyScriptRuntime(true);
         $runtime->failSend = true;
-        $service = $this->service($repository, runtime: $runtime);
+        $queue = new ArrayGameLogQueue();
+        $service = $this->service($repository, runtime: $runtime, queue: $queue);
 
         $result = $service->runDue(10);
 
@@ -142,6 +145,8 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $this->assertSame(GameAccountService::ERROR_STATUS, $account['status']);
         $this->assertSame(0, (int)$account['desired_running']);
         $this->assertSame(GameAccountAutoRestartService::MAX_ATTEMPTS, (int)$account['auto_restart_attempts']);
+        $this->assertStringContainsString('自动重连失败次数过多', $queue->normal[0]['lines'][0]);
+        $this->assertSame([], $queue->events);
     }
 
     private function service(
