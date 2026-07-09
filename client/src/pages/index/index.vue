@@ -139,19 +139,20 @@
           <text class="close" @click="closeLogs">×</text>
         </view>
         <view class="log-body">
-          <scroll-view class="log-cats" scroll-y>
-            <view
-              v-for="cat in logCategories"
-              :key="cat.name"
-              :class="['cat-pill', logs.category === cat.name ? 'active' : '']"
-              @click="logs.category = cat.name"
-            >
-              <text>{{ cat.name }}</text>
-              <text class="cat-count">{{ cat.count }}</text>
-            </view>
-          </scroll-view>
           <view class="log-main">
             <view class="log-tools">
+              <picker
+                class="log-category-picker"
+                mode="selector"
+                :range="logCategoryLabels"
+                :value="activeLogCategoryIndex"
+                @change="onLogCategoryChange"
+              >
+                <view class="log-category-select">
+                  <text class="log-category-label">{{ selectedLogCategoryLabel }}</text>
+                  <text class="log-category-arrow">⌄</text>
+                </view>
+              </picker>
               <input v-model="logs.search" class="log-search" :placeholder="t('client.logs.search')" />
               <button class="log-mode" @click="toggleLogMode">
                 {{ logs.mode === 'raw' ? t('client.logs.event_cards') : t('client.logs.normal_logs') }}
@@ -653,6 +654,12 @@ function toggleLogMode() {
   logs.category = t('client.logs.all');
 }
 
+function onLogCategoryChange(event) {
+  const index = Number(event.detail.value);
+  const category = logCategories.value[index];
+  logs.category = category?.name || t('client.logs.all');
+}
+
 async function clearLogs() {
   if (!logs.account) return;
   try {
@@ -706,6 +713,12 @@ const logCategories = computed(() => {
   activeLogItems.value.forEach((item) => counts.set(item.module, (counts.get(item.module) || 0) + 1));
   return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
 });
+const logCategoryLabels = computed(() => logCategories.value.map((cat) => `${cat.name}（${cat.count}）`));
+const activeLogCategoryIndex = computed(() => {
+  const index = logCategories.value.findIndex((cat) => cat.name === logs.category);
+  return index >= 0 ? index : 0;
+});
+const selectedLogCategoryLabel = computed(() => logCategoryLabels.value[activeLogCategoryIndex.value] || `${t('client.logs.all')}（0）`);
 
 const filteredLogItems = computed(() => activeLogItems.value.filter((item) => {
   const all = t('client.logs.all');
@@ -1026,6 +1039,7 @@ function openPaymentWindow() {
 }
 
 .close {
+  flex-shrink: 0;
   color: #98a2b3;
   font-size: 40rpx;
 }
@@ -1221,56 +1235,67 @@ function openPaymentWindow() {
   width: min(1200px, 96vw);
   height: min(740px, 92vh);
   padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .log-body {
-  display: grid;
-  grid-template-columns: 260rpx minmax(0, 1fr);
-  gap: 24rpx;
-  height: calc(100% - 72rpx);
-}
-
-.log-cats {
-  height: 100%;
-  padding: 12rpx;
-  box-sizing: border-box;
-  background: #edf2f7;
-}
-
-.cat-pill {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 12rpx;
-  padding: 14rpx 20rpx;
-  border-radius: 8px;
-  background: #fff;
-  color: #667085;
-  font-size: 24rpx;
-}
-
-.cat-pill.active {
-  color: #1677ff;
-  box-shadow: inset 0 0 0 2px #7cc8ff;
-}
-
-.cat-count {
-  min-width: 48rpx;
-  border-radius: 999px;
-  background: #5d6b82;
-  color: #fff;
-  text-align: center;
+  flex: 1;
+  min-height: 0;
 }
 
 .log-main {
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
 .log-tools {
+  flex-shrink: 0;
+  flex-wrap: wrap;
   gap: 14rpx;
+}
+
+.log-category-picker {
+  width: 260rpx;
+  flex-shrink: 0;
+}
+
+.log-category-select {
+  height: 72rpx;
+  padding: 0 18rpx;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  background: #fff;
+  color: #1f2937;
+  font-size: 24rpx;
+}
+
+.log-category-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-category-arrow {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  color: #667085;
 }
 
 .log-search {
   flex: 1;
+  min-width: 320rpx;
   height: 72rpx;
   padding: 0 18rpx;
   border: 1px solid #d0d5dd;
@@ -1290,6 +1315,7 @@ function openPaymentWindow() {
 }
 
 .log-options {
+  flex-shrink: 0;
   flex-wrap: wrap;
   gap: 16rpx;
   margin: 14rpx 0;
@@ -1302,10 +1328,12 @@ function openPaymentWindow() {
 }
 
 .log-list {
-  height: calc(100% - 150rpx);
+  flex: 1;
+  min-height: 0;
   border-top: 1px solid #edf2f7;
   border-bottom: 1px solid #edf2f7;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  box-sizing: border-box;
 }
 
 .log-line {
@@ -1348,6 +1376,7 @@ function openPaymentWindow() {
 
 .log-footer {
   display: flex;
+  flex-shrink: 0;
   justify-content: flex-end;
   margin-top: 16rpx;
 }
@@ -1452,13 +1481,39 @@ function openPaymentWindow() {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .log-body {
-    grid-template-columns: 1fr;
+  .log-dialog {
+    width: calc(100vw - 32rpx);
+    height: calc(100vh - 64rpx);
+    padding: 24rpx;
   }
 
-  .log-cats {
-    height: 150rpx;
-    white-space: nowrap;
+  .log-head {
+    align-items: flex-start;
+    gap: 16rpx;
+  }
+
+  .log-title {
+    min-width: 0;
+    flex: 1;
+    line-height: 1.35;
+  }
+
+  .log-category-picker,
+  .log-search,
+  .log-mode {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+
+  .log-options {
+    align-items: flex-start;
+  }
+
+  .recent-text {
+    width: 100%;
+    margin-left: 0;
+    text-align: right;
   }
 
   .quota-dialog {
