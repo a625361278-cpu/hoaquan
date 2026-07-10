@@ -12,6 +12,7 @@ use plugin\admin\api\Menu;
 use plugin\admin\app\model\Option;
 use plugin\admin\app\model\Role;
 use plugin\admin\app\model\Rule;
+use plugin\admin\app\service\GameAssistQuotaLogPermission;
 use support\Db;
 
 const GAMEASSIST_ADMIN_TITLE = 'Hoa Quán 后台';
@@ -25,6 +26,7 @@ try {
     }
 
     Menu::import($menus);
+    $quotaRoleUpdates = GameAssistQuotaLogPermission::syncExistingRoles();
 
     $option = Option::where('name', 'system_config')->first();
     if (!$option) {
@@ -67,6 +69,7 @@ try {
 
     echo '后台品牌和菜单同步完成' . PHP_EOL;
     echo '菜单数量：' . $ruleCount . PHP_EOL;
+    echo '配额日志权限同步角色数：' . $quotaRoleUpdates . PHP_EOL;
     echo '关键菜单：' . implode(', ', $rootKeys) . PHP_EOL;
     echo '后台名称：' . GAMEASSIST_ADMIN_TITLE . PHP_EOL;
     echo '后台图标：' . GAMEASSIST_ADMIN_LOGO . PHP_EOL;

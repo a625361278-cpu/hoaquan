@@ -141,6 +141,8 @@ php start.php status
 - 后台“GameAssist用户”管理针对产品用户表 `ga_users`，不是后台账号或 webman-admin 的 `wa_users`。
 - 后台仪表盘的今日注册、7日注册、30日注册和总用户数均统计 `ga_users.created_at`，不使用后台用户表。
 - GameAssist 用户后台允许查看、启用/禁用、重置密码和“添加配额”。添加配额只增加产品用户 `ga_users.balance`，必须填写正整数点数，可填写备注；成功后写入 `ga_user_point_transactions(type=admin_grant)` 和 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`。
+- 后台“会员管理 / 配额日志”是只读审计页面，包含“管理员添加记录”和“用户使用记录”两个标签。前者读取 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`，展示哪个管理员给哪个产品用户添加了多少配额；后者读取 `ga_user_point_transactions(type=quota_consume)`，展示用户在什么时间给哪个游戏账号消耗了多少配额。游戏账号删除后流水不删除，页面保留原始账号ID和延期说明并明确标记账号已删除。
+- “配额日志”权限自动跟随“GameAssist用户”菜单权限，不提供独立角色权限开关；`server/scripts/sync_admin.php` 会同步菜单并修正现有角色的关联权限。页面不提供修改、删除、补写或邀请奖励流水展示。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
 - 后台“运行服务配置”负责编辑运行服务启用状态、连接池 Token 和我方 WebSocket 地址；签名密钥为选填，仅用于历史 HTTP 接口签名校验。后台“脚本连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
 

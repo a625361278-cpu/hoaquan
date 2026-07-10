@@ -8,6 +8,7 @@ use plugin\admin\app\common\Tree;
 use plugin\admin\app\common\Util;
 use plugin\admin\app\model\Role;
 use plugin\admin\app\model\Rule;
+use plugin\admin\app\service\GameAssistQuotaLogPermission;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -108,6 +109,7 @@ class RuleController extends Crud
             'plugin\\admin\\app\\controller\\RoleController' => 'admin.menu.role',
             'plugin\\admin\\app\\controller\\RuleController' => 'admin.menu.rule',
             'plugin\\admin\\app\\controller\\GameAssistUserController' => 'admin.menu.gameassist_user',
+            GameAssistQuotaLogPermission::QUOTA_LOG_RULE_KEY => 'admin.menu.quota_logs',
             'plugin\\admin\\app\\controller\\AccountController' => 'admin.menu.profile',
             'plugin\\admin\\app\\controller\\UploadController' => 'admin.menu.attachment',
             'plugin\\admin\\app\\controller\\DictController' => 'admin.menu.dict',

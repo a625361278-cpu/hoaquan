@@ -60,6 +60,13 @@ return [
                 'href' => '/app/admin/game-assist-user/index',
                 'type' => 1,
                 'weight' => 800,
+            ],
+            [
+                'title' => '配额日志',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistUserController@quotaLogs',
+                'href' => '/app/admin/game-assist-user/quota-logs',
+                'type' => 1,
+                'weight' => 790,
             ]
         ]
     ],

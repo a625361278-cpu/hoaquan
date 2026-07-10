@@ -27,5 +27,20 @@ class AdminPermissionCodeTest extends TestCase
             '/app/admin/game-assist-user/reset-password',
             Util::controllerToUrlPath(GameAssistUserController::class . '@resetPassword')
         );
+
+        $this->assertSame(
+            '/app/admin/game-assist-user/quota-logs',
+            Util::controllerToUrlPath(GameAssistUserController::class . '@quotaLogs')
+        );
+
+        $this->assertSame(
+            '/app/admin/game-assist-user/quota-grant-records',
+            Util::controllerToUrlPath(GameAssistUserController::class . '@quotaGrantRecords')
+        );
+
+        $this->assertSame(
+            '/app/admin/game-assist-user/quota-consume-records',
+            Util::controllerToUrlPath(GameAssistUserController::class . '@quotaConsumeRecords')
+        );
     }
 }

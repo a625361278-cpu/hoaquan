@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="<?=admin_html_lang()?>">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title><?=admin_t('admin.quota_logs.title')?></title>
+        <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+        <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+        <style>
+            .quota-log-tabs > .layui-tab-title {
+                background: #fff;
+                padding: 0 16px;
+            }
+            .quota-log-tabs > .layui-tab-content {
+                padding: 0;
+            }
+            .quota-log-tabs .layui-tab-item {
+                padding-top: 10px;
+            }
+            .entity-missing,
+            .record-invalid {
+                color: #ff5722;
+            }
+            @media (max-width: 768px) {
+                .quota-log-tabs > .layui-tab-title {
+                    padding: 0 8px;
+                }
+                .top-search-from .layui-form-item {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body class="pear-container">
+        <div class="layui-tab layui-tab-brief quota-log-tabs" lay-filter="quota-log-tabs">
+            <ul class="layui-tab-title">
+                <li class="layui-this"><?=admin_t('admin.quota_logs.grant_tab')?></li>
+                <li><?=admin_t('admin.quota_logs.consume_tab')?></li>
+            </ul>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <div class="layui-card">
+                        <div class="layui-card-body">
+                            <form class="layui-form top-search-from" lay-filter="grant-search-form">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.admin_id')?></label>
+                                    <div class="layui-input-block"><input type="number" min="1" name="admin_id" class="layui-input"></div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.admin_account')?></label>
+                                    <div class="layui-input-block"><input type="text" name="admin_account" class="layui-input"></div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.user_id')?></label>
+                                    <div class="layui-input-block"><input type="number" min="1" name="user_id" class="layui-input"></div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.user_account')?></label>
+                                    <div class="layui-input-block"><input type="text" name="user_account" class="layui-input"></div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.operation_time')?></label>
+                                    <div class="layui-input-block" id="grant-created-at">
+                                        <input type="text" autocomplete="off" name="created_at[]" id="grant-created-at-start" class="layui-input inline-block" placeholder="<?=admin_t('admin.gameassist.start_time')?>">
+                                        -
+                                        <input type="text" autocomplete="off" name="created_at[]" id="grant-created-at-end" class="layui-input inline-block" placeholder="<?=admin_t('admin.gameassist.end_time')?>">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item layui-inline">
+                                    <label class="layui-form-label"></label>
+                                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="grant-query"><i class="layui-icon layui-icon-search"></i><?=admin_t('admin.common.search')?></button>
+                                    <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="grant-reset"><i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.reset')?></button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="layui-card">
+                        <div class="layui-card-body"><table id="grant-table" lay-filter="grant-table"></table></div>
+                    </div>
+                </div>
+
+                <div class="layui-tab-item">
+                    <div class="layui-card">
+                        <div class="layui-card-body">
+                            <form class="layui-form top-search-from" lay-filter="consume-search-form">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.user_id')?></label>
+                                    <div class="layui-input-block"><input type="number" min="1" name="user_id" class="layui-input"></div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.user_account')?></label>
+                                    <div class="layui-input-block"><input type="text" name="user_account" class="layui-input"></div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.game_account_id')?></label>
+                                    <div class="layui-input-block"><input type="number" min="1" name="game_account_id" class="layui-input"></div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.game_account')?></label>
+                                    <div class="layui-input-block"><input type="text" name="game_account" class="layui-input"></div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.consume_time')?></label>
+                                    <div class="layui-input-block" id="consume-created-at">
+                                        <input type="text" autocomplete="off" name="created_at[]" id="consume-created-at-start" class="layui-input inline-block" placeholder="<?=admin_t('admin.gameassist.start_time')?>">
+                                        -
+                                        <input type="text" autocomplete="off" name="created_at[]" id="consume-created-at-end" class="layui-input inline-block" placeholder="<?=admin_t('admin.gameassist.end_time')?>">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item layui-inline">
+                                    <label class="layui-form-label"></label>
+                                    <button class="pear-btn pear-btn-md pear-btn-primary" lay-submit lay-filter="consume-query"><i class="layui-icon layui-icon-search"></i><?=admin_t('admin.common.search')?></button>
+                                    <button type="reset" class="pear-btn pear-btn-md" lay-submit lay-filter="consume-reset"><i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.reset')?></button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="layui-card">
+                        <div class="layui-card-body"><table id="consume-table" lay-filter="consume-table"></table></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="text/html" id="grant-toolbar"><button class="pear-btn pear-btn-primary pear-btn-md" lay-event="refresh"><i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.refresh')?></button></script>
+        <script type="text/html" id="consume-toolbar"><button class="pear-btn pear-btn-primary pear-btn-md" lay-event="refresh"><i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.refresh')?></button></script>
+        <script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+        <script src="/app/admin/component/pear/pear.js"></script>
+        <script src="/app/admin/admin/js/permission.js"></script>
+        <script>
+            const GRANT_API = "/app/admin/game-assist-user/quota-grant-records";
+            const CONSUME_API = "/app/admin/game-assist-user/quota-consume-records";
+
+            layui.use(["table", "form", "element", "laydate", "popup", "util"], function() {
+                const table = layui.table;
+                const form = layui.form;
+                const element = layui.element;
+                const util = layui.util;
+                let consumeRendered = false;
+                let grantWhere = {};
+                let consumeWhere = {};
+
+                layui.laydate.render({elem: "#grant-created-at", range: ["#grant-created-at-start", "#grant-created-at-end"], type: "datetime"});
+                layui.laydate.render({elem: "#consume-created-at", range: ["#consume-created-at-start", "#consume-created-at-end"], type: "datetime"});
+
+                function escaped(value) {
+                    return util.escape(value === null || value === undefined ? "" : String(value));
+                }
+
+                function renderGrantTable() {
+                    table.render({
+                        elem: "#grant-table",
+                        id: "grant-table",
+                        url: GRANT_API,
+                        page: {limit: 20, limits: [20, 50, 100]},
+                        cols: [[
+                            {title: "ID", field: "id", sort: true, width: 90},
+                            {title: "<?=admin_t('admin.quota_logs.operation_time')?>", field: "created_at", sort: true, minWidth: 170},
+                            {title: "<?=admin_t('admin.quota_logs.admin_id')?>", field: "admin_id", width: 100, templet: function(d) { return d.admin_id === null ? "-" : escaped(d.admin_id); }},
+                            {title: "<?=admin_t('admin.quota_logs.admin_account')?>", minWidth: 170, templet: function(d) {
+                                if (!d.admin_exists) return '<span class="entity-missing">' + (d.admin_id === null ? "<?=admin_t('admin.quota_logs.admin_not_recorded')?>" : "<?=admin_t('admin.quota_logs.admin_deleted')?> #" + escaped(d.admin_id)) + '</span>';
+                                return escaped(d.admin_account) + (d.admin_nickname ? " / " + escaped(d.admin_nickname) : "");
+                            }},
+                            {title: "<?=admin_t('admin.quota_logs.user_id')?>", field: "user_id", width: 100},
+                            {title: "<?=admin_t('admin.quota_logs.user_account')?>", minWidth: 180, templet: function(d) {
+                                if (!d.user_exists) return '<span class="entity-missing"><?=admin_t('admin.quota_logs.user_deleted')?> #' + escaped(d.user_id) + '</span>';
+                                return escaped(d.user_account) + (d.user_nickname ? " / " + escaped(d.user_nickname) : "");
+                            }},
+                            {title: "<?=admin_t('admin.quota_logs.granted_points')?>", field: "points", width: 120, templet: function(d) { return d.payload_invalid ? '<span class="record-invalid"><?=admin_t('admin.quota_logs.invalid_content')?></span>' : escaped(d.points); }},
+                            {title: "<?=admin_t('admin.quota_logs.balance_after')?>", field: "balance_after", width: 130, templet: function(d) { return d.payload_invalid ? "-" : escaped(d.balance_after); }},
+                            {title: "<?=admin_t('admin.quota_logs.remark')?>", field: "remark", minWidth: 220, templet: function(d) { return '<span class="' + (d.payload_invalid ? "record-invalid" : "") + '">' + escaped(d.remark) + '</span>'; }}
+                        ]],
+                        skin: "line",
+                        size: "lg",
+                        toolbar: "#grant-toolbar",
+                        autoSort: false,
+                        defaultToolbar: ["filter", "print"],
+                        done: function(res) { if (res.code) layui.popup.failure(res.msg); }
+                    });
+                }
+
+                function renderConsumeTable() {
+                    consumeRendered = true;
+                    table.render({
+                        elem: "#consume-table",
+                        id: "consume-table",
+                        url: CONSUME_API,
+                        page: {limit: 20, limits: [20, 50, 100]},
+                        cols: [[
+                            {title: "ID", field: "id", sort: true, width: 90},
+                            {title: "<?=admin_t('admin.quota_logs.consume_time')?>", field: "created_at", sort: true, minWidth: 170},
+                            {title: "<?=admin_t('admin.quota_logs.user_id')?>", field: "user_id", width: 100},
+                            {title: "<?=admin_t('admin.quota_logs.user_account')?>", minWidth: 180, templet: function(d) {
+                                if (!d.user_exists) return '<span class="entity-missing"><?=admin_t('admin.quota_logs.user_deleted')?> #' + escaped(d.user_id) + '</span>';
+                                return escaped(d.user_account) + (d.user_nickname ? " / " + escaped(d.user_nickname) : "");
+                            }},
+                            {title: "<?=admin_t('admin.quota_logs.game_account_id')?>", field: "game_account_id", width: 120},
+                            {title: "<?=admin_t('admin.quota_logs.game_account')?>", minWidth: 210, templet: function(d) {
+                                if (!d.game_account_exists) return '<span class="entity-missing"><?=admin_t('admin.quota_logs.game_account_deleted')?> #' + escaped(d.game_account_id) + '</span>';
+                                return escaped(d.game_username) + (d.game_display_name ? " / " + escaped(d.game_display_name) : "");
+                            }},
+                            {title: "<?=admin_t('admin.quota_logs.server_name')?>", field: "server_name", minWidth: 130},
+                            {title: "<?=admin_t('admin.quota_logs.consumed_points')?>", field: "consumed_points", width: 120, templet: function(d) { return d.amount_invalid ? '<span class="record-invalid"><?=admin_t('admin.quota_logs.invalid_amount')?></span>' : escaped(d.consumed_points); }},
+                            {title: "<?=admin_t('admin.quota_logs.balance_after')?>", field: "balance_after", width: 130},
+                            {title: "<?=admin_t('admin.quota_logs.description')?>", field: "description", minWidth: 260}
+                        ]],
+                        skin: "line",
+                        size: "lg",
+                        toolbar: "#consume-toolbar",
+                        autoSort: false,
+                        defaultToolbar: ["filter", "print"],
+                        done: function(res) { if (res.code) layui.popup.failure(res.msg); }
+                    });
+                }
+
+                renderGrantTable();
+
+                element.on("tab(quota-log-tabs)", function(data) {
+                    if (data.index === 1 && !consumeRendered) renderConsumeTable();
+                });
+
+                form.on("submit(grant-query)", function(data) { grantWhere = data.field; table.reload("grant-table", {page: {curr: 1}, where: grantWhere}); return false; });
+                form.on("submit(grant-reset)", function() { grantWhere = {}; table.reload("grant-table", {page: {curr: 1}, where: grantWhere}); });
+                form.on("submit(consume-query)", function(data) { consumeWhere = data.field; if (!consumeRendered) renderConsumeTable(); table.reload("consume-table", {page: {curr: 1}, where: consumeWhere}); return false; });
+                form.on("submit(consume-reset)", function() { consumeWhere = {}; if (!consumeRendered) renderConsumeTable(); table.reload("consume-table", {page: {curr: 1}, where: consumeWhere}); });
+
+                table.on("toolbar(grant-table)", function(obj) { if (obj.event === "refresh") table.reloadData("grant-table", {scrollPos: "fixed"}); });
+                table.on("toolbar(consume-table)", function(obj) { if (obj.event === "refresh") table.reloadData("consume-table", {scrollPos: "fixed"}); });
+                table.on("sort(grant-table)", function(obj) { table.reload("grant-table", {initSort: obj, where: Object.assign({}, grantWhere, {field: obj.field, order: obj.type})}); });
+                table.on("sort(consume-table)", function(obj) { table.reload("consume-table", {initSort: obj, where: Object.assign({}, consumeWhere, {field: obj.field, order: obj.type})}); });
+            });
+        </script>
+    </body>
+</html>

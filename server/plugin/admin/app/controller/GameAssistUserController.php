@@ -4,6 +4,7 @@ namespace plugin\admin\app\controller;
 
 use app\support\I18n;
 use plugin\admin\app\model\GameAssistUser;
+use plugin\admin\app\service\GameAssistQuotaLogAdminService;
 use plugin\admin\app\service\GameAssistUserAdminService;
 use RuntimeException;
 use support\exception\BusinessException;
@@ -16,10 +17,13 @@ class GameAssistUserController extends Crud
 
     private GameAssistUserAdminService $service;
 
+    private GameAssistQuotaLogAdminService $quotaLogService;
+
     public function __construct()
     {
         $this->model = new GameAssistUser();
         $this->service = new GameAssistUserAdminService(I18n::localeFromRequest());
+        $this->quotaLogService = new GameAssistQuotaLogAdminService(I18n::localeFromRequest());
     }
 
     public function index(): Response
@@ -79,6 +83,30 @@ class GameAssistUserController extends Crud
         return $this->json(0, 'ok', $result);
     }
 
+    /**
+     * 配额日志
+     */
+    public function quotaLogs(): Response
+    {
+        return raw_view('game-assist-user/quota-logs');
+    }
+
+    /**
+     * 管理员添加记录
+     */
+    public function quotaGrantRecords(Request $request): Response
+    {
+        return $this->quotaLogResponse(fn (): array => $this->quotaLogService->grantRecords($request->get()));
+    }
+
+    /**
+     * 用户使用记录
+     */
+    public function quotaConsumeRecords(Request $request): Response
+    {
+        return $this->quotaLogResponse(fn (): array => $this->quotaLogService->consumeRecords($request->get()));
+    }
+
     protected function selectInput(Request $request): array
     {
         [$where, $format, $limit, $field, $order] = parent::selectInput($request);
@@ -126,5 +154,21 @@ class GameAssistUserController extends Crud
             throw new BusinessException(I18n::t('admin.gameassist.quota_positive', [], I18n::localeFromRequest()), 2);
         }
         return $points;
+    }
+
+    private function quotaLogResponse(callable $callback): Response
+    {
+        try {
+            $result = $callback();
+        } catch (RuntimeException $exception) {
+            throw new BusinessException($exception->getMessage(), 2);
+        }
+
+        return json([
+            'code' => 0,
+            'msg' => 'ok',
+            'count' => (int)$result['count'],
+            'data' => $result['data'],
+        ]);
     }
 }
