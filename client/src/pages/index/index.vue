@@ -27,7 +27,7 @@
           </view>
           <view v-if="activeMenuId === item.id" class="menu-pop">
             <view class="menu-item" @click.stop="addQuota(item)">＋ {{ t('client.home.add_quota') }}</view>
-            <view class="menu-item" @click.stop="openPasswordDialog(item)">🔒 {{ t('client.home.update_game_password') }}</view>
+            <view class="menu-item" @click.stop="openPasswordDialog(item)">🔒 {{ credentialActionText(item) }}</view>
             <view class="menu-item danger" @click.stop="deleteAccount(item)">⌫ {{ t('client.home.delete_role') }}</view>
           </view>
         </view>
@@ -53,19 +53,25 @@
         </view>
       </view>
 
-      <view class="add-card" @click="goAddGame">
+      <view :class="['add-card', canAddAccount ? '' : 'disabled']" @click="goAddGame">
         <text class="plus">+</text>
-        <text>{{ t('client.home.add_game') }}</text>
+        <text>{{ accountAddText }}</text>
       </view>
     </view>
 
     <view v-if="passwordDialog.visible" class="modal-mask">
       <view class="small-dialog">
         <view class="dialog-head">
-          <text class="dialog-title">{{ t('client.home.update_game_password') }}</text>
+          <text class="dialog-title">{{ credentialActionText(passwordDialog.account) }}</text>
           <text class="close" @click="closePasswordDialog">×</text>
         </view>
-        <input v-model="passwordDialog.password" class="dialog-input" password :placeholder="t('client.home.password_placeholder')" />
+        <input
+          v-model="passwordDialog.password"
+          class="dialog-input"
+          password
+          :maxlength="isSocialLogin(passwordDialog.account) ? -1 : 140"
+          :placeholder="credentialPlaceholder(passwordDialog.account)"
+        />
         <view class="dialog-actions">
           <button class="dialog-secondary" @click="closePasswordDialog">{{ t('admin.common.cancel') }}</button>
           <button class="dialog-primary" @click="submitPassword">{{ t('admin.common.submit') }}</button>
@@ -207,12 +213,12 @@
             <text>{{ t('client.recharge.select_package') }}</text>
           </view>
           <view class="recharge-step-line"></view>
-          <view class="recharge-step">
+          <view :class="['recharge-step', recharge.order ? 'active' : '']">
             <text class="recharge-step-icon">◉</text>
             <text>{{ t('client.recharge.scan') }}</text>
           </view>
           <view class="recharge-step-line"></view>
-          <view class="recharge-step muted">
+          <view :class="['recharge-step', recharge.status === 'success' ? 'active' : 'muted']">
             <text class="recharge-step-icon">✓</text>
             <text>{{ t('client.recharge.pay_done') }}</text>
           </view>
@@ -228,12 +234,26 @@
 
         <view class="recharge-pay-method">
           <text>{{ t('client.recharge.pay_method') }}</text>
-          <text class="recharge-pending">{{ t('client.recharge.pending') }}</text>
+          <text class="recharge-pending">{{ recharge.channel || t('client.recharge.channel_configured') }}</text>
+        </view>
+
+        <view v-if="!recharge.order" class="recharge-payer-form">
+          <text class="recharge-section-title">{{ t('client.recharge.payer_info') }}</text>
+          <input v-model="recharge.customerName" class="recharge-input" :placeholder="t('client.recharge.customer_name')" maxlength="128" />
+          <input v-model="recharge.customerMobile" class="recharge-input" :placeholder="t('client.recharge.customer_mobile')" maxlength="64" />
+          <input v-model="recharge.bankAccount" class="recharge-input" :placeholder="t('client.recharge.bank_account')" maxlength="-1" />
+        </view>
+
+        <view v-else class="recharge-order-status">
+          <text>{{ t('client.recharge.merchant_order') }}：{{ recharge.order.merchant_order }}</text>
+          <text>{{ t('client.recharge.order_status') }}：{{ rechargeStatusText }}</text>
+          <text v-if="recharge.order.last_error" class="recharge-error">{{ recharge.order.last_error }}</text>
+          <button v-if="recharge.pollStopped && recharge.status !== 'success'" class="recharge-refresh" @click="refreshRechargeOrder">{{ t('client.recharge.manual_refresh') }}</button>
         </view>
 
         <view class="recharge-actions">
           <button class="recharge-cancel" @click="closeRecharge">{{ t('client.recharge.cancel') }}</button>
-          <button class="recharge-pay-button" @click="openPaymentWindow">{{ t('client.recharge.pay', { amount: RECHARGE_PRICE }) }}</button>
+          <button v-if="!recharge.order" class="recharge-pay-button" :disabled="recharge.submitting" @click="openPaymentWindow">{{ recharge.submitting ? t('client.recharge.creating') : t('client.recharge.pay', { amount: RECHARGE_PRICE }) }}</button>
         </view>
       </view>
     </view>
@@ -262,15 +282,18 @@
 </template>
 
 <script setup>
-import { computed, nextTick, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { onHide, onShow, onUnload } from '@dcloudio/uni-app';
 import { useI18n } from 'vue-i18n';
 import { API_BASE_URL, consumeLoginAnnouncementPending, getToken, request, requireLogin } from '../../utils/api';
+import { translateGameLogLine } from '../../utils/gameLogI18n';
 import { getLocale, switchLocale } from '../../utils/i18n';
 
 const { t } = useI18n();
 const user = ref({});
 const gameAccounts = ref([]);
+const accountLimit = ref(3);
+const canAddAccount = ref(true);
 const rechargeVisible = ref(false);
 const currentLocale = ref(getLocale());
 const activeMenuId = ref(null);
@@ -278,9 +301,38 @@ const actionLoading = ref(false);
 const logsTailId = 'log-tail';
 const BASE_QUOTA_COST = 10;
 const BASE_QUOTA_DAYS = 11;
-const RECHARGE_PRICE = '149000';
+const RECHARGE_PRICE = '149000.00 VND';
 let logTimer = null;
 let logSocket = null;
+let rechargeTimer = null;
+
+const accountAddText = computed(() => canAddAccount.value
+  ? t('client.home.add_game_with_limit', { count: gameAccounts.value.length, limit: accountLimit.value })
+  : t('client.home.account_limit_reached', { count: gameAccounts.value.length, limit: accountLimit.value }));
+
+const recharge = reactive({
+  customerName: '',
+  customerMobile: '',
+  bankAccount: '',
+  idempotencyKey: '',
+  submitting: false,
+  order: null,
+  status: '',
+  channel: '',
+  pollStartedAt: 0,
+  pollStopped: false,
+});
+
+watch(() => recharge.customerMobile, (value, previousValue) => {
+  const previousMobile = String(previousValue || '').trim();
+  if (!recharge.bankAccount.trim() || recharge.bankAccount === previousMobile) {
+    recharge.bankAccount = String(value || '').trim();
+  }
+});
+
+const rechargeStatusText = computed(() => recharge.status
+  ? t(`client.recharge.status_${recharge.status}`)
+  : t('client.recharge.status_creating'));
 
 const announcement = reactive({
   visible: false,
@@ -340,7 +392,10 @@ onShow(() => {
 });
 
 onHide(closeLogSocket);
-onUnload(closeLogSocket);
+onUnload(() => {
+  closeLogSocket();
+  stopRechargePolling();
+});
 
 async function loadHome() {
   try {
@@ -348,6 +403,8 @@ async function loadHome() {
     user.value = me.user;
     const accounts = await request({ url: '/api/game-accounts' });
     gameAccounts.value = accounts.items || [];
+    accountLimit.value = Number(accounts.account_limit || 3);
+    canAddAccount.value = Boolean(accounts.can_add_account);
     await maybeShowLoginAnnouncement();
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
@@ -543,14 +600,16 @@ function closePasswordDialog() {
 
 async function submitPassword() {
   if (!passwordDialog.password) {
-    uni.showToast({ title: t('client.add.require_game_credentials'), icon: 'none' });
+    uni.showToast({ title: t(isSocialLogin(passwordDialog.account) ? 'api.game.require_token' : 'client.add.require_game_credentials'), icon: 'none' });
     return;
   }
   try {
     await request({
-      url: `/api/game-accounts/${passwordDialog.account.id}/password`,
+      url: `/api/game-accounts/${passwordDialog.account.id}/credential`,
       method: 'POST',
-      data: { game_password: passwordDialog.password },
+      data: isSocialLogin(passwordDialog.account)
+        ? { token: passwordDialog.password }
+        : { game_password: passwordDialog.password },
     });
     closePasswordDialog();
     await loadHome();
@@ -687,6 +746,18 @@ function toggleLogMode() {
   logs.category = t('client.logs.all');
 }
 
+function isSocialLogin(account) {
+  return [2, 3].includes(Number(account?.login_method));
+}
+
+function credentialActionText(account) {
+  return t(isSocialLogin(account) ? 'client.home.update_token' : 'client.home.update_game_password');
+}
+
+function credentialPlaceholder(account) {
+  return t(isSocialLogin(account) ? 'client.home.token_placeholder' : 'client.home.password_placeholder');
+}
+
 function onLogCategoryChange(event) {
   const index = Number(event.detail.value);
   const category = logCategories.value[index];
@@ -722,7 +793,7 @@ const normalLogItems = computed(() => logs.lines.map((line) => {
     }
   }
   return {
-    raw: String(line),
+    raw: translateGameLogLine(line, t),
     module: event?.module || moduleMatch?.[1] || t('client.logs.all'),
     event,
   };
@@ -770,6 +841,10 @@ const filteredEvents = computed(() => filteredLogItems.value
 const visibleLogCount = computed(() => (logs.mode === 'event' ? filteredEvents.value.length : filteredLogLines.value.length));
 
 function goAddGame() {
+  if (!canAddAccount.value) {
+    uni.showToast({ title: accountAddText.value, icon: 'none' });
+    return;
+  }
   uni.navigateTo({ url: '/pages/game/add' });
 }
 
@@ -785,20 +860,121 @@ function goPointRecharge() {
   if (quotaDialog.visible) {
     closeQuotaDialog();
   }
+  resetRecharge();
   rechargeVisible.value = true;
 }
 
 function closeRecharge() {
+  stopRechargePolling();
   rechargeVisible.value = false;
 }
 
-function openPaymentWindow() {
+async function openPaymentWindow() {
+  if (!recharge.customerName.trim() || !recharge.customerMobile.trim() || !recharge.bankAccount.trim()) {
+    uni.showToast({ title: t('client.recharge.payer_required'), icon: 'none' });
+    return;
+  }
+  let paymentWindow = null;
   // #ifdef H5
-  window.open(`${window.location.origin}/static/temp-payment-apply.html#/`, '_blank', 'noopener,noreferrer');
+  paymentWindow = window.open('about:blank', '_blank');
+  if (!paymentWindow) {
+    uni.showToast({ title: t('client.recharge.popup_blocked'), icon: 'none' });
+    return;
+  }
+  paymentWindow.opener = null;
   // #endif
   // #ifndef H5
   uni.showToast({ title: t('client.recharge.h5_only'), icon: 'none' });
+  return;
   // #endif
+  recharge.submitting = true;
+  recharge.idempotencyKey ||= createIdempotencyKey();
+  try {
+    const result = await request({
+      url: '/api/recharge/orders',
+      method: 'POST',
+      data: {
+        package_code: 'quota_30',
+        customer_name: recharge.customerName.trim(),
+        customer_mobile: recharge.customerMobile.trim(),
+        bank_account: recharge.bankAccount.trim(),
+        idempotency_key: recharge.idempotencyKey,
+      },
+    });
+    applyRechargeOrder(result.order);
+    if (!result.order?.pay_url) {
+      paymentWindow.close();
+      uni.showToast({ title: result.order?.last_error || t('client.recharge.pay_url_missing'), icon: 'none' });
+      startRechargePolling();
+      return;
+    }
+    paymentWindow.location.href = result.order.pay_url;
+    startRechargePolling();
+  } catch (error) {
+    paymentWindow.close();
+    uni.showToast({ title: error.message, icon: 'none' });
+  } finally {
+    recharge.submitting = false;
+  }
+}
+
+function createIdempotencyKey() {
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return `web_${Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function resetRecharge() {
+  stopRechargePolling();
+  recharge.customerName = '';
+  recharge.customerMobile = '';
+  recharge.bankAccount = '';
+  recharge.idempotencyKey = '';
+  recharge.submitting = false;
+  recharge.order = null;
+  recharge.status = '';
+  recharge.channel = '';
+  recharge.pollStartedAt = 0;
+  recharge.pollStopped = false;
+}
+
+function applyRechargeOrder(order) {
+  if (!order) return;
+  recharge.order = order;
+  recharge.status = order.status || '';
+  recharge.channel = t('client.recharge.channel_configured');
+}
+
+function startRechargePolling() {
+  stopRechargePolling();
+  recharge.pollStartedAt = Date.now();
+  recharge.pollStopped = false;
+  rechargeTimer = setInterval(refreshRechargeOrder, 3000);
+}
+
+function stopRechargePolling() {
+  if (rechargeTimer) clearInterval(rechargeTimer);
+  rechargeTimer = null;
+}
+
+async function refreshRechargeOrder() {
+  if (!recharge.order?.merchant_order || recharge.status === 'success') return;
+  if (recharge.pollStartedAt && Date.now() - recharge.pollStartedAt >= 5 * 60 * 1000) {
+    stopRechargePolling();
+    recharge.pollStopped = true;
+    return;
+  }
+  try {
+    const result = await request({ url: `/api/recharge/orders/${encodeURIComponent(recharge.order.merchant_order)}` });
+    applyRechargeOrder(result.order);
+    if (recharge.status === 'success') {
+      stopRechargePolling();
+      await loadHome();
+      uni.showToast({ title: t('client.recharge.success'), icon: 'success' });
+    }
+  } catch (error) {
+    uni.showToast({ title: error.message, icon: 'none' });
+  }
 }
 </script>
 
@@ -1033,6 +1209,13 @@ function openPaymentWindow() {
   font-size: 26rpx;
 }
 
+.add-card.disabled {
+  cursor: not-allowed;
+  border-color: #d0d5dd;
+  background: rgba(242, 244, 247, 0.8);
+  color: #98a2b3;
+}
+
 .plus {
   font-size: 60rpx;
   line-height: 1;
@@ -1252,6 +1435,46 @@ function openPaymentWindow() {
   border-bottom: 1px solid #edf2f7;
   color: #344054;
   font-size: 24rpx;
+}
+
+.recharge-payer-form,
+.recharge-order-status {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 24rpx;
+}
+
+.recharge-input {
+  width: 100%;
+  height: 72rpx;
+  padding: 0 20rpx;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  box-sizing: border-box;
+  font-size: 24rpx;
+}
+
+.recharge-order-status {
+  padding: 18rpx;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475467;
+  font-size: 22rpx;
+  overflow-wrap: anywhere;
+}
+
+.recharge-error { color: #d92d20; }
+
+.recharge-refresh {
+  width: 100%;
+  height: 58rpx;
+  line-height: 58rpx;
+  margin: 0;
+  background: #eef7ff;
+  color: #1677ff;
+  font-size: 22rpx;
 }
 
 .recharge-pending {

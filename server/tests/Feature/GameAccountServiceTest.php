@@ -9,10 +9,42 @@ use PHPUnit\Framework\TestCase;
 use tests\Support\ArrayGameAccountRepository;
 use tests\Support\ArrayGameAccountTaskStatePendingStore;
 use tests\Support\ArrayGameAccountRuntimeResourceStore;
+use tests\Support\ArrayGameAccountLoginValidationStore;
 use tests\Support\ArrayThirdPartyScriptRuntime;
 
 class GameAccountServiceTest extends TestCase
 {
+    public function testCreateEndpointDelegatesToLoginValidationWithoutPersistingAccount(): void
+    {
+        $repository = new ArrayGameAccountRepository([]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $service = new GameAccountService(
+            $repository,
+            [
+                'enabled' => true,
+                'transport' => 'websocket',
+                'script_token' => 'script-token',
+                'credential_key' => 'test-key',
+            ],
+            'zh_CN',
+            $runtime,
+            null,
+            null,
+            null,
+            new ArrayGameAccountLoginValidationStore()
+        );
+
+        $result = $service->createFromLogin(7, [
+            'login_method' => 1,
+            'game_username' => 'player',
+            'game_password' => 'password',
+        ]);
+
+        $this->assertSame('verifying', $result['data']['status']);
+        $this->assertCount(0, $repository->listByUserId(7));
+        $this->assertCount(1, $runtime->validations);
+    }
+
     public function testEmptyGameAccountListIsReturnedAsRealEmptyState(): void
     {
         $service = new GameAccountService(new ArrayGameAccountRepository([]));
@@ -22,6 +54,9 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame(0, $result['code']);
         $this->assertSame([], $result['data']['items']);
         $this->assertSame('未添加游戏账号', $result['data']['empty_text']);
+        $this->assertSame(0, $result['data']['account_count']);
+        $this->assertSame(3, $result['data']['account_limit']);
+        $this->assertTrue($result['data']['can_add_account']);
     }
 
     public function testGameAccountListMarksAccountsWithSavedConfig(): void
@@ -104,30 +139,115 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame(0, $resources['speedCard']);
     }
 
-    public function testCreateGameAccountCreatesLocalPreviewWhenThirdPartyApiIsDisabled(): void
+    public function testDisabledSocialLoginOnlyRejectsNewAccount(): void
+    {
+        $service = new GameAccountService(new ArrayGameAccountRepository([]), [
+            'enabled' => false,
+            'credential_key' => 'test-key',
+            'facebook_login_enabled' => false,
+            'google_login_enabled' => true,
+        ]);
+
+        $this->assertSame([1, 3], $service->listForUser(7)['data']['supported_login_methods']);
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('该登录方式当前已关闭，暂不能新增账号');
+        $service->createFromLogin(7, [
+            'login_method' => 2,
+            'game_uid' => 'uid-facebook',
+            'token' => 'token-facebook',
+        ]);
+    }
+
+    public function testSocialTokenCanBeUpdatedWhileCreationSwitchIsDisabled(): void
+    {
+        $repository = new ArrayGameAccountRepository([[
+            'id' => 3,
+            'user_id' => 7,
+            'display_name' => 'uid-facebook',
+            'login_method' => 2,
+            'game_uid' => 'uid-facebook',
+            'game_username' => '',
+            'game_password_cipher' => null,
+            'game_token_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('old-token'),
+            'channel_code' => 'official_app',
+            'status' => 'stopped',
+            'sync_status' => 'local_unsynced',
+            'config_json' => '{}',
+        ]]);
+        $service = new GameAccountService($repository, [
+            'enabled' => false,
+            'credential_key' => 'test-key',
+            'facebook_login_enabled' => false,
+        ]);
+
+        $result = $service->updateCredential(7, 3, ['token' => 'new-token']);
+
+        $this->assertSame(0, $result['code']);
+        $stored = $repository->findById(3);
+        $this->assertSame('new-token', (new \app\service\CredentialCipher('test-key'))->decrypt($stored['game_token_cipher']));
+        $this->assertArrayNotHasKey('game_token_cipher', $result['data']['account']);
+    }
+
+    public function testCreateSocialAccountRequiresUidAndToken(): void
     {
         $service = new GameAccountService(new ArrayGameAccountRepository([]), [
             'enabled' => false,
             'credential_key' => 'test-key',
         ]);
 
-        $result = $service->createFromLogin(7, [
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('请输入游戏UID和Token');
+        $service->createFromLogin(7, [
+            'login_method' => 2,
+            'game_uid' => 'uid-facebook',
+            'token' => '',
+        ]);
+    }
+
+    public function testLegacyPasswordEndpointRejectsSocialAccount(): void
+    {
+        $repository = new ArrayGameAccountRepository([[
+            'id' => 3,
+            'user_id' => 7,
+            'display_name' => 'uid-google',
+            'login_method' => 3,
+            'game_uid' => 'uid-google',
+            'game_username' => '',
+            'game_password_cipher' => null,
+            'game_token_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('google-token'),
             'channel_code' => 'official_app',
-            'game_username' => 'any-player',
-            'game_password' => 'anything',
+            'status' => 'stopped',
+            'sync_status' => 'local_unsynced',
+            'config_json' => '{}',
+        ]]);
+        $service = new GameAccountService($repository, [
+            'enabled' => false,
+            'credential_key' => 'test-key',
         ]);
 
-        $this->assertSame(0, $result['code']);
-        $this->assertSame('local_preview', $result['data']['account']['status']);
-        $this->assertSame('local_unsynced', $result['data']['account']['sync_status']);
-        $this->assertSame('any-player', $result['data']['account']['display_name']);
-        $this->assertSame('本地预览账号已添加，服务器同步未启用', $result['msg']);
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('该账号不是账号密码登录，请更新Token');
+        $service->updatePassword(7, 3, 'new-password');
+    }
+
+    public function testCreateRejectsInvalidLoginMethod(): void
+    {
+        $service = new GameAccountService(new ArrayGameAccountRepository([]), [
+            'enabled' => false,
+            'credential_key' => 'test-key',
+        ]);
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('游戏账号登录方式无效');
+        $service->createFromLogin(7, ['login_method' => 9, 'game_uid' => 'uid', 'token' => 'token']);
     }
 
     public function testCreateGameAccountRequiresCredentialKey(): void
     {
         $service = new GameAccountService(new ArrayGameAccountRepository([]), [
-            'enabled' => false,
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
             'credential_key' => '',
         ]);
 
@@ -498,6 +618,42 @@ class GameAccountServiceTest extends TestCase
         $this->assertFalse($runtime->started[0]['task_state']['exists']);
         $this->assertSame(1, (int)$repository->findById(3)['desired_running']);
         $this->assertSame('启动任务已提交，等待服务器确认', $result['msg']);
+    }
+
+    public function testExistingFacebookAccountStartsWithDecryptedTokenWhenCreationIsDisabled(): void
+    {
+        $repository = new ArrayGameAccountRepository([[
+            'id' => 3,
+            'user_id' => 7,
+            'display_name' => 'uid-facebook',
+            'login_method' => 2,
+            'game_uid' => 'uid-facebook',
+            'game_username' => '',
+            'game_password_cipher' => null,
+            'game_token_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('facebook-token'),
+            'channel_code' => 'official_app',
+            'server_id' => '',
+            'server_name' => '',
+            'status' => 'stopped',
+            'sync_status' => 'local_unsynced',
+            'third_party_account_id' => '',
+            'remark' => '',
+            'config_json' => '{}',
+            'expire_time' => '2099-01-01 00:00:00',
+        ]]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+            'facebook_login_enabled' => false,
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime);
+
+        $service->start(7, 3);
+
+        $this->assertSame(2, $runtime->started[0]['login_method']);
+        $this->assertSame('facebook-token', $runtime->started[0]['credential']);
     }
 
     public function testStartSendsLatestTaskStateSnapshot(): void

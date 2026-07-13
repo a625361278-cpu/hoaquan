@@ -17,6 +17,7 @@ class ArrayThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
             'account_id' => 0,
             'session_id' => '',
             'request_id' => '',
+            'validation_id' => '',
             'connected_at' => 1783123200,
             'last_seen' => 1783123200,
         ] + $metadata;
@@ -72,6 +73,40 @@ class ArrayThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
         return $state;
     }
 
+    public function allocateIdleForValidation(string $validationId, string $sessionId, string $requestId): ?array
+    {
+        foreach ($this->connections as $clientId => $state) {
+            if (($state['state'] ?? '') !== 'idle') {
+                continue;
+            }
+            $state['state'] = 'validating';
+            $state['validation_id'] = $validationId;
+            $state['session_id'] = $sessionId;
+            $state['request_id'] = $requestId;
+            $this->connections[$clientId] = $state;
+            return $state;
+        }
+        return null;
+    }
+
+    public function restoreValidationToIdle(string $clientId, string $validationId, string $sessionId, string $requestId): ?array
+    {
+        $state = $this->connections[$clientId] ?? null;
+        if (!$state
+            || ($state['state'] ?? '') !== 'validating'
+            || ($state['validation_id'] ?? '') !== $validationId
+            || ($state['session_id'] ?? '') !== $sessionId
+            || ($state['request_id'] ?? '') !== $requestId) {
+            return null;
+        }
+        $state['state'] = 'idle';
+        $state['validation_id'] = '';
+        $state['session_id'] = '';
+        $state['request_id'] = '';
+        $this->connections[$clientId] = $state;
+        return $state;
+    }
+
     public function releaseClient(string $clientId): ?array
     {
         $state = $this->connections[$clientId] ?? null;
@@ -95,6 +130,7 @@ class ArrayThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
             'idle_count' => count(array_filter($rows, static fn (array $row): bool => ($row['state'] ?? '') === 'idle')),
             'bound_count' => count(array_filter($rows, static fn (array $row): bool => ($row['state'] ?? '') === 'bound')),
             'stopping_count' => count(array_filter($rows, static fn (array $row): bool => ($row['state'] ?? '') === 'stopping')),
+            'validating_count' => count(array_filter($rows, static fn (array $row): bool => ($row['state'] ?? '') === 'validating')),
         ];
     }
 }

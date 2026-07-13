@@ -8,10 +8,25 @@
     "type",
     "request_id",
     "session_id",
-    "game_username",
-    "game_password",
+    "login_method",
     "task_state",
     "config"
+  ],
+  "allOf": [
+    {
+      "if": { "properties": { "login_method": { "const": 1 } } },
+      "then": {
+        "required": ["game_username", "game_password"],
+        "not": { "anyOf": [{ "required": ["game_uid"] }, { "required": ["token"] }] }
+      }
+    },
+    {
+      "if": { "properties": { "login_method": { "enum": [2, 3] } } },
+      "then": {
+        "required": ["game_uid", "token"],
+        "not": { "anyOf": [{ "required": ["game_username"] }, { "required": ["game_password"] }] }
+      }
+    }
   ],
   "properties": {
     "type": {
@@ -29,6 +44,11 @@
       "minLength": 1,
       "description": "本次运行日志会话 ID"
     },
+    "login_method": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "description": "登录方式：1账号密码，2Facebook，3Google"
+    },
     "game_username": {
       "type": "string",
       "minLength": 1,
@@ -38,6 +58,17 @@
       "type": "string",
       "minLength": 1,
       "description": "后端解密后的游戏密码，仅用于启动通信"
+    },
+    "game_uid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Facebook或Google登录使用的游戏UID"
+    },
+    "token": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Facebook或Google登录使用的Token，仅在启动通信中传递"
     },
     "task_state": {
       "type": "object",

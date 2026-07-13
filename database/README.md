@@ -19,11 +19,17 @@
 
 `ga_game_accounts` 默认不插入任何游戏账号，用户端会显示真实空状态。
 
+`ga_game_accounts.login_method` 定义登录方式：历史账号和默认值 `1` 为账号密码，`2` 为 Facebook，`3` 为 Google。社交账号使用 `game_uid` 和 `game_token_cipher`，Token 通过与游戏密码相同的凭证密钥加密；公开接口和日志不得返回 Token 明文或密文。后台开关只控制新增，不修改已有账号。
+
 `ga_announcements` 默认不插入任何公告。用户端登录公告必须由后台“公告管理”录入并启用，系统不会生成默认公告来伪装运营内容。
 
 邀请功能使用 `ga_users.invite_code`、`ga_users.invited_by_user_id`、`ga_users.bound_role_id`、`ga_users.invite_rewarded_at` 和 `ga_user_point_transactions`。注册时只记录邀请关系；被邀请用户添加游戏账号并启动成功，第三方返回 `started` 后，系统用 `role_id` 自动绑定角色并给邀请人增加 1 点、写入点数流水；第三方未返回 `role_id` 时使用用户填写的 `game_username`。
 
 配额功能使用同一个 `ga_users.balance` 余额池。邀请奖励和后台赠送都会增加余额；用户把配额分配到游戏账号时会立即扣除余额并更新 `ga_game_accounts.expire_time`，账号不启动也按自然时间消耗，删除游戏账号不退回余额。
+
+RonnyPay 充值订单保存在 `ga_payment_orders`。`bank_account` 使用 `LONGTEXT` 保存用户提交的 MoMo 付款账号快照，应用层只去除首尾空格并校验非空，不进行长度或字符类型限制，也不会转换为数值，因此前导零会被保留。为兼容升级前的历史订单，同步脚本新增该字段时允许旧行为空；修改上线后创建的新订单必须写入该字段。
+
+新用户注册赠送由 `ga_system_settings.registration_reward_points` 控制，默认 1 点，0 表示关闭。用户创建、初始余额和 `ga_user_point_transactions(type=registration_reward)` 流水在同一事务中提交，只影响后续新注册用户，不补发历史账号；它与角色绑定后给邀请人的邀请奖励是两笔独立业务。
 
 账号延期规则固定为基础套餐 `10` 点兑换 `11` 天，额外配额 `N` 点增加 `N` 天；延期起点为 `max(当前时间, 当前账号 expire_time)`。扣点写入 `ga_user_point_transactions(type=quota_consume)`，后台赠送写入 `ga_user_point_transactions(type=admin_grant)`。
 

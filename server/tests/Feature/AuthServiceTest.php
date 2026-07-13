@@ -48,6 +48,7 @@ class AuthServiceTest extends TestCase
         $this->assertSame('new_player', $result['data']['user']['account']);
         $this->assertSame('new@example.com', $result['data']['user']['email']);
         $this->assertSame('new_player', $result['data']['user']['nickname']);
+        $this->assertSame('1.00', $result['data']['user']['balance']);
         $this->assertArrayNotHasKey('password_hash', $result['data']['user']);
     }
 
@@ -62,11 +63,54 @@ class AuthServiceTest extends TestCase
         $this->assertSame('注册成功', $result['msg']);
         $this->assertSame('new_player', $result['data']['user']['account']);
         $this->assertSame('', $result['data']['user']['email']);
+        $this->assertSame('1.00', $result['data']['user']['balance']);
+        $this->assertCount(1, $users->pointTransactions);
+        $this->assertSame('registration_reward', $users->pointTransactions[0]['type']);
+        $this->assertSame('1.00', $users->pointTransactions[0]['amount']);
 
         $user = $users->findActiveByAccount('new_player');
         $this->assertSame('first_pet', $user['security_question_key']);
         $this->assertNotSame('Mimi', $user['security_answer_hash']);
         $this->assertTrue(password_verify('Mimi', $user['security_answer_hash']));
+    }
+
+    public function testRegisterUsesConfiguredRewardPoints(): void
+    {
+        $users = $this->makeUsers();
+        $service = $this->makeService(users: $users, registrationRewardPoints: 7);
+
+        $result = $service->register('rewarded_player', '', '', 'secret123', 'secret123', '', '10.2.3.4', 'first_pet', 'Mimi');
+
+        $this->assertSame('7.00', $result['data']['user']['balance']);
+        $this->assertCount(1, $users->pointTransactions);
+        $this->assertSame('7.00', $users->pointTransactions[0]['balance_after']);
+        $this->assertSame('10.2.3.4', $users->pointTransactions[0]['ip_address']);
+    }
+
+    public function testRegisterWithZeroRewardCreatesNoPointTransaction(): void
+    {
+        $users = $this->makeUsers();
+        $service = $this->makeService(users: $users, registrationRewardPoints: 0);
+
+        $result = $service->register('zero_reward', '', '', 'secret123', 'secret123', '', '', 'first_pet', 'Mimi');
+
+        $this->assertSame('0.00', $result['data']['user']['balance']);
+        $this->assertSame([], $users->pointTransactions);
+    }
+
+    public function testInvitedUserGetsRegistrationRewardWithoutImmediatelyRewardingInviter(): void
+    {
+        $users = $this->makeUsers();
+        $service = $this->makeService(users: $users);
+
+        $result = $service->register('invited_new', '', '', 'secret123', 'secret123', 'PLAYER01', '10.2.3.4', 'first_pet', 'Mimi');
+
+        $created = $users->findActiveByAccount('invited_new');
+        $this->assertSame(1, $created['invited_by_user_id']);
+        $this->assertSame('1.00', $result['data']['user']['balance']);
+        $this->assertCount(1, $users->pointTransactions);
+        $this->assertSame('registration_reward', $users->pointTransactions[0]['type']);
+        $this->assertSame('0.00', $users->findActiveByAccount('player001')['balance']);
     }
 
     public function testRegisterRejectsDuplicateAccount(): void
@@ -373,7 +417,7 @@ class AuthServiceTest extends TestCase
         $service->currentUser($token);
     }
 
-    private function makeService(?MemoryEmailCodeStore $emailCodes = null, ?MemoryMailer $mailer = null, ?ArrayUserRepository $users = null, string $verificationMode = 'security_question'): AuthService
+    private function makeService(?MemoryEmailCodeStore $emailCodes = null, ?MemoryMailer $mailer = null, ?ArrayUserRepository $users = null, string $verificationMode = 'security_question', int $registrationRewardPoints = 1): AuthService
     {
         return new AuthService(
             $users ?? $this->makeUsers(),
@@ -381,7 +425,8 @@ class AuthServiceTest extends TestCase
             $emailCodes ?? new MemoryEmailCodeStore(),
             $mailer ?? new MemoryMailer(),
             'zh_CN',
-            $verificationMode
+            $verificationMode,
+            $registrationRewardPoints
         );
     }
 
@@ -397,6 +442,7 @@ class AuthServiceTest extends TestCase
                 'avatar' => '',
                 'balance' => '0.00',
                 'expire_at' => null,
+                'invite_code' => 'PLAYER01',
                 'security_question_key' => 'first_pet',
                 'security_answer_hash' => password_hash('Mimi', PASSWORD_DEFAULT),
                 'status' => 1,

@@ -24,7 +24,7 @@ class I18nServiceTest extends TestCase
 
     public function testVietnameseTranslationCanBeResolvedByKey(): void
     {
-        $this->assertSame('Dang nhap', I18n::t('auth.login', [], 'vi'));
+        $this->assertSame('Đăng nhập', I18n::t('auth.login', [], 'vi'));
     }
 
     private function readMessages(string $path): array

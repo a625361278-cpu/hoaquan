@@ -7,6 +7,7 @@ use app\repository\UserRepositoryInterface;
 class ArrayUserRepository implements UserRepositoryInterface
 {
     private int $nextId = 100;
+    public array $pointTransactions = [];
 
     public function __construct(private array $users)
     {
@@ -94,8 +95,11 @@ class ArrayUserRepository implements UserRepositoryInterface
         string $inviteRegisteredIp = '',
         ?string $inviteCode = null,
         ?string $securityQuestionKey = null,
-        ?string $securityAnswerHash = null
+        ?string $securityAnswerHash = null,
+        int $registrationRewardPoints = 0,
+        string $registrationRewardDescription = ''
     ): array {
+        $balance = number_format($registrationRewardPoints, 2, '.', '');
         $user = [
             'id' => $this->nextId++,
             'account' => $account,
@@ -103,7 +107,7 @@ class ArrayUserRepository implements UserRepositoryInterface
             'nickname' => $nickname,
             'password_hash' => $passwordHash,
             'avatar' => '',
-            'balance' => '0.00',
+            'balance' => $balance,
             'expire_at' => null,
             'security_question_key' => $securityQuestionKey,
             'security_answer_hash' => $securityAnswerHash,
@@ -115,6 +119,16 @@ class ArrayUserRepository implements UserRepositoryInterface
             'status' => 1,
         ];
         $this->users[] = $user;
+        if ($registrationRewardPoints > 0) {
+            $this->pointTransactions[] = [
+                'user_id' => $user['id'],
+                'type' => 'registration_reward',
+                'amount' => $balance,
+                'balance_after' => $balance,
+                'description' => $registrationRewardDescription,
+                'ip_address' => $inviteRegisteredIp,
+            ];
+        }
         return $user;
     }
 

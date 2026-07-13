@@ -40,11 +40,16 @@ Route::group('/api', function () {
     Route::get('/me', [app\controller\AuthController::class, 'me']);
     Route::get('/profile', [app\controller\ProfileController::class, 'show']);
     Route::get('/announcements/latest', [app\controller\AnnouncementController::class, 'latest']);
+    Route::post('/recharge/orders', [app\controller\RechargeController::class, 'store']);
+    Route::get('/recharge/orders/{merchant_order}', [app\controller\RechargeController::class, 'show']);
+    Route::post('/recharge/ronnypay/notify', [app\controller\RechargeController::class, 'notify']);
     Route::get('/game-accounts', [app\controller\GameAccountController::class, 'index']);
     Route::post('/game-accounts', [app\controller\GameAccountController::class, 'store']);
+    Route::get('/game-account-validations/{validationId}', [app\controller\GameAccountController::class, 'loginValidation']);
     Route::post('/game-accounts/{id}/start', [app\controller\GameAccountController::class, 'start']);
     Route::post('/game-accounts/{id}/stop', [app\controller\GameAccountController::class, 'stop']);
     Route::post('/game-accounts/{id}/password', [app\controller\GameAccountController::class, 'updatePassword']);
+    Route::post('/game-accounts/{id}/credential', [app\controller\GameAccountController::class, 'updateCredential']);
     Route::delete('/game-accounts/{id}', [app\controller\GameAccountController::class, 'delete']);
     Route::post('/game-accounts/{id}/quota', [app\controller\GameAccountController::class, 'quota']);
     Route::get('/game-accounts/{id}/logs', [app\controller\GameAccountController::class, 'logs']);

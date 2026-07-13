@@ -18,11 +18,13 @@ interface GameAccountRepositoryInterface
 
     public function listExpiredActiveAccounts(array $statuses, string $now, int $limit): array;
 
-    public function createLocalPreview(int $userId, array $data): array;
+    public function createLocalPreviewWithinLimit(int $userId, array $data, int $maxAccounts): ?array;
 
     public function saveLocalConfig(int $userId, int $accountId, array $config, string $syncStatus): array;
 
     public function updateCredentials(int $userId, int $accountId, string $encryptedPassword): array;
+
+    public function updateToken(int $userId, int $accountId, string $encryptedToken): array;
 
     public function updateRuntimeState(int $userId, int $accountId, array $data): array;
 

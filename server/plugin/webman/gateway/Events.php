@@ -5,9 +5,12 @@ namespace plugin\webman\gateway;
 use app\repository\DbGameAccountRepository;
 use app\repository\DbUserRepository;
 use app\service\GameAccountAutoRestartService;
+use app\service\GameAccountLoginMethod;
+use app\service\GameAccountLoginValidationService;
 use app\service\GameAccountResourceService;
 use app\service\GameAccountService;
 use app\service\GameAccountTaskStateService;
+use app\service\GameLogMessage;
 use app\service\GameLogQueue;
 use app\service\GatewayThirdPartyScriptRuntime;
 use app\service\ProfileService;
@@ -49,8 +52,11 @@ class Events
                 return;
             }
 
+            $peerIp = (string)($server['REMOTE_ADDR'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''));
             $metadata = [
-                'remote_ip' => (string)($server['REMOTE_ADDR'] ?? ($_SERVER['REMOTE_ADDR'] ?? '')),
+                'remote_ip' => self::forwardedClientIp($server, $peerIp),
+                'peer_ip' => $peerIp,
+                'peer_port' => (int)($server['REMOTE_PORT'] ?? ($_SERVER['REMOTE_PORT'] ?? 0)),
                 'script_version' => (string)($query['version'] ?? ''),
             ];
             $state = self::store()->registerIdle($clientId, $metadata);
@@ -65,6 +71,7 @@ class Events
                 'state' => $state['state'],
                 'server_time' => time(),
             ]));
+            Log::info('Third-party script websocket connected', self::connectionTrace($clientId, $state));
         } catch (Throwable $e) {
             Log::error('Third-party script websocket auth failed', ['client_id' => $clientId, 'error' => $e->getMessage()]);
             self::closeWithError($clientId, $e->getMessage());
@@ -82,9 +89,20 @@ class Events
             }
 
             $payloadObject = json_decode($messageString);
+            $jsonErrorCode = json_last_error();
+            $jsonErrorMessage = json_last_error_msg();
             $payload = json_decode($messageString, true);
             if (!$payloadObject instanceof \stdClass) {
-                self::closeWithError($clientId, 'invalid json');
+                $invalidMessageFile = self::quarantineInvalidMessage($clientId, $messageString);
+                Log::warning('Third-party script websocket invalid message', array_merge(
+                    self::connectionTrace($clientId, self::store()->connection($clientId) ?? []),
+                    self::invalidMessageDiagnostics($messageString, $jsonErrorCode, $jsonErrorMessage),
+                    ['invalid_message_file' => $invalidMessageFile]
+                ));
+                self::closeWithError(
+                    $clientId,
+                    $jsonErrorCode === JSON_ERROR_NONE ? 'json root must be object' : 'invalid json'
+                );
                 return;
             }
             if (!is_array($payload)) {
@@ -92,20 +110,37 @@ class Events
                 return;
             }
 
+            $type = (string)($payload['type'] ?? 'log');
             $state = self::store()->heartbeat($clientId, [
                 'script_version' => $payload['script_version'] ?? null,
+                'message_type' => $type,
+                'message_bytes' => $messageBytes,
             ]);
             if (!$state) {
                 self::closeWithError($clientId, 'connection state missing');
                 return;
             }
 
-            $type = (string)($payload['type'] ?? 'log');
             if ($type !== 'task_state_save' && $messageBytes > self::BASE_MESSAGE_BYTES) {
                 self::closeWithError($clientId, 'message too large');
                 return;
             }
             if (in_array($type, ['heartbeat', 'ping', 'pong'], true)) {
+                return;
+            }
+
+            if ((string)($state['state'] ?? '') === 'validating') {
+                if ($type !== 'login' || !self::validLoginValidationPayload($payload)) {
+                    self::loginValidations()->failProtocol(
+                        (string)($state['validation_id'] ?? ''),
+                        '第三方登录验证响应不符合协议'
+                    );
+                    self::closeWithError($clientId, 'invalid login validation response');
+                    return;
+                }
+                if (!self::loginValidations()->completeFromThirdParty($clientId, $payload, $state)) {
+                    self::closeWithError($clientId, 'login validation context mismatch');
+                }
                 return;
             }
 
@@ -135,7 +170,26 @@ class Events
     public static function onClose($clientId): void
     {
         $state = self::store()->releaseClient($clientId);
-        if (!$state || (int)($state['account_id'] ?? 0) <= 0) {
+        if (!$state) {
+            Log::warning('Third-party script websocket closed without connection state', [
+                'client_id' => $clientId,
+            ]);
+            return;
+        }
+
+        $trace = self::connectionTrace($clientId, $state);
+        if ((string)($state['state'] ?? '') === 'validating') {
+            self::loginValidations()->failProtocol(
+                (string)($state['validation_id'] ?? ''),
+                '第三方登录验证连接已断开'
+            );
+            Log::warning('Third-party login validation websocket closed', $trace);
+            return;
+        }
+        if ((int)($state['account_id'] ?? 0) > 0) {
+            Log::warning('Third-party script bound websocket closed', $trace);
+        } else {
+            Log::info('Third-party script idle websocket closed', $trace);
             return;
         }
 
@@ -151,7 +205,7 @@ class Events
         }
 
         if ((int)($account['desired_running'] ?? 0) === 1) {
-            self::autoRestarter()->scheduleReconnect($accountId, '运行连接断开', (string)($state['session_id'] ?? ''));
+            self::autoRestarter()->scheduleReconnect($accountId, 'client.logs.system.runtime_connection_closed_reconnecting', (string)($state['session_id'] ?? ''));
             return;
         }
 
@@ -160,7 +214,7 @@ class Events
             'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
         ]);
         self::resources()->clear($accountId);
-        self::appendLogLines($accountId, ['[ERROR] 运行连接断开'], (string)($state['session_id'] ?? ''));
+        self::appendLogLines($accountId, [GameLogMessage::localized('ERROR', 'client.logs.system.runtime_connection_closed')], (string)($state['session_id'] ?? ''));
     }
 
     private static function markStarted(int $accountId, array $payload, array $state): void
@@ -172,7 +226,7 @@ class Events
                 'account_id' => $accountId,
                 'client_id' => (string)($state['client_id'] ?? ''),
             ], self::startedContextTrace($payload, $state)));
-            self::appendLogLines($accountId, ['[WARN] 启动确认已失效，已忽略过期回包'], $sessionId);
+            self::appendLogLines($accountId, [GameLogMessage::localized('WARN', 'client.logs.system.start_confirmation_expired')], $sessionId);
             return;
         }
 
@@ -181,7 +235,7 @@ class Events
             return;
         }
         if (!self::canAcceptStarted($account)) {
-            self::appendLogLines($accountId, ['[WARN] 启动确认已失效，已忽略过期回包'], $sessionId);
+            self::appendLogLines($accountId, [GameLogMessage::localized('WARN', 'client.logs.system.start_confirmation_expired')], $sessionId);
             return;
         }
 
@@ -204,9 +258,11 @@ class Events
             ]));
         } catch (Throwable $e) {
             Log::error('Failed to bind role after script started', ['account_id' => $accountId, 'error' => $e->getMessage()]);
-            self::appendLogLines($accountId, ['[ERROR] 启动成功后角色绑定失败：' . $e->getMessage()], $sessionId);
+            self::appendLogLines($accountId, [GameLogMessage::localized('ERROR', 'client.logs.system.role_bind_failed', [
+                'error' => $e->getMessage(),
+            ])], $sessionId);
         }
-        self::appendLogLines($accountId, ['[INFO] 启动游戏成功'], $sessionId);
+        self::appendLogLines($accountId, [GameLogMessage::localized('INFO', 'client.logs.system.game_started')], $sessionId);
     }
 
     private static function startedContextMatches(array $payload, array $state): bool
@@ -257,11 +313,19 @@ class Events
             return $roleId;
         }
 
-        return trim((string)($account['game_username'] ?? ''));
+        $loginMethod = (int)($account['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD);
+        return trim((string)($loginMethod === GameAccountLoginMethod::ACCOUNT_PASSWORD
+            ? ($account['game_username'] ?? '')
+            : ($account['game_uid'] ?? '')));
     }
 
     private static function markError(string $clientId, int $accountId, string $message, string $sessionId): void
     {
+        Log::warning('Third-party script websocket closing after client error', [
+            'client_id' => $clientId,
+            'account_id' => $accountId,
+            'reason' => 'client_reported_error',
+        ]);
         $account = self::accounts()->findById($accountId);
         if ($account) {
             self::accounts()->updateRuntimeState((int)$account['user_id'], $accountId, [
@@ -281,6 +345,12 @@ class Events
 
     private static function markStopped(string $clientId, int $accountId, string $connectionState, string $sessionId): void
     {
+        Log::info('Third-party script websocket closing after client stopped', [
+            'client_id' => $clientId,
+            'account_id' => $accountId,
+            'connection_state' => $connectionState,
+            'reason' => 'client_reported_stopped',
+        ]);
         self::store()->releaseClient($clientId);
         Gateway::closeClient($clientId);
         if ($connectionState === 'stopping') {
@@ -290,7 +360,7 @@ class Events
 
         $account = self::accounts()->findById($accountId);
         if ($account && (int)($account['desired_running'] ?? 0) === 1) {
-            self::autoRestarter()->scheduleReconnect($accountId, '运行异常停止', $sessionId);
+            self::autoRestarter()->scheduleReconnect($accountId, 'client.logs.system.runtime_stopped_reconnecting', $sessionId);
             return;
         }
 
@@ -409,11 +479,125 @@ class Events
 
     private static function closeWithError(string $clientId, string $message): void
     {
+        $state = self::store()->connection($clientId);
+        if (($state['state'] ?? '') === 'validating') {
+            self::loginValidations()->failProtocol(
+                (string)($state['validation_id'] ?? ''),
+                '第三方登录验证响应异常'
+            );
+        }
+        Log::warning('Third-party script websocket closing with server error', array_merge(
+            self::connectionTrace($clientId, $state ?? []),
+            ['reason' => $message]
+        ));
         Gateway::sendToClient($clientId, self::json([
             'type' => 'error',
             'message' => $message,
         ]));
         Gateway::closeClient($clientId);
+    }
+
+    private static function connectionTrace(string $clientId, array $state): array
+    {
+        $now = time();
+        $connectedAt = (int)($state['connected_at'] ?? 0);
+        $boundAt = (int)($state['bound_at'] ?? 0);
+        $lastSeen = (int)($state['last_seen'] ?? 0);
+        $lastMessageAt = (int)($state['last_message_at'] ?? 0);
+        $lastHeartbeatAt = (int)($state['last_heartbeat_at'] ?? 0);
+
+        return [
+            'client_id' => $clientId,
+            'remote_ip' => (string)($state['remote_ip'] ?? ''),
+            'peer_ip' => (string)($state['peer_ip'] ?? ''),
+            'peer_port' => (int)($state['peer_port'] ?? 0),
+            'state' => (string)($state['state'] ?? ''),
+            'account_id' => (int)($state['account_id'] ?? 0),
+            'request_id' => (string)($state['request_id'] ?? ''),
+            'validation_id' => (string)($state['validation_id'] ?? ''),
+            'session_id' => (string)($state['session_id'] ?? ''),
+            'connected_seconds' => $connectedAt > 0 ? max(0, $now - $connectedAt) : null,
+            'bound_seconds' => $boundAt > 0 ? max(0, $now - $boundAt) : null,
+            'last_seen_seconds' => $lastSeen > 0 ? max(0, $now - $lastSeen) : null,
+            'last_message_seconds' => $lastMessageAt > 0 ? max(0, $now - $lastMessageAt) : null,
+            'last_heartbeat_seconds' => $lastHeartbeatAt > 0 ? max(0, $now - $lastHeartbeatAt) : null,
+            'last_message_type' => (string)($state['last_message_type'] ?? ''),
+            'last_message_bytes' => (int)($state['last_message_bytes'] ?? 0),
+            'message_count' => (int)($state['message_count'] ?? 0),
+            'heartbeat_count' => (int)($state['heartbeat_count'] ?? 0),
+            'script_version' => (string)($state['script_version'] ?? ''),
+        ];
+    }
+
+    private static function forwardedClientIp(array $server, string $fallback): string
+    {
+        $forwardedFor = trim((string)($server['HTTP_X_FORWARDED_FOR'] ?? ''));
+        if ($forwardedFor === '') {
+            return $fallback;
+        }
+
+        $candidate = trim(explode(',', $forwardedFor, 2)[0]);
+        return filter_var($candidate, FILTER_VALIDATE_IP) !== false ? $candidate : $fallback;
+    }
+
+    private static function invalidMessageDiagnostics(string $message, int $jsonErrorCode, string $jsonErrorMessage): array
+    {
+        $trimmed = trim($message);
+        return [
+            'invalid_message_bytes' => strlen($message),
+            'invalid_message_trimmed_bytes' => strlen($trimmed),
+            'invalid_message_sha256' => hash('sha256', $message),
+            'invalid_message_json_error_code' => $jsonErrorCode,
+            'invalid_message_json_error' => $jsonErrorMessage,
+            'invalid_message_utf8' => preg_match('//u', $message) === 1,
+            'invalid_message_starts_object' => str_starts_with($trimmed, '{'),
+            'invalid_message_ends_object' => str_ends_with($trimmed, '}'),
+            'invalid_message_prefix_hex' => bin2hex(substr($message, 0, 16)),
+            'invalid_message_suffix_hex' => bin2hex(substr($message, -16)),
+        ];
+    }
+
+    private static function quarantineInvalidMessage(string $clientId, string $message): string
+    {
+        $directory = runtime_path('diagnostics/third-party-invalid');
+        try {
+            if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
+                throw new \RuntimeException('无法创建非法消息隔离目录');
+            }
+            chmod($directory, 0700);
+
+            $safeClientId = preg_replace('/[^a-zA-Z0-9_-]/', '_', $clientId) ?: 'unknown';
+            $hash = hash('sha256', $message);
+            $filename = date('Ymd-His') . '-' . $safeClientId . '-' . substr($hash, 0, 16) . '.bin';
+            $path = $directory . DIRECTORY_SEPARATOR . $filename;
+            $written = file_put_contents($path, $message, LOCK_EX);
+            if ($written === false || $written !== strlen($message)) {
+                throw new \RuntimeException('非法消息原始数据写入不完整');
+            }
+            chmod($path, 0600);
+            self::pruneInvalidMessages($directory, time() - 7 * 86400);
+            return $path;
+        } catch (Throwable $e) {
+            Log::error('Third-party invalid message quarantine failed', [
+                'client_id' => $clientId,
+                'message_bytes' => strlen($message),
+                'message_sha256' => hash('sha256', $message),
+                'error' => $e->getMessage(),
+            ]);
+            return '';
+        }
+    }
+
+    private static function pruneInvalidMessages(string $directory, int $olderThan): void
+    {
+        foreach (glob($directory . DIRECTORY_SEPARATOR . '*.bin') ?: [] as $path) {
+            $modifiedAt = filemtime($path);
+            if ($modifiedAt !== false && $modifiedAt < $olderThan && !unlink($path)) {
+                Log::warning('Third-party invalid message quarantine cleanup failed', [
+                    'path' => $path,
+                ]);
+            }
+        }
     }
 
     private static function queryFromHandshake(mixed $data): array
@@ -482,6 +666,25 @@ class Events
         return max(self::BASE_MESSAGE_BYTES, self::taskStateMaxBytes() + self::TASK_STATE_PROTOCOL_OVERHEAD_BYTES);
     }
 
+    private static function validLoginValidationPayload(array $payload): bool
+    {
+        if (!array_key_exists('request_id', $payload)
+            || !is_string($payload['request_id'])
+            || !array_key_exists('session_id', $payload)
+            || !is_string($payload['session_id'])
+            || !array_key_exists('code', $payload)
+            || !is_int($payload['code'])
+            || !in_array($payload['code'], [0, 1], true)
+            || !array_key_exists('msg', $payload)
+            || !is_string($payload['msg'])) {
+            return false;
+        }
+        return $payload['code'] === 0
+            || (array_key_exists('server_name', $payload)
+                && is_string($payload['server_name'])
+                && trim($payload['server_name']) !== '');
+    }
+
     private static function taskStateMaxBytes(): int
     {
         return max(1, (int)app_env('GAME_TASK_STATE_MAX_BYTES', (string)self::DEFAULT_TASK_STATE_BYTES));
@@ -522,6 +725,21 @@ class Events
             $store,
             self::queue(),
             (string)($config['credential_key'] ?? '')
+        );
+    }
+
+    private static function loginValidations(): GameAccountLoginValidationService
+    {
+        $settings = new SystemSettingService();
+        $config = $settings->thirdPartyConfig();
+        $config['max_accounts_per_user'] = $settings->gameAccountMaxCount();
+        $store = self::store();
+        return new GameAccountLoginValidationService(
+            self::accounts(),
+            $config,
+            I18n::DEFAULT_LOCALE,
+            new GatewayThirdPartyScriptRuntime($store),
+            new \app\service\RedisGameAccountLoginValidationStore()
         );
     }
 }

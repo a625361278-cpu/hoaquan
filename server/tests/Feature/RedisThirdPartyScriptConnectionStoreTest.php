@@ -20,6 +20,38 @@ class RedisThirdPartyScriptConnectionStoreTest extends TestCase
         $this->assertSame(180, $redis->ttl($this->accountKey(3)));
     }
 
+    public function testHeartbeatRecordsMessageDiagnosticsWithoutSensitivePayload(): void
+    {
+        $redis = new InMemoryRedisClient();
+        $store = new RedisThirdPartyScriptConnectionStore($redis);
+        $store->registerIdle('client-1', [
+            'remote_ip' => '203.0.113.10',
+            'peer_ip' => '127.0.0.1',
+            'peer_port' => 54321,
+        ]);
+
+        $store->heartbeat('client-1', [
+            'script_version' => '1.0.0',
+            'message_type' => 'heartbeat',
+            'message_bytes' => 51,
+        ]);
+        $store->heartbeat('client-1', [
+            'message_type' => 'status',
+            'message_bytes' => 128,
+        ]);
+
+        $state = $store->connection('client-1');
+        $this->assertSame('203.0.113.10', $state['remote_ip']);
+        $this->assertSame('127.0.0.1', $state['peer_ip']);
+        $this->assertSame(54321, $state['peer_port']);
+        $this->assertSame('status', $state['last_message_type']);
+        $this->assertSame(128, $state['last_message_bytes']);
+        $this->assertSame(2, $state['message_count']);
+        $this->assertSame(1, $state['heartbeat_count']);
+        $this->assertGreaterThan(0, $state['last_heartbeat_at']);
+        $this->assertArrayNotHasKey('message_payload', $state);
+    }
+
     public function testConnectionByAccountRepairsMissingAccountIndexFromBoundConnection(): void
     {
         $redis = new InMemoryRedisClient();
@@ -34,6 +66,23 @@ class RedisThirdPartyScriptConnectionStoreTest extends TestCase
         $this->assertSame('bound', $connection['state']);
         $this->assertSame('client-1', $redis->get($this->accountKey(3)));
         $this->assertSame(180, $redis->ttl($this->accountKey(3)));
+    }
+
+    public function testValidationConnectionOnlyReturnsIdleWhenContextMatches(): void
+    {
+        $redis = new InMemoryRedisClient();
+        $store = new RedisThirdPartyScriptConnectionStore($redis);
+        $store->registerIdle('client-1');
+        $reserved = $store->allocateIdleForValidation('validation-1', 'session-1', 'request-1');
+        $this->assertSame('validating', $reserved['state']);
+        $this->assertNull($store->restoreValidationToIdle('client-1', 'wrong', 'session-1', 'request-1'));
+        $this->assertSame('validating', $store->connection('client-1')['state']);
+
+        $restored = $store->restoreValidationToIdle('client-1', 'validation-1', 'session-1', 'request-1');
+        $this->assertSame('idle', $restored['state']);
+        $this->assertSame('', $restored['validation_id']);
+        $this->assertSame(1, $store->stats()['idle_count']);
+        $this->assertSame(0, $store->stats()['validating_count']);
     }
 
     public function testDefaultRedisClientIsAConnectionObject(): void
@@ -117,5 +166,37 @@ class InMemoryRedisClient
     public function ttl(string $key): int
     {
         return $this->ttls[$key] ?? -1;
+    }
+
+    public function eval(string $script, array $arguments, int $keyCount): mixed
+    {
+        if (!str_contains($script, "state['state'] = 'idle'")) {
+            throw new \RuntimeException('Unsupported in-memory Redis script');
+        }
+        [$connectionKey, $boundKey, $idleKey] = array_slice($arguments, 0, $keyCount);
+        [$validationId, $sessionId, $requestId, $now, $ttl, $clientId] = array_slice($arguments, $keyCount);
+        $raw = $this->get($connectionKey);
+        if (!is_string($raw)) {
+            return false;
+        }
+        $state = json_decode($raw, true);
+        if (($state['state'] ?? '') !== 'validating'
+            || ($state['validation_id'] ?? '') !== $validationId
+            || ($state['session_id'] ?? '') !== $sessionId
+            || ($state['request_id'] ?? '') !== $requestId) {
+            return false;
+        }
+        $state['state'] = 'idle';
+        $state['account_id'] = 0;
+        $state['validation_id'] = '';
+        $state['session_id'] = '';
+        $state['request_id'] = '';
+        $state['bound_at'] = 0;
+        $state['last_seen'] = (int)$now;
+        $encoded = json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $this->setEx($connectionKey, (int)$ttl, $encoded);
+        $this->sRem($boundKey, $clientId);
+        $this->sAdd($idleKey, $clientId);
+        return $encoded;
     }
 }

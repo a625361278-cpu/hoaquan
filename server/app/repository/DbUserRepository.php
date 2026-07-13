@@ -2,6 +2,7 @@
 
 namespace app\repository;
 
+use app\service\SystemSettingService;
 use support\Db;
 
 class DbUserRepository implements UserRepositoryInterface
@@ -71,29 +72,54 @@ class DbUserRepository implements UserRepositoryInterface
         string $inviteRegisteredIp = '',
         ?string $inviteCode = null,
         ?string $securityQuestionKey = null,
-        ?string $securityAnswerHash = null
+        ?string $securityAnswerHash = null,
+        int $registrationRewardPoints = 0,
+        string $registrationRewardDescription = ''
     ): array {
-        $now = date('Y-m-d H:i:s');
-        $id = Db::table('ga_users')->insertGetId([
-            'account' => $account,
-            'email' => $email === '' ? null : $email,
-            'nickname' => $nickname,
-            'password_hash' => $passwordHash,
-            'security_question_key' => $securityQuestionKey,
-            'security_answer_hash' => $securityAnswerHash,
-            'invite_code' => $inviteCode,
-            'invited_by_user_id' => $invitedByUserId,
-            'invite_registered_ip' => $inviteRegisteredIp,
-            'status' => 1,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        $user = $this->findActiveById((int)$id);
-        if (!$user) {
-            throw new \RuntimeException('用户创建后读取失败');
+        if ($registrationRewardPoints < 0 || $registrationRewardPoints > SystemSettingService::MAX_REGISTRATION_REWARD_POINTS) {
+            throw new \InvalidArgumentException('Registration reward points are outside the allowed range');
         }
-        return $user;
+
+        return Db::transaction(function () use ($account, $email, $nickname, $passwordHash, $invitedByUserId, $inviteRegisteredIp, $inviteCode, $securityQuestionKey, $securityAnswerHash, $registrationRewardPoints, $registrationRewardDescription): array {
+            $now = date('Y-m-d H:i:s');
+            $balance = number_format($registrationRewardPoints, 2, '.', '');
+            $id = Db::table('ga_users')->insertGetId([
+                'account' => $account,
+                'email' => $email === '' ? null : $email,
+                'nickname' => $nickname,
+                'password_hash' => $passwordHash,
+                'balance' => $balance,
+                'security_question_key' => $securityQuestionKey,
+                'security_answer_hash' => $securityAnswerHash,
+                'invite_code' => $inviteCode,
+                'invited_by_user_id' => $invitedByUserId,
+                'invite_registered_ip' => $inviteRegisteredIp,
+                'status' => 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            if ($registrationRewardPoints > 0) {
+                Db::table('ga_user_point_transactions')->insert([
+                    'user_id' => $id,
+                    'type' => 'registration_reward',
+                    'amount' => $balance,
+                    'balance_after' => $balance,
+                    'description' => $registrationRewardDescription,
+                    'related_user_id' => null,
+                    'related_role_id' => '',
+                    'related_payment_order_id' => null,
+                    'ip_address' => $inviteRegisteredIp,
+                    'created_at' => $now,
+                ]);
+            }
+
+            $user = $this->findActiveById((int)$id);
+            if (!$user) {
+                throw new \RuntimeException('用户创建后读取失败');
+            }
+            return $user;
+        });
     }
 
     public function updateInviteCode(int $id, string $inviteCode): array

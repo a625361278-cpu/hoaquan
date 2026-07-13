@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hoavienpro.com/schemas/third-party-login-validation.schema.json",
+  "title": "Game account login validation WebSocket message",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "request_id", "session_id", "login_method"],
+      "properties": {
+        "type": { "const": "login" },
+        "request_id": { "type": "string", "minLength": 1 },
+        "session_id": { "type": "string", "minLength": 1 },
+        "login_method": { "type": "integer", "enum": [1, 2, 3] },
+        "game_username": { "type": "string", "minLength": 1 },
+        "game_password": { "type": "string", "minLength": 1 },
+        "game_uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "token": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "login_method": { "const": 1 } }, "required": ["login_method"] },
+          "then": {
+            "required": ["game_username", "game_password"],
+            "not": { "anyOf": [{ "required": ["game_uid"] }, { "required": ["token"] }] }
+          },
+          "else": {
+            "required": ["game_uid", "token"],
+            "not": { "anyOf": [{ "required": ["game_username"] }, { "required": ["game_password"] }] }
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "request_id", "session_id", "code", "msg"],
+      "properties": {
+        "type": { "const": "login" },
+        "request_id": { "type": "string", "minLength": 1 },
+        "session_id": { "type": "string", "minLength": 1 },
+        "code": { "type": "integer", "enum": [0, 1] },
+        "server_name": { "type": "string" },
+        "msg": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "code": { "const": 1 } }, "required": ["code"] },
+          "then": { "required": ["server_name"], "properties": { "server_name": { "minLength": 1 } } }
+        }
+      ]
+    }
+  ]
+}

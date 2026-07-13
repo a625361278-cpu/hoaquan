@@ -107,28 +107,47 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
             ->all();
     }
 
-    public function createLocalPreview(int $userId, array $data): array
+    public function createLocalPreviewWithinLimit(int $userId, array $data, int $maxAccounts): ?array
     {
-        $now = date('Y-m-d H:i:s');
-        $id = Db::table('ga_game_accounts')->insertGetId([
-            'user_id' => $userId,
-            'display_name' => $data['display_name'],
-            'game_username' => $data['game_username'],
-            'channel_code' => $data['channel_code'],
-            'game_password_cipher' => $data['game_password_cipher'],
-            'server_id' => $data['server_id'],
-            'server_name' => $data['server_name'],
-            'status' => 'local_preview',
-            'sync_status' => 'local_unsynced',
-            'third_party_account_id' => '',
-            'log_session_id' => '',
-            'remark' => $data['remark'],
-            'config_json' => '{}',
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
+        if ($maxAccounts <= 0) {
+            throw new \InvalidArgumentException('Game account limit must be positive');
+        }
 
-        return $this->findByUserId($userId, (int)$id) ?? [];
+        return Db::transaction(function () use ($userId, $data, $maxAccounts): ?array {
+            $user = Db::table('ga_users')->where('id', $userId)->lockForUpdate()->first();
+            if (!$user) {
+                throw new \RuntimeException('GameAssist user not found while creating game account');
+            }
+
+            $currentCount = Db::table('ga_game_accounts')->where('user_id', $userId)->count();
+            if ($currentCount >= $maxAccounts) {
+                return null;
+            }
+
+            $now = date('Y-m-d H:i:s');
+            $id = Db::table('ga_game_accounts')->insertGetId([
+                'user_id' => $userId,
+                'display_name' => $data['display_name'],
+                'game_username' => $data['game_username'],
+                'game_uid' => $data['game_uid'],
+                'channel_code' => $data['channel_code'],
+                'login_method' => $data['login_method'],
+                'game_password_cipher' => $data['game_password_cipher'],
+                'game_token_cipher' => $data['game_token_cipher'],
+                'server_id' => $data['server_id'],
+                'server_name' => $data['server_name'],
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'third_party_account_id' => '',
+                'log_session_id' => '',
+                'remark' => $data['remark'],
+                'config_json' => '{}',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            return $this->findByUserId($userId, (int)$id) ?? throw new \RuntimeException('Created game account cannot be loaded');
+        });
     }
 
     public function saveLocalConfig(int $userId, int $accountId, array $config, string $syncStatus): array
@@ -152,6 +171,20 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
             ->where('id', $accountId)
             ->update([
                 'game_password_cipher' => $encryptedPassword,
+                'sync_status' => 'local_unsynced',
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+        return $this->findByUserId($userId, $accountId) ?? [];
+    }
+
+    public function updateToken(int $userId, int $accountId, string $encryptedToken): array
+    {
+        Db::table('ga_game_accounts')
+            ->where('user_id', $userId)
+            ->where('id', $accountId)
+            ->update([
+                'game_token_cipher' => $encryptedToken,
                 'sync_status' => 'local_unsynced',
                 'updated_at' => date('Y-m-d H:i:s'),
             ]);

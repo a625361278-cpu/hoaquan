@@ -13,60 +13,71 @@
     </view>
 
     <view v-if="currentStep === 1" class="panel">
-      <text class="section-title">{{ t('client.add.choose_channel') }}</text>
+      <text class="section-title">{{ t('client.add.choose_login_method') }}</text>
       <view class="channel-grid">
         <view
-          v-for="channel in channels"
-          :key="channel.code"
-          :class="['channel-card', form.channel_code === channel.code ? 'active' : '']"
-          @click="form.channel_code = channel.code"
+          v-for="method in loginMethods"
+          :key="method.value"
+          :class="['channel-card', form.login_method === method.value ? 'active' : '']"
+          @click="form.login_method = method.value"
         >
-          <text class="channel-icon">{{ channel.icon }}</text>
-          <text class="channel-name">{{ t(channel.titleKey) }}</text>
-          <text class="channel-desc">{{ t(channel.descKey) }}</text>
+          <text class="channel-icon">{{ method.icon }}</text>
+          <text class="channel-name">{{ t(method.titleKey) }}</text>
+          <text class="channel-desc">{{ t(method.descKey) }}</text>
         </view>
       </view>
-      <text class="hint">{{ t('client.add.channel_placeholder') }}</text>
     </view>
 
     <view v-if="currentStep === 2" class="panel">
       <text class="section-title">{{ t('client.add.login_game') }}</text>
-      <view class="field">
+      <view v-if="form.login_method === 1" class="field">
         <text class="label">{{ t('client.add.game_username') }}</text>
         <input v-model="form.game_username" class="input" :placeholder="t('client.add.placeholder_game_username')" />
       </view>
-      <view class="field">
+      <view v-if="form.login_method === 1" class="field">
         <text class="label">{{ t('client.add.game_password') }}</text>
         <input v-model="form.game_password" class="input" password :placeholder="t('client.add.placeholder_game_password')" />
       </view>
-      <text class="hint">{{ t('client.add.preview_login_hint') }}</text>
+      <view v-if="form.login_method !== 1" class="field">
+        <text class="label">{{ t('client.add.game_uid') }}</text>
+        <input v-model="form.game_uid" class="input" :placeholder="t('client.add.placeholder_game_uid')" />
+      </view>
+      <view v-if="form.login_method !== 1" class="field">
+        <text class="label">{{ t('client.add.token') }}</text>
+        <input v-model="form.token" class="input" password maxlength="-1" :placeholder="t('client.add.placeholder_token')" />
+      </view>
+      <text class="hint">{{ t(form.login_method === 1 ? 'client.add.preview_login_hint' : 'client.add.social_login_hint') }}</text>
     </view>
 
     <view class="actions">
       <button v-if="currentStep > 1" class="ghost" @click="previousStep">{{ t('client.add.previous') }}</button>
       <button class="primary" :disabled="submitting" @click="nextStep">
-        {{ currentStep < 2 ? t('client.add.next') : t('client.add.confirm') }}
+        {{ currentStep < 2 ? t('client.add.next') : (submitting ? t('client.add.verifying') : t('client.add.confirm')) }}
       </button>
     </view>
   </view>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import { useI18n } from 'vue-i18n';
 import { request, requireLogin } from '../../utils/api';
-import { PREVIEW_CHANNEL } from '../../utils/gameConfigSchema';
+import { LOGIN_METHOD_OPTIONS, PREVIEW_CHANNEL } from '../../utils/gameConfigSchema';
 
 const { t } = useI18n();
+const PENDING_VALIDATION_KEY = 'gameassist_pending_account_validation';
 const currentStep = ref(1);
 const submitting = ref(false);
-const channels = [
-  { ...PREVIEW_CHANNEL, icon: 'APP' },
-];
+const supportedLoginMethods = ref([]);
+const loginMethods = computed(() => LOGIN_METHOD_OPTIONS.filter(item => supportedLoginMethods.value.includes(item.value)));
 const form = reactive({
   channel_code: PREVIEW_CHANNEL.code,
+  login_method: 1,
   game_username: '',
   game_password: '',
+  game_uid: '',
+  token: '',
 });
 
 const stepItems = [
@@ -75,6 +86,27 @@ const stepItems = [
 ];
 
 requireLogin();
+onShow(async () => {
+  await loadLoginMethods();
+  await resumePendingValidation();
+});
+
+async function loadLoginMethods() {
+  try {
+    const result = await request({ url: '/api/game-accounts' });
+    const methods = result.supported_login_methods;
+    if (!Array.isArray(methods) || !methods.every(value => [1, 2, 3].includes(Number(value)))) {
+      throw new Error(t('client.add.login_methods_invalid'));
+    }
+    supportedLoginMethods.value = methods.map(Number);
+    if (!supportedLoginMethods.value.includes(form.login_method)) {
+      form.login_method = supportedLoginMethods.value[0];
+    }
+  } catch (error) {
+    supportedLoginMethods.value = [];
+    uni.showToast({ title: error.message, icon: 'none' });
+  }
+}
 
 function previousStep() {
   currentStep.value = Math.max(1, currentStep.value - 1);
@@ -82,12 +114,19 @@ function previousStep() {
 
 async function nextStep() {
   if (currentStep.value < 2) {
+    if (!supportedLoginMethods.value.includes(form.login_method)) {
+      uni.showToast({ title: t('client.add.login_methods_invalid'), icon: 'none' });
+      return;
+    }
     currentStep.value += 1;
     return;
   }
 
-  if (!form.game_username || !form.game_password) {
-    uni.showToast({ title: t('client.add.require_game_credentials'), icon: 'none' });
+  const credentialsValid = form.login_method === 1
+    ? Boolean(form.game_username.trim() && form.game_password.trim())
+    : Boolean(form.game_uid.trim() && form.token.trim());
+  if (!credentialsValid) {
+    uni.showToast({ title: t(form.login_method === 1 ? 'client.add.require_game_credentials' : 'client.add.require_social_credentials'), icon: 'none' });
     return;
   }
 
@@ -96,20 +135,82 @@ async function nextStep() {
     const result = await request({
       url: '/api/game-accounts',
       method: 'POST',
-      data: {
+      data: form.login_method === 1 ? {
         channel_code: form.channel_code,
+        login_method: form.login_method,
         game_username: form.game_username,
         game_password: form.game_password,
+      } : {
+        channel_code: form.channel_code,
+        login_method: form.login_method,
+        game_uid: form.game_uid,
+        token: form.token,
       },
     });
-    uni.showToast({ title: t('client.add.success'), icon: 'none' });
-    const accountId = result.account && result.account.id;
-    uni.redirectTo({ url: accountId ? `/pages/game/config?id=${accountId}` : '/pages/index/index' });
+    if (!result.validation_id) {
+      throw new Error(t('client.add.login_validation_error'));
+    }
+    uni.setStorageSync(PENDING_VALIDATION_KEY, result.validation_id);
+    await pollValidation(result.validation_id);
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
   } finally {
     submitting.value = false;
   }
+}
+
+async function resumePendingValidation() {
+  const validationId = uni.getStorageSync(PENDING_VALIDATION_KEY);
+  if (!validationId || submitting.value) return;
+  currentStep.value = 2;
+  submitting.value = true;
+  try {
+    await pollValidation(validationId);
+  } catch (error) {
+    uni.removeStorageSync(PENDING_VALIDATION_KEY);
+    uni.showToast({ title: error.message, icon: 'none' });
+  } finally {
+    submitting.value = false;
+  }
+}
+
+async function pollValidation(validationId) {
+  const deadline = Date.now() + 25000;
+  let lastNetworkError = null;
+  while (Date.now() <= deadline) {
+    let result;
+    try {
+      result = await request({ url: `/api/game-account-validations/${validationId}` });
+      lastNetworkError = null;
+    } catch (error) {
+      lastNetworkError = error;
+      await delay(1000);
+      continue;
+    }
+    if (result.status === 'verifying') {
+      await delay(1000);
+      continue;
+    }
+    uni.removeStorageSync(PENDING_VALIDATION_KEY);
+    if (result.status === 'success') {
+      uni.showToast({ title: t('client.add.login_validation_success'), icon: 'none' });
+      const accountId = result.account && result.account.id;
+      uni.redirectTo({ url: accountId ? `/pages/game/config?id=${accountId}` : '/pages/index/index' });
+      return;
+    }
+    if (result.status === 'rejected') {
+      throw new Error(result.message || t('client.add.login_validation_rejected'));
+    }
+    if (result.status === 'timeout') {
+      throw new Error(t('client.add.login_validation_timeout'));
+    }
+    throw new Error(t('client.add.login_validation_error'));
+  }
+  throw lastNetworkError || new Error(t('client.add.login_validation_timeout'));
+}
+
+function delay(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
 function back() {

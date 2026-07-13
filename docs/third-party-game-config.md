@@ -20,11 +20,33 @@ ws://example.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 ## 启动载荷
 
-正式第三方接入固定使用 WebSocket。用户点击启动后，服务端会从空闲脚本连接中分配一个连接，并向该连接发送下面的 `start` 包。`game_password` 只在启动通信中传递，不写入 `config`；`task_state` 是第三方最近一次已接收的任务数据快照，不写入 `config`。
+用户添加游戏账号时，服务端会先占用空闲连接发送 `login` 验证包。凭证字段与 `start` 相同且互斥，但不包含 `config/task_state`。第三方必须在20秒内返回同一 `request_id/session_id` 的 `type=login` 结果；`code` 为整数0或1，`msg` 为字符串，`code=1` 时 `server_name` 必须为非空字符串。只有真实成功结果才会保存账号。正常结果后连接恢复空闲；超时、非法响应或上下文不匹配时连接关闭。
 
-`request_id` 是本次请求编号，不是游戏账号、区服或角色 ID；第三方回 `started/error/stopped` 时建议原样带回。`session_id` 是本次运行日志会话 ID。当前游戏只有一个区服，启动包不传 `server_id`、`server_name`。
+正式第三方接入固定使用 WebSocket。用户点击启动后，服务端会从空闲脚本连接中分配一个连接，并向该连接发送下面的 `start` 包。`game_password` 或 `token` 只在启动通信中传递，不写入 `config`；`task_state` 是第三方最近一次已接收的任务数据快照，不写入 `config`。
 
-`start` 是幂等的“启动或重新绑定”指令。网络断开、我方服务重启或第三方脚本重连后，只要玩家没有手动停止账号，服务端会在有空闲脚本连接时再次发送 `start`。第三方需要用 `game_username` 判断该游戏任务是否已经在运行：如果已经在运行，不要重复启动任务，只需要把新的 WebSocket 连接绑定到该任务并返回 `started`；如果未运行，则正常启动后返回 `started`。本协议不另设 `resume` 消息。
+`request_id` 是本次请求编号，不是游戏账号、区服或角色 ID；第三方回 `started/error/stopped` 时建议原样带回。`session_id` 是本次运行日志会话 ID。`login_method` 是整型账号登录方式枚举：`1` 使用 `game_username + game_password`，`2` 为 Facebook、`3` 为 Google，后两种都使用 `game_uid + token`。三组凭证字段互斥，第三方必须按该字段选择登录流程。当前游戏只有一个区服，启动包不传 `server_id`、`server_name`。
+
+`start` 是幂等的“启动或重新绑定”指令。网络断开、我方服务重启或第三方脚本重连后，只要玩家没有手动停止账号，服务端会在有空闲脚本连接时再次发送 `start`。第三方在方式 `1` 使用 `game_username`、方式 `2/3` 使用 `game_uid` 判断任务是否已经运行：已经运行时不要重复启动，只把新连接绑定到原任务并返回 `started`；未运行时正常启动。本协议不另设 `resume` 消息。
+
+Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id/config/task_state` 与完整示例一致：
+
+```json
+{
+  "type": "start",
+  "login_method": 2,
+  "game_uid": "game_uid_001",
+  "token": "facebook-token"
+}
+```
+
+```json
+{
+  "type": "start",
+  "login_method": 3,
+  "game_uid": "game_uid_001",
+  "token": "google-token"
+}
+```
 
 服务端只接受 `request_id/session_id` 与当前连接绑定值一致的 `started` 回包；如果玩家已停止、账号配额已过期或旧启动回包迟到，服务端会忽略该回包并写入系统日志。
 
@@ -33,6 +55,7 @@ ws://example.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
   "type": "start",
   "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
   "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
+  "login_method": 1,
   "game_username": "game_account_001",
   "game_password": "plain-password-used-only-during-start",
   "task_state": {
@@ -461,7 +484,7 @@ ws://example.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 }
 ```
 
-`role_id` 是稳定唯一的游戏角色标识，用于平台用户绑定和邀请奖励去重，建议每次 `started` 都返回。允许常见账号/角色标识字符，最长 128 个字符，不能包含空白或控制字符。缺少 `role_id` 时，服务端会使用本次启动包中的 `game_username` 作为绑定 ID。`display_name` 只用于展示角色名，不参与奖励和唯一身份判断。
+`role_id` 是稳定唯一的游戏角色标识，用于平台用户绑定和邀请奖励去重，建议每次 `started` 都返回。允许常见账号/角色标识字符，最长 128 个字符，不能包含空白或控制字符。缺少 `role_id` 时，账号密码登录使用 `game_username`，Facebook/Google 登录使用 `game_uid` 作为绑定 ID。`display_name` 只用于展示角色名，不参与奖励和唯一身份判断。
 
 ### 第三方返回 error
 

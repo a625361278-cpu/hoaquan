@@ -27,6 +27,12 @@ class GameAccountController extends BaseApiController
         return ApiResponse::json($this->gameAccountService($request)->createFromLogin($userId, $this->jsonInput($request)));
     }
 
+    public function loginValidation(Request $request, string $validationId): Response
+    {
+        $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
+        return ApiResponse::json($this->gameAccountService($request)->loginValidationStatus($userId, $validationId));
+    }
+
     public function config(Request $request, int $id): Response
     {
         $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
@@ -106,6 +112,16 @@ class GameAccountController extends BaseApiController
         ));
     }
 
+    public function updateCredential(Request $request, int $id): Response
+    {
+        $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
+        return ApiResponse::json($this->gameAccountService($request)->updateCredential(
+            $userId,
+            $id,
+            $this->jsonInput($request)
+        ));
+    }
+
     public function clearLogs(Request $request, int $id): Response
     {
         $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
@@ -118,9 +134,13 @@ class GameAccountController extends BaseApiController
 
     private function gameAccountService(Request $request): GameAccountService
     {
+        $settings = new SystemSettingService();
+        $config = $settings->thirdPartyConfig();
+        $config['max_accounts_per_user'] = $settings->gameAccountMaxCount();
+
         return new GameAccountService(
             new DbGameAccountRepository(),
-            (new SystemSettingService())->thirdPartyConfig(),
+            $config,
             I18n::localeFromRequest($request)
         );
     }

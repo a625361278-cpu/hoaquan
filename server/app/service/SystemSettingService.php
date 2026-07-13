@@ -6,6 +6,13 @@ use support\Db;
 
 class SystemSettingService
 {
+    public const DEFAULT_GAME_ACCOUNT_MAX_COUNT = 3;
+    public const MIN_GAME_ACCOUNT_MAX_COUNT = 1;
+    public const MAX_GAME_ACCOUNT_MAX_COUNT = 100;
+    public const DEFAULT_REGISTRATION_REWARD_POINTS = 1;
+    public const MIN_REGISTRATION_REWARD_POINTS = 0;
+    public const MAX_REGISTRATION_REWARD_POINTS = 1000;
+
     public const THIRD_PARTY_SETTING_NAMES = [
         'third_party_enabled',
         'third_party_base_url',
@@ -16,6 +23,9 @@ class SystemSettingService
         'third_party_script_ws_url',
         'third_party_transport',
         'third_party_sign_secret',
+        'game_account_max_count',
+        'facebook_login_enabled',
+        'google_login_enabled',
     ];
 
     public const SMTP_SETTING_NAMES = [
@@ -53,7 +63,22 @@ class SystemSettingService
             'transport' => $settings['third_party_transport'] ?? 'websocket',
             'sign_secret' => $settings['third_party_sign_secret'] ?? '',
             'credential_key' => ($settings['game_account_credential_key'] ?? '') ?: app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''),
+            'facebook_login_enabled' => ($settings['facebook_login_enabled'] ?? '1') === '1',
+            'google_login_enabled' => ($settings['google_login_enabled'] ?? '1') === '1',
         ];
+    }
+
+    public function supportedLoginMethods(): array
+    {
+        $settings = $this->thirdPartyConfig();
+        $methods = [GameAccountLoginMethod::ACCOUNT_PASSWORD];
+        if ($settings['facebook_login_enabled']) {
+            $methods[] = GameAccountLoginMethod::FACEBOOK;
+        }
+        if ($settings['google_login_enabled']) {
+            $methods[] = GameAccountLoginMethod::GOOGLE;
+        }
+        return $methods;
     }
 
     public function thirdPartyRawSettings(): array
@@ -94,6 +119,34 @@ class SystemSettingService
             throw new \RuntimeException('认证方式配置错误：' . $mode);
         }
         return $mode;
+    }
+
+    public function gameAccountMaxCount(): int
+    {
+        $raw = trim($this->get('game_account_max_count', (string)self::DEFAULT_GAME_ACCOUNT_MAX_COUNT));
+        if (!preg_match('/^\d+$/', $raw)) {
+            throw new \RuntimeException('游戏账号上限配置不是有效整数：' . $raw);
+        }
+
+        $value = (int)$raw;
+        if ($value < self::MIN_GAME_ACCOUNT_MAX_COUNT || $value > self::MAX_GAME_ACCOUNT_MAX_COUNT) {
+            throw new \RuntimeException('游戏账号上限配置超出允许范围：' . $value);
+        }
+        return $value;
+    }
+
+    public function registrationRewardPoints(): int
+    {
+        $raw = trim($this->get('registration_reward_points', (string)self::DEFAULT_REGISTRATION_REWARD_POINTS));
+        if (!preg_match('/^\d+$/', $raw)) {
+            throw new \RuntimeException('注册赠送点数配置不是有效整数：' . $raw);
+        }
+
+        $value = (int)$raw;
+        if ($value < self::MIN_REGISTRATION_REWARD_POINTS || $value > self::MAX_REGISTRATION_REWARD_POINTS) {
+            throw new \RuntimeException('注册赠送点数配置超出允许范围：' . $value);
+        }
+        return $value;
     }
 
     public function get(string $name, string $default = ''): string

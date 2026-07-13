@@ -22,7 +22,8 @@ class BaseApiController
             new RedisEmailCodeStore(I18n::localeFromRequest($request)),
             new SmtpMailer($settings, I18n::localeFromRequest($request)),
             I18n::localeFromRequest($request),
-            $settings->authVerificationMode()
+            $settings->authVerificationMode(),
+            $settings->registrationRewardPoints()
         );
     }
 

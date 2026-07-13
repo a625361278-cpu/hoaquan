@@ -11,6 +11,8 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
     public array $stopped = [];
     public bool $failSend = false;
     public bool $stopSent = true;
+    public array $validations = [];
+    public array $discardedValidations = [];
 
     public function __construct(public bool $hasIdleConnection = true)
     {
@@ -29,7 +31,7 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
         ];
     }
 
-    public function sendStartCommand(array $reservation, array $account, string $gamePassword, array $config, array $taskState = []): array
+    public function sendStartCommand(array $reservation, array $account, string $credential, array $config, array $taskState = []): array
     {
         if ($this->failSend) {
             throw new ApiException('send failed', 503);
@@ -39,21 +41,59 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
             'account_id' => (int)$account['id'],
             'request_id' => (string)$reservation['request_id'],
             'session_id' => (string)$reservation['session_id'],
-            'game_password' => $gamePassword,
+            'login_method' => (int)($account['login_method'] ?? 1),
+            'credential' => $credential,
+            'game_password' => $credential,
             'config' => $config,
             'task_state' => $taskState,
         ];
         return $reservation;
     }
 
+    public function reserveValidation(string $validationId, string $requestId, string $sessionId): array
+    {
+        if (!$this->hasIdleConnection) {
+            throw new ApiException('服务器未准备好，请联系管理员', 409);
+        }
+        return [
+            'client_id' => 'client-validation',
+            'validation_id' => $validationId,
+            'request_id' => $requestId,
+            'session_id' => $sessionId,
+        ];
+    }
+
+    public function sendLoginValidationCommand(array $reservation, int $loginMethod, string $identity, string $credential): array
+    {
+        if ($this->failSend) {
+            throw new ApiException('send failed', 503);
+        }
+        $this->validations[] = $reservation + [
+            'login_method' => $loginMethod,
+            'identity' => $identity,
+            'credential' => $credential,
+        ];
+        return $reservation;
+    }
+
+    public function restoreValidationConnection(array $reservation): bool
+    {
+        return true;
+    }
+
+    public function discardValidationConnection(array $reservation): void
+    {
+        $this->discardedValidations[] = $reservation;
+    }
+
     public function releaseReservation(array $reservation): void
     {
     }
 
-    public function startAccount(array $account, string $requestId, string $sessionId, string $gamePassword, array $config, array $taskState = []): array
+    public function startAccount(array $account, string $requestId, string $sessionId, string $credential, array $config, array $taskState = []): array
     {
         $reservation = $this->reserveAccount((int)$account['id'], $requestId, $sessionId);
-        return $this->sendStartCommand($reservation, $account, $gamePassword, $config, $taskState);
+        return $this->sendStartCommand($reservation, $account, $credential, $config, $taskState);
     }
 
     public function stopAccount(int $accountId, string $requestId): array

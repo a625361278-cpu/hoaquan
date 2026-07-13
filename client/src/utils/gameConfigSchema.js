@@ -7,6 +7,12 @@ export const PREVIEW_CHANNEL = {
   descKey: 'client.add.channel.official_app_desc',
 };
 
+export const LOGIN_METHOD_OPTIONS = [
+  { value: 1, icon: 'APP', titleKey: 'client.add.login_method.account_password', descKey: 'client.add.login_method.account_password_desc' },
+  { value: 2, icon: 'f', titleKey: 'client.add.login_method.facebook', descKey: 'client.add.login_method.facebook_desc' },
+  { value: 3, icon: 'G', titleKey: 'client.add.login_method.google', descKey: 'client.add.login_method.google_desc' },
+];
+
 export const PREVIEW_SERVER = {
   id: 'local-preview',
   nameKey: 'client.add.server.local_preview',

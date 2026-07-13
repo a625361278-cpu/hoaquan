@@ -48,6 +48,47 @@ class ThirdPartyScriptHandshakeTest extends TestCase
         $this->assertSame('1', $query['version']);
     }
 
+    public function testInvalidMessageDiagnosticsDescribeShapeWithoutLoggingRawPayload(): void
+    {
+        $message = "\xEF\xBB\xBF" . '{"type":"heartbeat"';
+        json_decode($message);
+        $errorCode = json_last_error();
+        $errorMessage = json_last_error_msg();
+
+        $method = new ReflectionMethod(Events::class, 'invalidMessageDiagnostics');
+        $method->setAccessible(true);
+        $diagnostics = $method->invoke(null, $message, $errorCode, $errorMessage);
+
+        $this->assertSame(strlen($message), $diagnostics['invalid_message_bytes']);
+        $this->assertSame(hash('sha256', $message), $diagnostics['invalid_message_sha256']);
+        $this->assertSame($errorCode, $diagnostics['invalid_message_json_error_code']);
+        $this->assertFalse($diagnostics['invalid_message_starts_object']);
+        $this->assertFalse($diagnostics['invalid_message_ends_object']);
+        $this->assertStringStartsWith('efbbbf', $diagnostics['invalid_message_prefix_hex']);
+        $this->assertArrayNotHasKey('message', $diagnostics);
+        $this->assertArrayNotHasKey('payload', $diagnostics);
+    }
+
+    public function testInvalidMessageQuarantinePreservesOriginalBytes(): void
+    {
+        $message = "\xEF\xBB\xBF" . '{"type":"heartbeat"';
+        $method = new ReflectionMethod(Events::class, 'quarantineInvalidMessage');
+        $method->setAccessible(true);
+
+        $path = $method->invoke(null, 'client:test/1', $message);
+        try {
+            $this->assertNotSame('', $path);
+            $this->assertFileExists($path);
+            $this->assertSame($message, file_get_contents($path));
+            $this->assertStringEndsWith('.bin', $path);
+            $this->assertStringNotContainsString('heartbeat', basename($path));
+        } finally {
+            if (is_string($path) && is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
+
     private function parseQuery(mixed $data): array
     {
         $method = new ReflectionMethod(Events::class, 'queryFromHandshake');

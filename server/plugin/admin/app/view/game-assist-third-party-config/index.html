@@ -46,6 +46,30 @@
                     </div>
 
                     <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.game_account_max_count')?></label>
+                        <div class="layui-input-block">
+                            <input type="number" name="game_account_max_count" min="1" max="100" step="1" required lay-verify="required|number" autocomplete="off" class="layui-input">
+                            <div class="form-help"><?=admin_t('admin.third_party_config.game_account_max_count_help')?></div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.facebook_login_enabled')?></label>
+                        <div class="layui-input-block">
+                            <input type="checkbox" name="facebook_login_enabled" value="1" lay-skin="switch" lay-text="ON|OFF">
+                            <div class="form-help"><?=admin_t('admin.third_party_config.social_login_enabled_help')?></div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.third_party_config.google_login_enabled')?></label>
+                        <div class="layui-input-block">
+                            <input type="checkbox" name="google_login_enabled" value="1" lay-skin="switch" lay-text="ON|OFF">
+                            <div class="form-help"><?=admin_t('admin.third_party_config.social_login_enabled_help')?></div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
                         <label class="layui-form-label"><?=admin_t('admin.third_party_config.script_token')?></label>
                         <div class="layui-input-block">
                             <input type="text" name="third_party_script_token" autocomplete="off" class="layui-input">
@@ -114,7 +138,10 @@
                             third_party_enabled: res.data.enabled ? "1" : "",
                             third_party_script_ws_url: res.data.script_ws_url || "",
                             third_party_script_token: res.data.script_token || "",
-                            third_party_sign_secret: res.data.sign_secret || ""
+                            third_party_sign_secret: res.data.sign_secret || "",
+                            game_account_max_count: res.data.game_account_max_count || 3,
+                            facebook_login_enabled: res.data.facebook_login_enabled ? "1" : "",
+                            google_login_enabled: res.data.google_login_enabled ? "1" : ""
                         });
                         $("#script-full-url").text(res.data.script_full_url || "");
                         form.render();

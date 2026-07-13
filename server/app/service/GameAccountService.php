@@ -26,6 +26,7 @@ class GameAccountService
     private GameAccountResourceService $resources;
     private GameAccountQuotaService $quotaService;
     private GameAccountTaskStateService $taskStates;
+    private int $maxAccountsPerUser;
 
     public function __construct(
         private GameAccountRepositoryInterface $accounts,
@@ -34,7 +35,8 @@ class GameAccountService
         ?ThirdPartyScriptRuntimeInterface $scriptRuntime = null,
         ?GameAccountResourceService $resources = null,
         ?GameAccountQuotaService $quotaService = null,
-        ?GameAccountTaskStateService $taskStates = null
+        ?GameAccountTaskStateService $taskStates = null,
+        private ?GameAccountLoginValidationStoreInterface $loginValidations = null
     )
     {
         if (is_string($thirdPartyConfigOrLocale)) {
@@ -48,7 +50,15 @@ class GameAccountService
             'script_token' => '',
             'script_ws_url' => '',
             'sign_secret' => '',
+            'max_accounts_per_user' => SystemSettingService::DEFAULT_GAME_ACCOUNT_MAX_COUNT,
+            'facebook_login_enabled' => true,
+            'google_login_enabled' => true,
         ], $thirdPartyConfigOrLocale);
+        $this->maxAccountsPerUser = (int)$this->thirdPartyConfig['max_accounts_per_user'];
+        if ($this->maxAccountsPerUser < SystemSettingService::MIN_GAME_ACCOUNT_MAX_COUNT
+            || $this->maxAccountsPerUser > SystemSettingService::MAX_GAME_ACCOUNT_MAX_COUNT) {
+            throw new \InvalidArgumentException('Game account max count is outside the allowed range');
+        }
         $this->locale = I18n::normalizeLocale($locale);
         $this->scriptRuntime = $scriptRuntime ?? new GatewayThirdPartyScriptRuntime(locale: $this->locale);
         $this->resources = $resources ?? new GameAccountResourceService();
@@ -58,9 +68,16 @@ class GameAccountService
 
     public function listForUser(int $userId): array
     {
+        $items = $this->accounts->listByUserId($userId);
+        $accountCount = count($items);
+
         return ApiResponse::success([
-            'items' => array_map([$this, 'publicAccount'], $this->accounts->listByUserId($userId)),
+            'items' => array_map([$this, 'publicAccount'], $items),
             'empty_text' => I18n::t('api.game.account_empty', [], $this->locale),
+            'account_count' => $accountCount,
+            'account_limit' => $this->maxAccountsPerUser,
+            'can_add_account' => $accountCount < $this->maxAccountsPerUser,
+            'supported_login_methods' => $this->supportedLoginMethods(),
         ]);
     }
 
@@ -71,34 +88,24 @@ class GameAccountService
 
     public function createFromLogin(int $userId, array $payload): array
     {
-        $gameUsername = trim((string)($payload['game_username'] ?? ''));
-        $gamePassword = trim((string)($payload['game_password'] ?? ''));
-        if ($gameUsername === '' || $gamePassword === '') {
-            throw new ApiException(I18n::t('api.game.require_game_credentials', [], $this->locale), 422);
-        }
+        return (new GameAccountLoginValidationService(
+            $this->accounts,
+            $this->thirdPartyConfig,
+            $this->locale,
+            $this->scriptRuntime,
+            $this->loginValidations
+        ))->begin($userId, $payload);
+    }
 
-        $channelCode = trim((string)($payload['channel_code'] ?? '')) ?: self::PREVIEW_CHANNEL;
-        if (!in_array($channelCode, self::SUPPORTED_CHANNELS, true)) {
-            throw new ApiException(I18n::t('api.game.channel_unsupported', [], $this->locale), 422);
-        }
-
-        $encryptedPassword = $this->cipher()->encrypt($gamePassword);
-        $serverId = trim((string)($payload['server_id'] ?? ''));
-        $serverName = trim((string)($payload['server_name'] ?? ''));
-        $account = $this->accounts->createLocalPreview($userId, [
-            'channel_code' => $channelCode,
-            'game_username' => $gameUsername,
-            'game_password_cipher' => $encryptedPassword,
-            'server_id' => $serverId,
-            'server_name' => $serverName,
-            'display_name' => $gameUsername,
-            'remark' => I18n::t('api.game.local_preview_remark', [], $this->locale),
-        ]);
-
-        return ApiResponse::success([
-            'account' => $this->publicAccount($account),
-            'preview_mode' => empty($this->thirdPartyConfig['enabled']),
-        ], I18n::t('api.game.local_preview_created', [], $this->locale));
+    public function loginValidationStatus(int $userId, string $validationId): array
+    {
+        return (new GameAccountLoginValidationService(
+            $this->accounts,
+            $this->thirdPartyConfig,
+            $this->locale,
+            $this->scriptRuntime,
+            $this->loginValidations
+        ))->status($userId, $validationId);
     }
 
     public function configForUser(int $userId, int $accountId): array
@@ -177,7 +184,7 @@ class GameAccountService
         $account = $this->requireAccount($userId, $accountId);
         $this->assertQuotaActive($account);
         $this->assertThirdPartyScriptReady();
-        $gamePassword = $this->cipher()->decrypt((string)($account['game_password_cipher'] ?? ''));
+        $credential = $this->credentialForStart($account);
         $taskState = $this->taskStates->get($accountId);
         $logSessionId = bin2hex(random_bytes(12));
         $requestId = bin2hex(random_bytes(16));
@@ -204,7 +211,7 @@ class GameAccountService
             $runtime = $this->scriptRuntime->sendStartCommand(
                 $reservation,
                 $account,
-                $gamePassword,
+                $credential,
                 $this->decodeConfig((string)($account['config_json'] ?? '{}')),
                 $taskState
             );
@@ -273,12 +280,35 @@ class GameAccountService
             throw new ApiException(I18n::t('api.game.require_game_credentials', [], $this->locale), 422);
         }
 
-        $this->requireAccount($userId, $accountId);
+        $existing = $this->requireAccount($userId, $accountId);
+        if ((int)($existing['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD) !== GameAccountLoginMethod::ACCOUNT_PASSWORD) {
+            throw new ApiException(I18n::t('api.game.password_update_not_supported', [], $this->locale), 422);
+        }
         $account = $this->accounts->updateCredentials($userId, $accountId, $this->cipher()->encrypt($password));
 
         return ApiResponse::success([
             'account' => $this->publicAccount($account),
         ], I18n::t('api.game.password_updated', [], $this->locale));
+    }
+
+    public function updateCredential(int $userId, int $accountId, array $payload): array
+    {
+        $existing = $this->requireAccount($userId, $accountId);
+        $loginMethod = (int)($existing['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD);
+        if ($loginMethod === GameAccountLoginMethod::ACCOUNT_PASSWORD) {
+            return $this->updatePassword($userId, $accountId, (string)($payload['game_password'] ?? ''));
+        }
+        if (!GameAccountLoginMethod::isSocial($loginMethod)) {
+            throw new ApiException(I18n::t('api.game.login_method_invalid', [], $this->locale), 422);
+        }
+        $token = trim((string)($payload['token'] ?? ''));
+        if ($token === '') {
+            throw new ApiException(I18n::t('api.game.require_token', [], $this->locale), 422);
+        }
+        $account = $this->accounts->updateToken($userId, $accountId, $this->cipher()->encrypt($token));
+        return ApiResponse::success([
+            'account' => $this->publicAccount($account),
+        ], I18n::t('api.game.token_updated', [], $this->locale));
     }
 
     public function delete(int $userId, int $accountId): array
@@ -312,7 +342,9 @@ class GameAccountService
             'id' => (int)$account['id'],
             'display_name' => (string)$account['display_name'],
             'game_username' => (string)($account['game_username'] ?? ''),
+            'game_uid' => (string)($account['game_uid'] ?? ''),
             'channel_code' => (string)($account['channel_code'] ?? self::PREVIEW_CHANNEL),
+            'login_method' => (int)($account['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD),
             'server_id' => (string)($account['server_id'] ?? ''),
             'server_name' => (string)($account['server_name'] ?? ''),
             'status' => (string)$account['status'],
@@ -378,6 +410,30 @@ class GameAccountService
     private function cipher(): CredentialCipher
     {
         return new CredentialCipher((string)($this->thirdPartyConfig['credential_key'] ?? ''), $this->locale);
+    }
+
+    private function supportedLoginMethods(): array
+    {
+        $methods = [GameAccountLoginMethod::ACCOUNT_PASSWORD];
+        if (!empty($this->thirdPartyConfig['facebook_login_enabled'])) {
+            $methods[] = GameAccountLoginMethod::FACEBOOK;
+        }
+        if (!empty($this->thirdPartyConfig['google_login_enabled'])) {
+            $methods[] = GameAccountLoginMethod::GOOGLE;
+        }
+        return $methods;
+    }
+
+    private function credentialForStart(array $account): string
+    {
+        $loginMethod = (int)($account['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD);
+        if ($loginMethod === GameAccountLoginMethod::ACCOUNT_PASSWORD) {
+            return $this->cipher()->decrypt((string)($account['game_password_cipher'] ?? ''));
+        }
+        if (GameAccountLoginMethod::isSocial($loginMethod)) {
+            return $this->cipher()->decrypt((string)($account['game_token_cipher'] ?? ''));
+        }
+        throw new ApiException(I18n::t('api.game.login_method_invalid', [], $this->locale), 422);
     }
 
     private function decodeConfig(string $json): array

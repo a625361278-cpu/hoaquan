@@ -54,10 +54,10 @@ class GameAccountExpiryService
                 'desired_running' => 0,
                 'auto_restart_attempts' => 0,
                 'auto_restart_next_at' => null,
-                'auto_restart_last_error' => '配额到期',
+                'auto_restart_last_error' => 'client.logs.system.quota_expired_stop_sent',
             ]);
 
-            $this->logs->enqueueNormal($accountId, ['[WARN] 配额到期，已发送停止指令'], $sessionId);
+            $this->logs->enqueueNormal($accountId, [GameLogMessage::localized('WARN', 'client.logs.system.quota_expired_stop_sent')], $sessionId);
             $result[$status === GameAccountService::STOPPING_STATUS ? 'stopping' : 'stopped']++;
         }
 

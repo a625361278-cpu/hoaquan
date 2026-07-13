@@ -17,7 +17,7 @@ class AuthServiceI18nTest extends TestCase
         $service = $this->makeService('vi');
 
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('Tai khoan hoac mat khau khong dung');
+        $this->expectExceptionMessage('Sai tài khoản hoặc mật khẩu');
 
         $service->login('player001', 'bad-password');
     }
@@ -29,7 +29,7 @@ class AuthServiceI18nTest extends TestCase
         $result = $service->register('new_player', '', '', 'secret123', 'secret123', '', '', 'first_pet', 'Mimi');
 
         $this->assertSame(0, $result['code']);
-        $this->assertSame('Dang ky thanh cong', $result['msg']);
+        $this->assertSame('Đăng ký thành công', $result['msg']);
     }
 
     private function makeService(string $locale, ?MemoryEmailCodeStore $emailCodes = null): AuthService

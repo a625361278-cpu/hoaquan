@@ -28,6 +28,9 @@ class ThirdPartyConfigAdminService
             'script_ws_url' => (string)($settings['third_party_script_ws_url'] ?? ''),
             'script_full_url' => $this->fullScriptUrl((string)($settings['third_party_script_ws_url'] ?? ''), $token),
             'sign_secret' => (string)($settings['third_party_sign_secret'] ?? ''),
+            'game_account_max_count' => $this->gameAccountMaxCount($settings['game_account_max_count'] ?? (string)SystemSettingService::DEFAULT_GAME_ACCOUNT_MAX_COUNT),
+            'facebook_login_enabled' => ($settings['facebook_login_enabled'] ?? '1') === '1',
+            'google_login_enabled' => ($settings['google_login_enabled'] ?? '1') === '1',
         ];
     }
 
@@ -45,6 +48,7 @@ class ThirdPartyConfigAdminService
         if ($enabled && $scriptWsUrl === '') {
             throw new RuntimeException(I18n::t('admin.third_party_config.script_url_required', [], $this->locale));
         }
+        $gameAccountMaxCount = $this->gameAccountMaxCount($payload['game_account_max_count'] ?? '');
 
         $this->settings->saveSettings([
             'third_party_enabled' => $enabled ? '1' : '0',
@@ -52,7 +56,29 @@ class ThirdPartyConfigAdminService
             'third_party_script_ws_url' => $scriptWsUrl,
             'third_party_sign_secret' => trim((string)($payload['third_party_sign_secret'] ?? '')),
             'third_party_transport' => 'websocket',
+            'game_account_max_count' => (string)$gameAccountMaxCount,
+            'facebook_login_enabled' => !empty($payload['facebook_login_enabled']) && (string)$payload['facebook_login_enabled'] !== '0' ? '1' : '0',
+            'google_login_enabled' => !empty($payload['google_login_enabled']) && (string)$payload['google_login_enabled'] !== '0' ? '1' : '0',
         ]);
+    }
+
+    private function gameAccountMaxCount(mixed $value): int
+    {
+        $raw = trim((string)$value);
+        if (!preg_match('/^\d+$/', $raw)) {
+            throw new RuntimeException(I18n::t('admin.third_party_config.game_account_max_count_invalid', [
+                'min' => SystemSettingService::MIN_GAME_ACCOUNT_MAX_COUNT,
+                'max' => SystemSettingService::MAX_GAME_ACCOUNT_MAX_COUNT,
+            ], $this->locale));
+        }
+        $count = (int)$raw;
+        if ($count < SystemSettingService::MIN_GAME_ACCOUNT_MAX_COUNT || $count > SystemSettingService::MAX_GAME_ACCOUNT_MAX_COUNT) {
+            throw new RuntimeException(I18n::t('admin.third_party_config.game_account_max_count_invalid', [
+                'min' => SystemSettingService::MIN_GAME_ACCOUNT_MAX_COUNT,
+                'max' => SystemSettingService::MAX_GAME_ACCOUNT_MAX_COUNT,
+            ], $this->locale));
+        }
+        return $count;
     }
 
     private function fullScriptUrl(string $baseUrl, string $token): string

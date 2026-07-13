@@ -94,10 +94,12 @@ php start.php status
 
 ## 当前业务边界
 
-- 第三方运行通道已固定为 WebSocket；游戏配置字段以当前 schema 和协议说明为准持续维护。添加游戏账号当前只支持 APP 渠道，只保存游戏账号和加密后的游戏密码，不伪造登录成功或选服成功。
+- 第三方运行通道已固定为 WebSocket；游戏配置字段以当前 schema 和协议说明为准持续维护。添加游戏账号的内部渠道固定为 APP，登录方式支持 `1=账号密码`、`2=Facebook`、`3=Google`。添加时必须先占用空闲脚本连接完成真实 `login` 验证，只有第三方在20秒内返回匹配上下文的 `code=1` 才写入账号；账号密码保存加密密码，Facebook/Google 保存游戏 UID 和加密 Token，不伪造登录成功或选服成功。
 - 游戏账号密码使用 `game_account_credential_key` 或环境变量 `GAME_ACCOUNT_CREDENTIAL_KEY` 加密保存；密钥缺失时拒绝保存账号。
 - 未添加游戏账号时，用户端显示统一风格的添加卡片。
-- 游戏账号会写入 `ga_game_accounts`，启动成功前不代表第三方登录成功、选服成功或角色信息已同步。
+- 单个用户可同时存在的游戏账号数量由 `ga_system_settings.game_account_max_count` 控制，默认 `3`，后台“运行服务配置”可设置 `1` 至 `100`。所有状态的现有账号都计入数量；删除账号后释放名额。降低上限不会删除已有账号，但超出或达到上限的用户不能继续添加。
+- 添加账号的数量校验在服务端事务中锁定当前用户后执行，避免并发请求突破上限；用户端显示当前数量和上限仅用于提示，不能替代服务端校验。配置缺失时使用默认值 `3`，配置格式错误或超出范围会明确报错。
+- `POST /api/game-accounts` 先返回短期 `validation_id/request_id/session_id/status=verifying`，用户端通过 `GET /api/game-account-validations/{validation_id}` 查询结果。验证任务和加密凭证短期保存在 Redis，成功后才在账号数量限制事务中写入 `ga_game_accounts`；正常 `code=0/1` 后脚本连接恢复空闲，超时、非法响应或上下文不匹配时关闭连接。
 - 等级、水滴、元宝、金币、订单统计等运行资源由第三方通过 WebSocket `status` 推送，服务端按账号保存 Redis 最新快照；未启动、未收到推送或字段缺失时用户端显示默认值。
 - 游戏配置可以保存到本地 `config_json`，同步状态为 `local_unsynced`；启动时会读取这份 JSON 发送给第三方。
 - 用户端点击“保存”会把游戏配置页当前完整配置保存为 `ga_game_accounts.config_json`；第三方读取时返回同一份 JSON，不生成假配置、不省略 `false` 或 `0`。
@@ -119,8 +121,13 @@ php start.php status
 - 日志写入按 1 万游戏账号设计：GatewayWorker 只把日志写入 64 个 Redis 分片队列，`game_log_writer` 默认 8 个进程按分片消费、内存聚合、批量落库。普通日志默认 10 秒或 50 行刷库一次，事件日志默认 2 秒或 20 条刷库一次；用户端读取结构不变，但普通日志可能有几秒延迟。
 - 第三方任务数据通过当前已绑定账号的 WebSocket 连接读写，不提供 HTTP 接口，不传 `account_id`。保存消息先写入 Redis 队列，由 `game_task_state_writer` 聚合后批量入库；我方只保存每个游戏账号的最新 JSON 快照，停止、重启、自动重连不清空，删除游戏账号时清空；单账号默认上限 `256KB`，可通过 `GAME_TASK_STATE_MAX_BYTES` 调整。
 - 用户注册和找回密码默认使用密保问题；`auth_verification_mode=email_code` 时才启用邮箱验证码。邮箱模式下 SMTP 未启用或配置不完整时，发送验证码会明确失败。
+- 新用户注册赠送点数由 `ga_system_settings.registration_reward_points` 控制，默认 `1`，后台“用户规则配置”允许设置 `0` 至 `1000` 的整数，`0` 表示关闭。仅对配置生效后的新注册用户执行，不补发历史用户。
+- 创建用户、设置初始余额和写入 `ga_user_point_transactions(type=registration_reward)` 在同一事务内完成；任一步失败都会回滚注册。注册赠送归新用户所有，与角色绑定后发给邀请人的 `1` 点邀请奖励相互独立。
 - 登录公告来自后台 `ga_announcements` 的最新启用记录；没有启用公告时用户端不弹窗，不使用前端假公告。
-- 用户端“点数充值”是申请支付接口用的临时展示入口，只在当前页打开套餐弹窗；当前固定展示 `30 点配额`、价格 `149000`、支付方式 `待接入`。点击“立即支付”只打开 `/static/temp-payment-apply.html#/` 静态页并显示“待接入充值”，不创建订单、不修改点数，正式支付接入后需要删除或替换。
+- 用户端“点数充值”已接入 RonnyPay 正式订单链路，首版固定套餐为 `quota_30`：`30.00` 点、`149000.00 VND`。姓名、手机号和 MoMo 付款账号只写入当前 `ga_payment_orders` 订单快照，不修改用户长期资料；客户端传入的金额和点数不会参与计价。付款账号按字符串原样保存和签名，仅去除首尾空格并校验非空，不限制长度或字符类型。
+- 创建订单使用用户与 `idempotency_key` 唯一约束防止重复下单；创建超时或 RonnyPay `502/503` 保留原商户订单并进入 `unknown`，由 `payment_reconciler` 查单，不自动换单。订单状态固定为 `creating/pending/unknown/success/fail/create_failed`，其中 `success` 不允许回退。
+- RonnyPay 成功回调和主动查单共用同一个事务入账流程：锁定订单和用户、写入 `ga_user_point_transactions(type=recharge)`、增加 `30.00` 点、标记订单入账。`uniq_payment_recharge(type, related_payment_order_id)` 保证一笔支付订单最多入账一次。
+- 用户端同步打开空白支付窗口，下单成功后再跳转到 RonnyPay `pay_url`，避免浏览器拦截；原页面每 3 秒查询本地订单，5 分钟后停止自动轮询并提供手动刷新。临时支付静态页已删除。
 
 ## 本地账号
 
@@ -143,8 +150,22 @@ php start.php status
 - GameAssist 用户后台允许查看、启用/禁用、重置密码和“添加配额”。添加配额只增加产品用户 `ga_users.balance`，必须填写正整数点数，可填写备注；成功后写入 `ga_user_point_transactions(type=admin_grant)` 和 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`。
 - 后台“会员管理 / 配额日志”是只读审计页面，包含“管理员添加记录”和“用户使用记录”两个标签。前者读取 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`，展示哪个管理员给哪个产品用户添加了多少配额；后者读取 `ga_user_point_transactions(type=quota_consume)`，展示用户在什么时间给哪个游戏账号消耗了多少配额。游戏账号删除后流水不删除，页面保留原始账号ID和延期说明并明确标记账号已删除。
 - “配额日志”权限自动跟随“GameAssist用户”菜单权限，不提供独立角色权限开关；`server/scripts/sync_admin.php` 会同步菜单并修正现有角色的关联权限。页面不提供修改、删除、补写或邀请奖励流水展示。
+- 后台“会员管理 / 支付订单”是只读页面，可按状态、用户、商户订单号和 RonnyPay 平台订单号筛选，并允许对非成功订单主动查单。后台不提供手工改成功、补点或删除订单；手机号在列表中脱敏展示。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
-- 后台“运行服务配置”负责编辑运行服务启用状态、连接池 Token 和我方 WebSocket 地址；签名密钥为选填，仅用于历史 HTTP 接口签名校验。后台“脚本连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
+- 后台“运行服务配置”负责编辑运行服务启用状态、每个用户最多游戏账号数、连接池 Token 和我方 WebSocket 地址；账号数量限制独立于运行服务启用开关。签名密钥为选填，仅用于历史 HTTP 接口签名校验。后台“脚本连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
+- 后台“用户规则配置”维护新用户注册赠送点数；修改后只影响后续注册，已有用户余额和历史流水不会被重算。
+
+## RonnyPay 配置
+
+- 私钥必须在本机或服务器离线生成并放在仓库外，只把公钥交给 RonnyPay。仓库、日志、后台和用户接口都不能保存或返回私钥、回调密钥。
+- 可使用 `php server/scripts/generate_ronnypay_keypair.php D:\\GameAssist-secrets\\ronnypay 2048` 离线生成；脚本拒绝覆盖已有文件。RSA 位数和 PEM 格式仍须先由 RonnyPay 确认。
+- 正式环境变量为 `RONNYPAY_ORDER_ENABLED`、`RONNYPAY_MERCHANT_ID`、`RONNYPAY_PRIVATE_KEY_PATH`、`RONNYPAY_CALLBACK_SECRET`、`RONNYPAY_NOTIFY_URL`、`RONNYPAY_WALLET_TYPE`、`RONNYPAY_BANK_CODE`；`RONNYPAY_BASE_URL` 默认 `https://ronnypay.com`。
+- 当前 MoMoPay 正式通道按 RonnyPay 最新文档使用 `RONNYPAY_WALLET_TYPE=1`、`RONNYPAY_BANK_CODE=971025`；两项与用户填写的 `bank_account` 会同时参与下单请求和 RSA 签名，不能留空。用户界面只显示 `MoMoPay`，不暴露内部通道值。
+- 越南通道要求 `total_fee` 为整数字符串：订单表和用户页面仍使用规范金额 `149000.00`，发给 RonnyPay 并参与 RSA 签名的值固定为 `149000`；回调和查单金额核对兼容两种等值格式。
+- 上线配置和双方验收完成前必须保持 `RONNYPAY_ORDER_ENABLED=0`。关闭开关只拒绝新下单，不阻断已创建订单的回调、主动查单和补偿进程。
+- 下单请求按 ASCII 字段名排序，排除空值和 `sign`，使用带尾部 `&` 的 `key=value&` 原文做 RSA-SHA256，再转换成无 padding 的 Base64URL。回调按排序后的 `key=value` 连接并追加 `&key=回调密钥`，计算小写 MD5并恒定时间比较。
+- 回调地址为 `POST /api/recharge/ronnypay/notify`，验签和订单、平台单号、商户号、金额核对全部成功后才返回纯文本 `success`。非法签名、未知订单、金额或订单号不一致会明确失败并写脱敏日志。
+- `payment_reconciler` 每 60 秒最多查询 50 笔 `pending/unknown`，按 1、5、15、30、60 分钟退避。只有 RonnyPay 的真实回调或查单结果能把订单改为支付成功。
 
 ## 邀请与个人中心
 
@@ -176,7 +197,8 @@ php start.php status
 - 运行服务需要先在后台“运行服务配置”或 `ga_system_settings` 配置 `third_party_enabled=1`、`third_party_script_token` 和 `third_party_script_ws_url`。`third_party_sign_secret` 可为空；为空时不影响脚本连接池 WebSocket，只影响历史 HTTP 签名接口。
 - 后台不再配置第三方 URL、URL 列表或单连接容量；旧 `third_party_ws_url`、`third_party_ws_urls`、`third_party_ws_connection_capacity` 可暂留数据库用于兼容旧数据，但启动逻辑不读取。
 - 常驻进程包括 GatewayWorker 的 Gateway、BusinessWorker、Register，以及 `server/config/process.php` 中的 `game_log_writer`、`game_task_state_writer`、`game_account_auto_restarter` 和 `game_account_expiry_watcher`。脚本连接状态写入 Redis 前缀 `gameassist:third_party_scripts:*`；日志写入 `gameassist:game_logs:queue:{shard}` 分片队列，`shard=account_id%64`，再由多 writer 聚合写入分段表。任务状态写入 `gameassist:game_task_states:queue:{shard}` 分片队列，再由任务状态 writer 聚合后批量 upsert。默认 `GAME_LOG_WRITER_COUNT=8`、`GAME_TASK_STATE_WRITER_COUNT=4`，可按服务器压力调整。
-- 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端先校验账号配额未到期，再验证密码可解密、读取本地配置 JSON、原子占用一个空闲脚本连接、写入 `starting`、`desired_running=1` 和日志会话，再向该脚本连接发送 `start` 包；接口成功只表示启动包已发出，不表示第三方登录成功。
+- 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端先校验账号配额未到期，再解密对应凭证、读取本地配置 JSON、原子占用空闲脚本连接并发送 `start`。`login_method=1` 只发送 `game_username + game_password`，`2/3` 只发送 `game_uid + token`；自动重连使用同一规则。接口成功只表示启动包已发出，不表示第三方登录成功。
+- 后台“运行服务配置”的 Facebook/Google 开关默认开启，关闭后只禁止新增对应登录方式；已有账号仍可启动、自动重连和更新 Token。Token 更新后在下次启动或重连生效，明文不会进入接口响应或日志。
 - 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端向已绑定脚本发送 `stop` 后本地状态进入 `stopping` 并写入 `desired_running=0`；收到脚本 `stopped` 或连接关闭确认后才改为 `stopped` 并清空本次普通日志，事件卡片历史不会清空。
 - 异常断线恢复：连接关闭但用户没有手动停止时，服务端不会把账号当作已停止，而是改为 `reconnecting`，保留原 `log_session_id` 和普通日志，等待空闲脚本连接后重发幂等 `start`。第三方应按 `game_username` 判断已有任务并重新绑定，不要重复启动；本协议不使用单独的 `resume` 消息。
 - 事件卡片历史定位为玩家游戏内事件展示，只由第三方 `event` 消息或普通日志中的 `[[EVT]]` 事件 JSON 写入；平台运行状态只写普通日志。
@@ -200,6 +222,7 @@ php start.php status
 - 用户端通过 `/api/i18n/messages?locale=zh_CN|vi` 拉取语言包，所有业务 API 请求会携带 `X-Locale`。
 - 后端语言选择优先级：`?lang=` / `?locale=`、`X-Locale` 请求头、`gameassist_locale` cookie、默认 `zh_CN`。
 - 后台和用户端都提供语言切换入口；切换后会保存到本地存储或 cookie。
+- 平台生成的用户运行日志以 `[[I18N]]` 结构化翻译消息保存，用户端查看时按当前界面语言渲染；历史版本已写入的中文断线、重连、启动、到期等平台日志由前端兼容转换。第三方脚本发送的游戏原始日志保持原文，不伪造翻译。
 - 用户端游戏配置页的分组标题、配置项名称、问号说明、导入/保存提示都必须从语言包读取；礼仪分监控开启后才显示 `basic.reputation.threshold` 礼仪分阈值字段。
 - 用户端游戏配置页的种植、订单、公会、活动分组和问号说明保持当前产品配置规范；没有说明的开关不显示问号，不用占位文案伪装。
 - 用户端游戏配置页以当前产品配置规范为校验口径，开关展开、单选、下拉等控件形态要保持一致；例如种植的“选择数量”为下拉选择，保存值仍是字符串。

@@ -67,6 +67,13 @@ return [
                 'href' => '/app/admin/game-assist-user/quota-logs',
                 'type' => 1,
                 'weight' => 790,
+            ],
+            [
+                'title' => '支付订单',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistPaymentOrderController',
+                'href' => '/app/admin/game-assist-payment-order/index',
+                'type' => 1,
+                'weight' => 780,
             ]
         ]
     ],
@@ -104,6 +111,13 @@ return [
                 'href' => '/app/admin/game-assist-announcement/index',
                 'type' => 1,
                 'weight' => 550,
+            ],
+            [
+                'title' => '用户规则配置',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistUserRulesController',
+                'href' => '/app/admin/game-assist-user-rules/index',
+                'type' => 1,
+                'weight' => 548,
             ],
             [
                 'title' => '第三方配置',

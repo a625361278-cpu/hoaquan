@@ -109,15 +109,26 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
         return array_slice($rows, 0, max(0, $limit));
     }
 
-    public function createLocalPreview(int $userId, array $data): array
+    public function createLocalPreviewWithinLimit(int $userId, array $data, int $maxAccounts): ?array
     {
+        $currentCount = count(array_filter(
+            $this->accounts,
+            static fn (array $account): bool => (int)($account['user_id'] ?? 0) === $userId
+        ));
+        if ($currentCount >= $maxAccounts) {
+            return null;
+        }
+
         $account = [
             'id' => $this->nextId++,
             'user_id' => $userId,
             'display_name' => $data['display_name'],
             'game_username' => $data['game_username'],
+            'game_uid' => $data['game_uid'],
             'channel_code' => $data['channel_code'],
+            'login_method' => $data['login_method'],
             'game_password_cipher' => $data['game_password_cipher'],
+            'game_token_cipher' => $data['game_token_cipher'],
             'server_id' => $data['server_id'],
             'server_name' => $data['server_name'],
             'status' => 'local_preview',
@@ -156,6 +167,18 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
             }
         }
 
+        throw new \RuntimeException('Account not found in test repository');
+    }
+
+    public function updateToken(int $userId, int $accountId, string $encryptedToken): array
+    {
+        foreach ($this->accounts as $index => $account) {
+            if ((int)$account['user_id'] === $userId && (int)$account['id'] === $accountId) {
+                $this->accounts[$index]['game_token_cipher'] = $encryptedToken;
+                $this->accounts[$index]['sync_status'] = 'local_unsynced';
+                return $this->accounts[$index];
+            }
+        }
         throw new \RuntimeException('Account not found in test repository');
     }
 

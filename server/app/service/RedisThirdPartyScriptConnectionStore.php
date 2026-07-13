@@ -42,10 +42,19 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
             'account_id' => 0,
             'session_id' => '',
             'request_id' => '',
+            'validation_id' => '',
             'remote_ip' => (string)($metadata['remote_ip'] ?? ''),
+            'peer_ip' => (string)($metadata['peer_ip'] ?? ''),
+            'peer_port' => (int)($metadata['peer_port'] ?? 0),
             'script_version' => (string)($metadata['script_version'] ?? ''),
             'connected_at' => $now,
             'last_seen' => $now,
+            'last_message_at' => $now,
+            'last_message_type' => 'connected',
+            'last_message_bytes' => 0,
+            'last_heartbeat_at' => 0,
+            'message_count' => 0,
+            'heartbeat_count' => 0,
             'last_error' => '',
         ];
 
@@ -65,6 +74,17 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
         $state['last_seen'] = time();
         if (isset($metadata['script_version'])) {
             $state['script_version'] = (string)$metadata['script_version'];
+        }
+        if (isset($metadata['message_type'])) {
+            $messageType = (string)$metadata['message_type'];
+            $state['last_message_at'] = time();
+            $state['last_message_type'] = $messageType;
+            $state['last_message_bytes'] = max(0, (int)($metadata['message_bytes'] ?? 0));
+            $state['message_count'] = (int)($state['message_count'] ?? 0) + 1;
+            if (in_array($messageType, ['heartbeat', 'ping', 'pong'], true)) {
+                $state['last_heartbeat_at'] = time();
+                $state['heartbeat_count'] = (int)($state['heartbeat_count'] ?? 0) + 1;
+            }
         }
         $this->writeConnection($clientId, $state);
         $accountId = (int)($state['account_id'] ?? 0);
@@ -128,6 +148,75 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
         return null;
     }
 
+    public function allocateIdleForValidation(string $validationId, string $sessionId, string $requestId): ?array
+    {
+        while ($clientId = $this->redis()->sPop($this->idleKey())) {
+            $clientId = (string)$clientId;
+            $state = $this->connection($clientId);
+            if (!$state || ($state['state'] ?? '') !== 'idle') {
+                continue;
+            }
+
+            $now = time();
+            $state['state'] = 'validating';
+            $state['account_id'] = 0;
+            $state['validation_id'] = $validationId;
+            $state['session_id'] = $sessionId;
+            $state['request_id'] = $requestId;
+            $state['bound_at'] = $now;
+            $state['last_seen'] = $now;
+            $state['last_error'] = '';
+            $this->writeConnection($clientId, $state);
+            $this->redis()->sAdd($this->boundKey(), $clientId);
+            return $state;
+        }
+
+        return null;
+    }
+
+    public function restoreValidationToIdle(string $clientId, string $validationId, string $sessionId, string $requestId): ?array
+    {
+        $key = $this->connectionKey($clientId);
+        $script = <<<'LUA'
+local raw = redis.call('GET', KEYS[1])
+if not raw then return false end
+local state = cjson.decode(raw)
+if state['state'] ~= 'validating'
+    or tostring(state['validation_id'] or '') ~= ARGV[1]
+    or tostring(state['session_id'] or '') ~= ARGV[2]
+    or tostring(state['request_id'] or '') ~= ARGV[3] then
+    return false
+end
+state['state'] = 'idle'
+state['account_id'] = 0
+state['validation_id'] = ''
+state['session_id'] = ''
+state['request_id'] = ''
+state['bound_at'] = 0
+state['last_seen'] = tonumber(ARGV[4])
+redis.call('SETEX', KEYS[1], tonumber(ARGV[5]), cjson.encode(state))
+redis.call('SREM', KEYS[2], ARGV[6])
+redis.call('SADD', KEYS[3], ARGV[6])
+return cjson.encode(state)
+LUA;
+        $result = $this->redis()->eval($script, [
+            $key,
+            $this->boundKey(),
+            $this->idleKey(),
+            $validationId,
+            $sessionId,
+            $requestId,
+            (string)time(),
+            (string)self::CONNECTION_TTL,
+            $clientId,
+        ], 3);
+        if (!is_string($result) || $result === '') {
+            return null;
+        }
+        $state = json_decode($result, true);
+        return is_array($state) ? $state : null;
+    }
+
     public function markStopping(int $accountId): ?array
     {
         $state = $this->connectionByAccount($accountId);
@@ -183,6 +272,7 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
             'idle_count' => 0,
             'bound_count' => 0,
             'stopping_count' => 0,
+            'validating_count' => 0,
         ];
         foreach ($rows as $row) {
             $state = (string)($row['state'] ?? '');
@@ -192,6 +282,8 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
                 $stats['bound_count']++;
             } elseif ($state === 'stopping') {
                 $stats['stopping_count']++;
+            } elseif ($state === 'validating') {
+                $stats['validating_count']++;
             }
         }
         return $stats;

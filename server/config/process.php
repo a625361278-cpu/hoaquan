@@ -71,6 +71,20 @@ return [
         'group' => app_env('WEBMAN_GROUP', ''),
         'reusePort' => false,
     ],
+    'game_account_login_validation_watcher' => [
+        'handler' => app\process\GameAccountLoginValidationWatcher::class,
+        'count' => 1,
+        'user' => app_env('WEBMAN_USER', ''),
+        'group' => app_env('WEBMAN_GROUP', ''),
+        'reusePort' => false,
+    ],
+    'payment_reconciler' => [
+        'handler' => app\process\PaymentReconciler::class,
+        'count' => 1,
+        'user' => app_env('WEBMAN_USER', ''),
+        'group' => app_env('WEBMAN_GROUP', ''),
+        'reusePort' => false,
+    ],
     // File update detection and automatic reload
     'monitor' => [
         'handler' => app\process\Monitor::class,

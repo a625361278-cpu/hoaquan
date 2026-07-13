@@ -14,6 +14,10 @@ interface ThirdPartyScriptConnectionStoreInterface
 
     public function allocateIdle(int $accountId, string $sessionId, string $requestId): ?array;
 
+    public function allocateIdleForValidation(string $validationId, string $sessionId, string $requestId): ?array;
+
+    public function restoreValidationToIdle(string $clientId, string $validationId, string $sessionId, string $requestId): ?array;
+
     public function markStopping(int $accountId): ?array;
 
     public function releaseClient(string $clientId): ?array;

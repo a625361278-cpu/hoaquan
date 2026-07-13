@@ -40,6 +40,7 @@ class ThirdPartyScriptRuntimeTest extends TestCase
         $this->assertSame('start', $payload['type']);
         $this->assertSame('request-1', $payload['request_id']);
         $this->assertSame('session-1', $payload['session_id']);
+        $this->assertSame(1, $payload['login_method']);
         $this->assertSame('player001', $payload['game_username']);
         $this->assertSame('secret-password', $payload['game_password']);
         $this->assertTrue($payload['task_state']['exists']);
@@ -73,6 +74,37 @@ class ThirdPartyScriptRuntimeTest extends TestCase
         $this->assertNull($payload['task_state']['saved_at']);
     }
 
+    public function testFacebookAndGoogleStartPayloadsOnlySendUidAndToken(): void
+    {
+        foreach ([2, 3] as $loginMethod) {
+            $store = new ArrayThirdPartyScriptConnectionStore();
+            $store->registerIdle('client-' . $loginMethod);
+            $sent = [];
+            $runtime = new GatewayThirdPartyScriptRuntime(
+                $store,
+                sender: function (string $clientId, string $payload) use (&$sent): bool {
+                    $sent[$clientId][] = json_decode($payload, true);
+                    return true;
+                },
+                sessionUpdater: static function (): void {
+                }
+            );
+
+            $runtime->startAccount([
+                'id' => $loginMethod,
+                'login_method' => $loginMethod,
+                'game_uid' => 'uid-' . $loginMethod,
+            ], 'request-' . $loginMethod, 'session-' . $loginMethod, 'token-' . $loginMethod, []);
+
+            $payload = $sent['client-' . $loginMethod][0];
+            $this->assertSame($loginMethod, $payload['login_method']);
+            $this->assertSame('uid-' . $loginMethod, $payload['game_uid']);
+            $this->assertSame('token-' . $loginMethod, $payload['token']);
+            $this->assertArrayNotHasKey('game_username', $payload);
+            $this->assertArrayNotHasKey('game_password', $payload);
+        }
+    }
+
     public function testStartFailsWhenNoIdleConnection(): void
     {
         $runtime = new GatewayThirdPartyScriptRuntime(new ArrayThirdPartyScriptConnectionStore());
@@ -81,6 +113,41 @@ class ThirdPartyScriptRuntimeTest extends TestCase
         $this->expectExceptionMessage('服务器未准备好，请联系管理员');
 
         $runtime->startAccount(['id' => 3], 'request-1', 'session-1', 'secret-password', []);
+    }
+
+    public function testLoginValidationPayloadUsesMutuallyExclusiveCredentialFields(): void
+    {
+        foreach ([1, 2, 3] as $method) {
+            $store = new ArrayThirdPartyScriptConnectionStore();
+            $store->registerIdle('validation-' . $method);
+            $sent = [];
+            $runtime = new GatewayThirdPartyScriptRuntime(
+                $store,
+                sender: function (string $clientId, string $payload) use (&$sent): bool {
+                    $sent[] = json_decode($payload, true);
+                    return true;
+                },
+                sessionUpdater: static function (): void {},
+                closer: static function (): void {}
+            );
+            $reservation = $runtime->reserveValidation('validation-id', 'request-id', 'session-id');
+            $runtime->sendLoginValidationCommand($reservation, $method, 'identity', 'credential');
+            $payload = $sent[0];
+            $this->assertSame('login', $payload['type']);
+            $this->assertSame($method, $payload['login_method']);
+            $this->assertArrayNotHasKey('account_id', $payload);
+            if ($method === 1) {
+                $this->assertSame('identity', $payload['game_username']);
+                $this->assertSame('credential', $payload['game_password']);
+                $this->assertArrayNotHasKey('game_uid', $payload);
+                $this->assertArrayNotHasKey('token', $payload);
+            } else {
+                $this->assertSame('identity', $payload['game_uid']);
+                $this->assertSame('credential', $payload['token']);
+                $this->assertArrayNotHasKey('game_username', $payload);
+                $this->assertArrayNotHasKey('game_password', $payload);
+            }
+        }
     }
 
     public function testStopSendsStopWithoutAccountIdAndMarksStopping(): void

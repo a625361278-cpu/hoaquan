@@ -3,6 +3,7 @@ import { getLocale, translate } from './i18n';
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const TOKEN_KEY = 'gameassist_token';
 const LOGIN_ANNOUNCEMENT_PENDING_KEY = 'gameassist_login_announcement_pending';
+const ACCOUNT_VALIDATION_PENDING_KEY = 'gameassist_pending_account_validation';
 
 export function getToken() {
   return uni.getStorageSync(TOKEN_KEY) || '';
@@ -15,6 +16,7 @@ export function setToken(token) {
 export function clearToken() {
   uni.removeStorageSync(TOKEN_KEY);
   uni.removeStorageSync(LOGIN_ANNOUNCEMENT_PENDING_KEY);
+  uni.removeStorageSync(ACCOUNT_VALIDATION_PENDING_KEY);
 }
 
 export function markLoginAnnouncementPending() {

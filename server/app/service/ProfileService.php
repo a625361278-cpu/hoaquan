@@ -172,7 +172,10 @@ class ProfileService
             return $roleId;
         }
 
-        return trim((string)($account['game_username'] ?? ''));
+        $loginMethod = (int)($account['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD);
+        return trim((string)($loginMethod === GameAccountLoginMethod::ACCOUNT_PASSWORD
+            ? ($account['game_username'] ?? '')
+            : ($account['game_uid'] ?? '')));
     }
 
     private function requireUser(int $userId): array

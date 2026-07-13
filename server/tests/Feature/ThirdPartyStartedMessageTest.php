@@ -74,6 +74,41 @@ class ThirdPartyStartedMessageTest extends TestCase
         }
     }
 
+    public function testSocialStartedWithoutRoleIdFallsBackToGameUid(): void
+    {
+        $connection = Db::connection();
+        $connection->beginTransaction();
+
+        try {
+            [, $accountId] = $this->createAccount([
+                'login_method' => 2,
+                'game_username' => '',
+                'game_password_cipher' => null,
+                'game_uid' => 'facebook-uid-1001',
+                'game_token_cipher' => 'encrypted-token',
+                'status' => 'starting',
+                'desired_running' => 1,
+                'log_session_id' => 'session-social',
+                'expire_time' => '2099-01-01 00:00:00',
+            ]);
+
+            $this->markStarted($accountId, [
+                'type' => 'started',
+                'request_id' => 'request-social',
+                'session_id' => 'session-social',
+            ], [
+                'request_id' => 'request-social',
+                'session_id' => 'session-social',
+            ]);
+
+            $account = (array)Db::table('ga_game_accounts')->where('id', $accountId)->first();
+            $this->assertSame('running', $account['status']);
+            $this->assertSame('facebook-uid-1001', $account['third_party_account_id']);
+        } finally {
+            $connection->rollBack();
+        }
+    }
+
     public function testLateStartedAfterManualStopIsIgnored(): void
     {
         $connection = Db::connection();
@@ -161,8 +196,11 @@ class ThirdPartyStartedMessageTest extends TestCase
         $accountId = (int)Db::table('ga_game_accounts')->insertGetId(array_merge([
             'user_id' => $userId,
             'display_name' => 'player_' . $suffix,
+            'login_method' => 1,
             'game_username' => 'player_' . $suffix . '@example.com',
             'game_password_cipher' => '',
+            'game_uid' => '',
+            'game_token_cipher' => null,
             'channel_code' => 'official_app',
             'server_id' => '',
             'server_name' => '',

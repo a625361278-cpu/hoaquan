@@ -50,8 +50,11 @@ try {
 
     $gameAccountColumns = [
         'game_username' => static fn ($table) => $table->string('game_username', 128)->default('')->after('display_name')->comment('游戏登录账号'),
+        'game_uid' => static fn ($table) => $table->string('game_uid', 128)->default('')->after('game_username')->comment('Facebook或Google游戏UID'),
         'game_password_cipher' => static fn ($table) => $table->text('game_password_cipher')->nullable()->after('game_username')->comment('游戏密码密文'),
+        'game_token_cipher' => static fn ($table) => $table->longText('game_token_cipher')->nullable()->after('game_password_cipher')->comment('Facebook或Google Token密文'),
         'channel_code' => static fn ($table) => $table->string('channel_code', 64)->default('official_app')->after('game_username')->comment('渠道标识'),
+        'login_method' => static fn ($table) => $table->unsignedTinyInteger('login_method')->default(1)->after('channel_code')->comment('登录方式：1账号密码，2Facebook，3Google'),
         'server_id' => static fn ($table) => $table->string('server_id', 64)->default('')->after('channel_code')->comment('区服ID'),
         'server_name' => static fn ($table) => $table->string('server_name', 128)->default('')->after('server_id')->comment('区服名称'),
         'sync_status' => static fn ($table) => $table->string('sync_status', 32)->default('local_unsynced')->after('status')->comment('同步状态'),
@@ -195,18 +198,75 @@ try {
             $table->string('description', 255)->default('')->comment('说明');
             $table->unsignedInteger('related_user_id')->nullable()->comment('关联用户ID');
             $table->string('related_role_id', 128)->default('')->comment('关联角色ID');
+            $table->unsignedBigInteger('related_payment_order_id')->nullable()->comment('关联支付订单ID');
             $table->string('ip_address', 64)->default('')->comment('触发IP');
             $table->dateTime('created_at')->useCurrent()->comment('创建时间');
             $table->index(['user_id', 'created_at'], 'idx_user_created');
             $table->index(['type', 'created_at'], 'idx_type_created');
             $table->unique(['type', 'related_user_id'], 'uniq_invite_reward_user');
         });
-    } elseif (!$schema->hasIndex('ga_user_point_transactions', 'uniq_invite_reward_user')) {
+    } else {
+        if (!$schema->hasColumn('ga_user_point_transactions', 'related_payment_order_id')) {
+            $schema->table('ga_user_point_transactions', function ($table) {
+                $table->unsignedBigInteger('related_payment_order_id')->nullable()->after('related_role_id')->comment('关联支付订单ID');
+            });
+        }
+        if (!$schema->hasIndex('ga_user_point_transactions', 'uniq_invite_reward_user')) {
+            $schema->table('ga_user_point_transactions', function ($table) {
+                $table->unique(['type', 'related_user_id'], 'uniq_invite_reward_user');
+            });
+        }
+    }
+    if (!$schema->hasIndex('ga_user_point_transactions', 'uniq_payment_recharge')) {
         $schema->table('ga_user_point_transactions', function ($table) {
-            $table->unique(['type', 'related_user_id'], 'uniq_invite_reward_user');
+            $table->unique(['type', 'related_payment_order_id'], 'uniq_payment_recharge');
         });
     }
     ensureTableEngine('ga_user_point_transactions', 'InnoDB');
+
+    if (!$schema->hasTable('ga_payment_orders')) {
+        $schema->create('ga_payment_orders', function ($table) {
+            $table->bigIncrements('id')->comment('支付订单ID');
+            $table->unsignedInteger('user_id')->comment('用户ID');
+            $table->string('provider', 32)->default('ronnypay')->comment('支付服务商');
+            $table->string('package_code', 64)->comment('套餐快照');
+            $table->decimal('points', 10, 2)->comment('到账点数快照');
+            $table->char('currency', 3)->default('VND')->comment('币种');
+            $table->decimal('total_fee', 18, 2)->comment('订单金额');
+            $table->string('customer_name', 128)->comment('付款人姓名快照');
+            $table->string('customer_mobile', 64)->comment('付款人手机号快照');
+            $table->longText('bank_account')->comment('付款账号快照');
+            $table->string('idempotency_key', 64)->comment('客户端幂等键');
+            $table->string('merchant_order', 64)->comment('商户订单号');
+            $table->string('provider_order_number', 64)->nullable()->comment('平台订单号');
+            $table->string('status', 32)->comment('订单状态');
+            $table->text('pay_url')->nullable()->comment('支付链接');
+            $table->string('country', 8)->default('VN')->comment('国家');
+            $table->string('wallet_type', 64)->default('')->comment('钱包类型');
+            $table->string('bank_code', 64)->default('')->comment('银行或通道编码');
+            $table->string('utr', 128)->default('')->comment('支付参考号');
+            $table->unsignedInteger('query_attempts')->default(0)->comment('查单次数');
+            $table->dateTime('next_query_at')->nullable()->comment('下次查单时间');
+            $table->dateTime('last_queried_at')->nullable()->comment('最后查单时间');
+            $table->dateTime('notified_at')->nullable()->comment('最后回调时间');
+            $table->dateTime('credited_at')->nullable()->comment('点数入账时间');
+            $table->string('last_error_code', 32)->default('')->comment('最后错误码');
+            $table->string('last_error_message', 255)->default('')->comment('最后错误');
+            $table->dateTime('created_at')->useCurrent()->comment('创建时间');
+            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate()->comment('更新时间');
+            $table->unique('merchant_order', 'uniq_payment_merchant_order');
+            $table->unique('provider_order_number', 'uniq_payment_provider_order');
+            $table->unique(['user_id', 'idempotency_key'], 'uniq_payment_user_idempotency');
+            $table->index(['status', 'next_query_at'], 'idx_payment_reconcile');
+            $table->index(['user_id', 'created_at'], 'idx_payment_user_created');
+        });
+    }
+    if (!$schema->hasColumn('ga_payment_orders', 'bank_account')) {
+        $schema->table('ga_payment_orders', function ($table) {
+            $table->longText('bank_account')->nullable()->after('customer_mobile')->comment('付款账号快照；仅新订单必填');
+        });
+    }
+    ensureTableEngine('ga_payment_orders', 'InnoDB');
 
     if (!$schema->hasTable('ga_admin_operation_logs')) {
         $schema->create('ga_admin_operation_logs', function ($table) {
@@ -233,6 +293,10 @@ try {
         'third_party_script_ws_url' => [app_env('THIRD_PARTY_SCRIPT_WS_URL', ''), '我方第三方脚本WebSocket地址'],
         'third_party_transport' => ['websocket', '第三方通信方式：websocket或http'],
         'game_account_credential_key' => [app_env('GAME_ACCOUNT_CREDENTIAL_KEY', ''), '游戏账号密码加密密钥'],
+        'game_account_max_count' => ['3', '单个用户同时可存在的游戏账号数量上限'],
+        'facebook_login_enabled' => ['1', '是否允许新增Facebook登录游戏账号：1是，0否'],
+        'google_login_enabled' => ['1', '是否允许新增Google登录游戏账号：1是，0否'],
+        'registration_reward_points' => ['1', '新用户注册赠送配额点数，0表示关闭'],
         'auth_verification_mode' => ['security_question', '认证方式：security_question密保问题，email_code邮箱验证码'],
         'smtp_enabled' => ['0', 'SMTP是否启用：0否，1是'],
         'smtp_host' => ['', 'SMTP服务器地址'],
@@ -276,6 +340,7 @@ try {
     echo 'ga_game_account_task_states：已同步' . PHP_EOL;
     echo 'ga_announcements：已同步' . PHP_EOL;
     echo 'ga_user_point_transactions：已同步，表引擎已校正为InnoDB' . PHP_EOL;
+    echo 'ga_payment_orders：已同步，表引擎已校正为InnoDB' . PHP_EOL;
     echo 'ga_admin_operation_logs：已同步' . PHP_EOL;
     echo 'SMTP配置项：已同步' . PHP_EOL;
     echo '认证方式配置项：已同步' . PHP_EOL;

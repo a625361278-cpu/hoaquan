@@ -26,10 +26,15 @@ class AuthService
         private ?EmailCodeStoreInterface $emailCodes = null,
         private ?MailerInterface $mailer = null,
         private string $locale = I18n::DEFAULT_LOCALE,
-        private string $verificationMode = self::MODE_SECURITY_QUESTION
+        private string $verificationMode = self::MODE_SECURITY_QUESTION,
+        private int $registrationRewardPoints = SystemSettingService::DEFAULT_REGISTRATION_REWARD_POINTS
     ) {
         $this->locale = I18n::normalizeLocale($this->locale);
         $this->verificationMode = $this->normalizeVerificationMode($this->verificationMode);
+        if ($this->registrationRewardPoints < SystemSettingService::MIN_REGISTRATION_REWARD_POINTS
+            || $this->registrationRewardPoints > SystemSettingService::MAX_REGISTRATION_REWARD_POINTS) {
+            throw new \InvalidArgumentException('Registration reward points are outside the allowed range');
+        }
     }
 
     public function login(string $account, string $password): array
@@ -184,7 +189,9 @@ class AuthService
             trim($registeredIp),
             $this->generateUniqueInviteCode(),
             $securityQuestionKey ?: null,
-            $securityAnswerHash
+            $securityAnswerHash,
+            $this->registrationRewardPoints,
+            $this->t('api.auth.registration_reward_description')
         );
 
         return ApiResponse::success([

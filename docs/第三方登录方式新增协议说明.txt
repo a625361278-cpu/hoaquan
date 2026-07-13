@@ -1,0 +1,132 @@
+GameAssist 第三方 start 协议新增说明
+
+现有 start 协议已经包含 login_method，原来固定为 1（账号密码登录）。当前支持 1=账号密码、2=Facebook、3=Google，并在添加账号前增加 login 验证。只有 login 返回 code=1 后账号才会保存。
+
+添加账号验证请求与 start 使用相同的凭证互斥规则，但 type 固定为 login，并且不携带 config、task_state：
+
+{
+  "type": "login",
+  "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
+  "login_method": 2,
+  "game_uid": "game_uid_001",
+  "token": "facebook-token"
+}
+
+响应示例：
+
+{
+  "type": "login",
+  "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
+  "code": 1,
+  "server_name": "VN-202",
+  "msg": "登录成功"
+}
+
+20 秒未返回视为超时。正常 code=0/1 后连接恢复空闲；超时、非法响应或上下文不匹配时关闭连接。
+
+一、字段变更
+
+login_method：现有整数必填字段，原来只支持 1，本次新增枚举值 2、3。
+
+- 1：账号密码登录
+- 2：Facebook 登录
+- 3：Google 登录
+
+本次真正新增的 start 字段：
+
+- game_uid：字符串，Facebook/Google 登录时必填，最长 128 个字符。
+- token：字符串，Facebook/Google 登录时必填。
+
+二、start 凭证字段规则
+
+1. login_method=1
+
+{
+  "login_method": 1,
+  "game_username": "game_account_001",
+  "game_password": "plain-password-used-only-during-start"
+}
+
+不会发送 game_uid、token。
+
+2. login_method=2（Facebook）
+
+{
+  "login_method": 2,
+  "game_uid": "game_uid_001",
+  "token": "facebook-token"
+}
+
+不会发送 game_username、game_password。
+
+3. login_method=3（Google）
+
+{
+  "login_method": 3,
+  "game_uid": "game_uid_001",
+  "token": "google-token"
+}
+
+不会发送 game_username、game_password。
+
+三、完整 start 包结构
+
+实际发送时，start 包仍包含原有公共字段：
+
+- type：固定为 start
+- request_id：本次请求编号
+- session_id：本次运行日志会话 ID
+- task_state：最近一次任务状态快照
+- config：用户保存的完整游戏配置
+
+Facebook 示例（config 仅用空对象缩写，线上仍发送原协议定义的完整 config）：
+
+{
+  "type": "start",
+  "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
+  "login_method": 2,
+  "game_uid": "game_uid_001",
+  "token": "facebook-token",
+  "task_state": {
+    "exists": false,
+    "state": {},
+    "saved_at": null
+  },
+  "config": {}
+}
+
+四、重连与幂等
+
+start 仍是幂等的“启动或重新绑定”指令：
+
+- login_method=1 使用 game_username 识别原任务。
+- login_method=2/3 使用 game_uid 识别原任务。
+- 如果任务已经运行，不要重复启动，只需把新的 WebSocket 连接绑定到原任务并返回 started。
+- 如果任务尚未运行，则正常启动并返回 started。
+- 本协议不新增 resume 消息。
+
+五、started 回包
+
+started/error/stopped 建议继续原样返回当前 request_id 和 session_id。
+
+{
+  "type": "started",
+  "request_id": "8f2e2e7c2d834f4f9f8e93b8fd15c111",
+  "session_id": "f3b33b8d8c8e4f44a0c6a3b7",
+  "role_id": "stable-role-id",
+  "display_name": "role-name"
+}
+
+role_id 建议始终返回。若未返回：
+
+- 账号密码登录使用 game_username 作为绑定标识。
+- Facebook/Google 登录使用 game_uid 作为绑定标识。
+
+六、安全约定
+
+- game_password 或 token 只会在 start 包中传递，不会写入 config。
+- 第三方日志不得记录完整 game_password 或 token。
+- 第三方必须严格按 login_method 选择凭证字段，不要混用两组字段。

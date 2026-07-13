@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="<?=admin_html_lang()?>">
+<head>
+    <meta charset="utf-8">
+    <title><?=admin_t('admin.payment_orders.title')?></title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+</head>
+<body class="pear-container">
+<div class="layui-card">
+    <div class="layui-card-body">
+        <form class="layui-form top-search-from" lay-filter="search-form">
+            <div class="layui-form-item">
+                <label class="layui-form-label"><?=admin_t('admin.payment_orders.status')?></label>
+                <div class="layui-input-block">
+                    <select name="status"><option value=""><?=admin_t('admin.common.all')?></option>
+                        <option value="creating">creating</option><option value="pending">pending</option>
+                        <option value="unknown">unknown</option><option value="success">success</option>
+                        <option value="fail">fail</option><option value="create_failed">create_failed</option>
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item"><label class="layui-form-label"><?=admin_t('admin.payment_orders.user')?></label><div class="layui-input-block"><input name="user" class="layui-input"></div></div>
+            <div class="layui-form-item"><label class="layui-form-label"><?=admin_t('admin.payment_orders.merchant_order')?></label><div class="layui-input-block"><input name="merchant_order" class="layui-input"></div></div>
+            <div class="layui-form-item"><label class="layui-form-label"><?=admin_t('admin.payment_orders.provider_order')?></label><div class="layui-input-block"><input name="provider_order_number" class="layui-input"></div></div>
+            <div class="layui-form-item layui-inline"><button class="pear-btn pear-btn-primary" lay-submit lay-filter="query"><?=admin_t('admin.common.search')?></button><button type="reset" class="pear-btn" lay-submit lay-filter="reset"><?=admin_t('admin.common.reset')?></button></div>
+        </form>
+    </div>
+</div>
+<div class="layui-card"><div class="layui-card-body"><table id="data-table" lay-filter="data-table"></table></div></div>
+<script type="text/html" id="toolbar"><button class="pear-btn pear-btn-md" lay-event="refresh"><i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.refresh')?></button></script>
+<script type="text/html" id="row-tools">{{# if(d.status !== 'success' && d.status !== 'create_failed'){ }}<button class="pear-btn pear-btn-primary pear-btn-sm" lay-event="query"><?=admin_t('admin.payment_orders.query')?></button>{{# } }}</script>
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+layui.use(['table','form','popup'], function(){
+    const table=layui.table, form=layui.form, $=layui.$, popup=layui.popup;
+    let where={};
+    table.render({elem:'#data-table',id:'data-table',url:'/app/admin/game-assist-payment-order/select',page:{limit:20,limits:[20,50,100]},toolbar:'#toolbar',defaultToolbar:['filter','exports'],skin:'line',size:'lg',cols:[[
+        {field:'id',title:'ID',width:80,sort:true},{field:'created_at',title:'<?=admin_t('admin.payment_orders.created_at')?>',width:170},
+        {title:'<?=admin_t('admin.payment_orders.user')?>',minWidth:170,templet:d=>layui.util.escape((d.user_account||('#'+d.user_id))+(d.user_nickname?' / '+d.user_nickname:''))},
+        {field:'merchant_order',title:'<?=admin_t('admin.payment_orders.merchant_order')?>',minWidth:250},{field:'provider_order_number',title:'<?=admin_t('admin.payment_orders.provider_order')?>',minWidth:210},
+        {field:'status',title:'<?=admin_t('admin.payment_orders.status')?>',width:120},{field:'total_fee',title:'<?=admin_t('admin.payment_orders.amount')?>',width:130},
+        {field:'points',title:'<?=admin_t('admin.payment_orders.points')?>',width:100},{field:'customer_name',title:'<?=admin_t('admin.payment_orders.payer')?>',width:130},
+        {field:'customer_mobile_masked',title:'<?=admin_t('admin.payment_orders.mobile')?>',width:150},{field:'credited_at',title:'<?=admin_t('admin.payment_orders.credited_at')?>',width:170},
+        {field:'last_error_message',title:'<?=admin_t('admin.payment_orders.last_error')?>',minWidth:220},{title:'<?=admin_t('admin.common.operation')?>',toolbar:'#row-tools',fixed:'right',width:110}
+    ]]});
+    form.on('submit(query)', data=>{where=data.field;table.reload('data-table',{page:{curr:1},where});return false;});
+    form.on('submit(reset)', ()=>{where={};table.reload('data-table',{page:{curr:1},where});});
+    table.on('toolbar(data-table)', obj=>{if(obj.event==='refresh')table.reload('data-table',{where});});
+    table.on('tool(data-table)', obj=>{if(obj.event!=='query')return;$.post('/app/admin/game-assist-payment-order/query',{merchant_order:obj.data.merchant_order},res=>{if(Number(res.code)!==0){popup.failure(res.msg||'failed');return;}popup.success('<?=admin_t('admin.payment_orders.query_done')?>');table.reload('data-table',{where});},'json').fail(()=>popup.failure('<?=admin_t('admin.payment_orders.query_failed')?>'));});
+});
+</script>
+</body></html>

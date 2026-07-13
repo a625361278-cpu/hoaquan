@@ -6,6 +6,7 @@ use app\service\CredentialCipher;
 use app\service\GameAccountAutoRestartService;
 use app\service\GameAccountService;
 use app\service\GameAccountTaskStateService;
+use app\service\GameLogMessage;
 use PHPUnit\Framework\TestCase;
 use tests\Support\ArrayGameAccountRepository;
 use tests\Support\ArrayGameAccountTaskStatePendingStore;
@@ -27,7 +28,7 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $queue = new ArrayGameLogQueue();
         $service = $this->service($repository, queue: $queue);
 
-        $service->scheduleReconnect(3, '运行连接断开', 'session-1');
+        $service->scheduleReconnect(3, 'client.logs.system.runtime_connection_closed_reconnecting', 'session-1');
 
         $account = $repository->findById(3);
         $this->assertSame(GameAccountService::RECONNECTING_STATUS, $account['status']);
@@ -35,7 +36,8 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $this->assertSame(0, (int)$account['auto_restart_attempts']);
         $this->assertSame(1, $repository->countNormalLogLines(3, 'session-1'));
         $this->assertSame('session-1', $queue->normal[0]['session_id']);
-        $this->assertStringContainsString('等待自动重连', $queue->normal[0]['lines'][0]);
+        $this->assertStringContainsString(GameLogMessage::PREFIX, $queue->normal[0]['lines'][0]);
+        $this->assertStringContainsString('client.logs.system.runtime_connection_closed_reconnecting', $queue->normal[0]['lines'][0]);
         $this->assertSame([], $queue->events);
     }
 
@@ -94,6 +96,31 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $this->assertSame(5, $runtime->started[0]['task_state']['state']->step);
     }
 
+    public function testReconnectUsesEncryptedSocialTokenInsteadOfPassword(): void
+    {
+        $repository = $this->repository([
+            'login_method' => 2,
+            'game_username' => '',
+            'game_password_cipher' => null,
+            'game_uid' => 'facebook-uid-1001',
+            'game_token_cipher' => (new CredentialCipher('test-key'))->encrypt('facebook-token-secret'),
+            'status' => GameAccountService::RECONNECTING_STATUS,
+            'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
+            'log_session_id' => 'session-social',
+            'desired_running' => 1,
+            'auto_restart_next_at' => '2026-07-07 10:00:00',
+        ]);
+        $runtime = new ArrayThirdPartyScriptRuntime(true);
+        $service = $this->service($repository, runtime: $runtime);
+
+        $result = $service->runDue(10);
+
+        $this->assertSame(1, $result['started']);
+        $this->assertSame(2, $runtime->started[0]['login_method']);
+        $this->assertSame('facebook-token-secret', $runtime->started[0]['credential']);
+        $this->assertSame('session-social', $runtime->started[0]['session_id']);
+    }
+
     public function testReconnectSkipsExpiredAccountWithoutSendingStart(): void
     {
         $repository = $this->repository([
@@ -131,7 +158,7 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $account = $repository->findById(3);
         $this->assertSame(1, $result['scheduled']);
         $this->assertSame(GameAccountService::RECONNECTING_STATUS, $account['status']);
-        $this->assertStringContainsString('连接丢失', $queue->normal[0]['lines'][0]);
+        $this->assertStringContainsString('client.logs.system.runtime_connection_missing_reconnecting', $queue->normal[0]['lines'][0]);
         $this->assertSame([], $queue->events);
     }
 
@@ -156,7 +183,7 @@ class GameAccountAutoRestartServiceTest extends TestCase
         $this->assertSame(GameAccountService::ERROR_STATUS, $account['status']);
         $this->assertSame(0, (int)$account['desired_running']);
         $this->assertSame(GameAccountAutoRestartService::MAX_ATTEMPTS, (int)$account['auto_restart_attempts']);
-        $this->assertStringContainsString('自动重连失败次数过多', $queue->normal[0]['lines'][0]);
+        $this->assertStringContainsString('client.logs.system.auto_reconnect_stopped', $queue->normal[0]['lines'][0]);
         $this->assertSame([], $queue->events);
     }
 
@@ -184,8 +211,11 @@ class GameAccountAutoRestartServiceTest extends TestCase
                 'id' => 3,
                 'user_id' => 7,
                 'display_name' => 'any-player',
+                'login_method' => 1,
                 'game_username' => 'any-player',
                 'game_password_cipher' => (new CredentialCipher('test-key'))->encrypt('secret-password'),
+                'game_uid' => '',
+                'game_token_cipher' => null,
                 'channel_code' => 'official_app',
                 'server_id' => '',
                 'server_name' => '',

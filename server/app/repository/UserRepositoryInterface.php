@@ -27,7 +27,9 @@ interface UserRepositoryInterface
         string $inviteRegisteredIp = '',
         ?string $inviteCode = null,
         ?string $securityQuestionKey = null,
-        ?string $securityAnswerHash = null
+        ?string $securityAnswerHash = null,
+        int $registrationRewardPoints = 0,
+        string $registrationRewardDescription = ''
     ): array;
 
     public function updateInviteCode(int $id, string $inviteCode): array;

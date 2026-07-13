@@ -25,7 +25,7 @@ class GameAccountAutoRestartService
         $this->taskStates ??= new GameAccountTaskStateService($this->accounts);
     }
 
-    public function scheduleReconnect(int $accountId, string $reason, string $sessionId = ''): void
+    public function scheduleReconnect(int $accountId, string $messageKey, string $sessionId = ''): void
     {
         $account = $this->accounts->findById($accountId);
         if (!$account || (int)($account['desired_running'] ?? 0) !== 1) {
@@ -47,11 +47,10 @@ class GameAccountAutoRestartService
             'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
             'log_session_id' => $sessionId,
             'auto_restart_next_at' => $this->dateTime($this->now()),
-            'auto_restart_last_error' => $reason,
+            'auto_restart_last_error' => $messageKey,
         ]);
 
-        $message = '[WARN] ' . $reason . '，等待自动重连';
-        $this->logs->enqueueNormal($accountId, [$message], $sessionId);
+        $this->logs->enqueueNormal($accountId, [GameLogMessage::localized('WARN', $messageKey)], $sessionId);
     }
 
     public function runDue(int $limit = self::DEFAULT_LIMIT): array
@@ -121,7 +120,7 @@ class GameAccountAutoRestartService
                 continue;
             }
 
-            $this->scheduleReconnect($accountId, '运行连接丢失', (string)($account['log_session_id'] ?? ''));
+            $this->scheduleReconnect($accountId, 'client.logs.system.runtime_connection_missing_reconnecting', (string)($account['log_session_id'] ?? ''));
             $result['scheduled']++;
         }
 
@@ -159,11 +158,18 @@ class GameAccountAutoRestartService
                 'sync_status' => GameAccountService::LOCAL_UNSYNCED_STATUS,
                 'log_session_id' => $sessionId,
             ]);
-            $gamePassword = (new CredentialCipher($this->credentialKey))->decrypt((string)($account['game_password_cipher'] ?? ''));
+            $loginMethod = (int)($account['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD);
+            $cipherField = $loginMethod === GameAccountLoginMethod::ACCOUNT_PASSWORD
+                ? 'game_password_cipher'
+                : (GameAccountLoginMethod::isSocial($loginMethod) ? 'game_token_cipher' : '');
+            if ($cipherField === '') {
+                throw new \RuntimeException('Unsupported game account login method: ' . $loginMethod);
+            }
+            $credential = (new CredentialCipher($this->credentialKey))->decrypt((string)($account[$cipherField] ?? ''));
             $this->runtime->sendStartCommand(
                 $reservation,
                 $account,
-                $gamePassword,
+                $credential,
                 $this->decodeConfig((string)($account['config_json'] ?? '{}')),
                 $this->taskStates->get($accountId)
             );
@@ -181,7 +187,7 @@ class GameAccountAutoRestartService
             'auto_restart_next_at' => null,
             'auto_restart_last_error' => '',
         ]);
-        $this->logs->enqueueNormal($accountId, ['[INFO] 已重新下发启动指令，等待服务器确认'], $sessionId);
+        $this->logs->enqueueNormal($accountId, [GameLogMessage::localized('INFO', 'client.logs.system.restart_command_sent')], $sessionId);
         return 'started';
     }
 
@@ -199,7 +205,9 @@ class GameAccountAutoRestartService
                 'auto_restart_next_at' => null,
                 'auto_restart_last_error' => $error,
             ]);
-            $this->logs->enqueueNormal($accountId, ['[ERROR] 自动重连失败次数过多，已停止重试：' . $error], $sessionId);
+            $this->logs->enqueueNormal($accountId, [GameLogMessage::localized('ERROR', 'client.logs.system.auto_reconnect_stopped', [
+                'error' => $error,
+            ])], $sessionId);
             return;
         }
 
@@ -210,7 +218,9 @@ class GameAccountAutoRestartService
             'auto_restart_next_at' => $this->dateTime($this->now() + $this->backoffSeconds($nextAttempt)),
             'auto_restart_last_error' => $error,
         ]);
-        $this->logs->enqueueNormal($accountId, ['[WARN] 自动重连失败，将稍后重试：' . $error], $sessionId);
+        $this->logs->enqueueNormal($accountId, [GameLogMessage::localized('WARN', 'client.logs.system.auto_reconnect_retry_later', [
+            'error' => $error,
+        ])], $sessionId);
     }
 
     private function backoffSeconds(int $attempt): int

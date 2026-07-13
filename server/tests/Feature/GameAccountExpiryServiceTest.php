@@ -4,6 +4,7 @@ namespace tests\Feature;
 
 use app\service\GameAccountExpiryService;
 use app\service\GameAccountService;
+use app\service\GameLogMessage;
 use PHPUnit\Framework\TestCase;
 use tests\Support\ArrayGameAccountRepository;
 use tests\Support\ArrayGameLogQueue;
@@ -35,7 +36,8 @@ class GameAccountExpiryServiceTest extends TestCase
         $this->assertSame(GameAccountService::STOPPING_STATUS, $account['status']);
         $this->assertSame(0, (int)$account['desired_running']);
         $this->assertSame(3, $runtime->stopped[0]['account_id']);
-        $this->assertStringContainsString('配额到期', $logs->normal[0]['lines'][0]);
+        $this->assertStringContainsString(GameLogMessage::PREFIX, $logs->normal[0]['lines'][0]);
+        $this->assertStringContainsString('client.logs.system.quota_expired_stop_sent', $logs->normal[0]['lines'][0]);
         $this->assertSame([], $logs->events);
     }
 

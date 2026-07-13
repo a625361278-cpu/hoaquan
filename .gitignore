@@ -2,9 +2,11 @@ server/vendor/
 server/runtime/
 server/.env
 server/.phpunit.result.cache
+server/resource/translations/*.zip
 client/node_modules/
 client/dist/
 .local/
+.codex-remote-attachments/
 *.log
 .DS_Store
 Thumbs.db

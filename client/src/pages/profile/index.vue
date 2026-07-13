@@ -230,6 +230,9 @@ function transactionType(type) {
   if (type === 'invite_reward') {
     return t('client.profile.invite_count');
   }
+  if (type === 'recharge') {
+    return t('client.profile.recharge');
+  }
   return type;
 }
 
