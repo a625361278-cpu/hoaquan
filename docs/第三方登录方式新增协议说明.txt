@@ -2,7 +2,9 @@ GameAssist 第三方 start 协议新增说明
 
 现有 start 协议已经包含 login_method，原来固定为 1（账号密码登录）。当前支持 1=账号密码、2=Facebook、3=Google，并在添加账号前增加 login 验证。只有 login 返回 code=1 后账号才会保存。
 
-添加账号验证请求与 start 使用相同的凭证互斥规则，但 type 固定为 login，并且不携带 config、task_state：
+添加账号以及修改已停止账号的密码/Token，都使用下面同一种验证请求。它与 start 使用相同的凭证互斥规则，但 type 固定为 login，并且不携带 config、task_state。凭证更新用途不会新增任何线上协议字段，第三方仍按 request_id/session_id 原样返回结果：
+
+服务端只会在账号完全停止且 desired_running=0 时发起凭证更新验证。code=1 后才覆盖旧密码/Token；code=0、20秒超时、协议错误或账号状态并发变化都保留旧凭证，且验证成功后不会自动启动账号。
 
 {
   "type": "login",

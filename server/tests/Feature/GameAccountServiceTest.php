@@ -174,18 +174,82 @@ class GameAccountServiceTest extends TestCase
             'sync_status' => 'local_unsynced',
             'config_json' => '{}',
         ]]);
-        $service = new GameAccountService($repository, [
-            'enabled' => false,
-            'credential_key' => 'test-key',
-            'facebook_login_enabled' => false,
-        ]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $store = new ArrayGameAccountLoginValidationStore();
+        $service = new GameAccountService(
+            $repository,
+            [
+                'enabled' => true,
+                'transport' => 'websocket',
+                'script_token' => 'script-token',
+                'credential_key' => 'test-key',
+                'facebook_login_enabled' => false,
+            ],
+            'zh_CN',
+            $runtime,
+            null,
+            null,
+            null,
+            $store
+        );
 
         $result = $service->updateCredential(7, 3, ['token' => 'new-token']);
 
         $this->assertSame(0, $result['code']);
+        $this->assertSame('verifying', $result['data']['status']);
+        $this->assertSame('credential_update', $result['data']['purpose']);
         $stored = $repository->findById(3);
-        $this->assertSame('new-token', (new \app\service\CredentialCipher('test-key'))->decrypt($stored['game_token_cipher']));
-        $this->assertArrayNotHasKey('game_token_cipher', $result['data']['account']);
+        $this->assertSame('old-token', (new \app\service\CredentialCipher('test-key'))->decrypt($stored['game_token_cipher']));
+        $this->assertSame('new-token', $runtime->validations[0]['credential']);
+    }
+
+    public function testCredentialValidationBlocksStartAndDeleteForTargetAccount(): void
+    {
+        $repository = new ArrayGameAccountRepository([[
+            'id' => 3,
+            'user_id' => 7,
+            'display_name' => 'player',
+            'login_method' => 1,
+            'game_username' => 'player',
+            'game_uid' => '',
+            'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('old-password'),
+            'game_token_cipher' => null,
+            'channel_code' => 'official_app',
+            'status' => 'stopped',
+            'desired_running' => 0,
+            'expire_time' => '2099-01-01 00:00:00',
+            'sync_status' => 'local_unsynced',
+            'config_json' => '{}',
+        ]]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $store = new ArrayGameAccountLoginValidationStore();
+        $service = new GameAccountService(
+            $repository,
+            [
+                'enabled' => true,
+                'transport' => 'websocket',
+                'script_token' => 'script-token',
+                'credential_key' => 'test-key',
+            ],
+            'zh_CN',
+            $runtime,
+            null,
+            null,
+            null,
+            $store
+        );
+        $service->updatePassword(7, 3, 'new-password');
+
+        foreach (['start', 'delete'] as $operation) {
+            try {
+                $service->{$operation}(7, 3);
+                $this->fail($operation . ' should be blocked while credential validation is active');
+            } catch (\app\exception\ApiException $e) {
+                $this->assertSame(409, $e->getApiCode());
+                $this->assertStringContainsString('正在验证新凭证', $e->getMessage());
+            }
+        }
+        $this->assertNotNull($repository->findById(3));
     }
 
     public function testCreateSocialAccountRequiresUidAndToken(): void

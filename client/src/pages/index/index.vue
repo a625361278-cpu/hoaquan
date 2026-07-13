@@ -69,12 +69,13 @@
           v-model="passwordDialog.password"
           class="dialog-input"
           password
+          :disabled="passwordDialog.validating"
           :maxlength="isSocialLogin(passwordDialog.account) ? -1 : 140"
           :placeholder="credentialPlaceholder(passwordDialog.account)"
         />
         <view class="dialog-actions">
-          <button class="dialog-secondary" @click="closePasswordDialog">{{ t('admin.common.cancel') }}</button>
-          <button class="dialog-primary" @click="submitPassword">{{ t('admin.common.submit') }}</button>
+          <button class="dialog-secondary" :disabled="passwordDialog.validating" @click="closePasswordDialog">{{ t('admin.common.cancel') }}</button>
+          <button class="dialog-primary" :disabled="passwordDialog.validating" @click="submitPassword">{{ passwordDialog.validating ? t('client.home.credential_verifying') : t('admin.common.submit') }}</button>
         </view>
       </view>
     </view>
@@ -285,7 +286,7 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { onHide, onShow, onUnload } from '@dcloudio/uni-app';
 import { useI18n } from 'vue-i18n';
-import { API_BASE_URL, consumeLoginAnnouncementPending, getToken, request, requireLogin } from '../../utils/api';
+import { API_BASE_URL, CREDENTIAL_VALIDATION_PENDING_KEY, consumeLoginAnnouncementPending, getToken, request, requireLogin } from '../../utils/api';
 import { translateGameLogLine } from '../../utils/gameLogI18n';
 import { getLocale, switchLocale } from '../../utils/i18n';
 
@@ -305,6 +306,7 @@ const RECHARGE_PRICE = '149000.00 VND';
 let logTimer = null;
 let logSocket = null;
 let rechargeTimer = null;
+let credentialValidationTimer = null;
 
 const accountAddText = computed(() => canAddAccount.value
   ? t('client.home.add_game_with_limit', { count: gameAccounts.value.length, limit: accountLimit.value })
@@ -361,6 +363,8 @@ const passwordDialog = reactive({
   visible: false,
   account: null,
   password: '',
+  validating: false,
+  validationId: '',
 });
 
 const quotaDialog = reactive({
@@ -385,16 +389,21 @@ const logs = reactive({
   transport: 'ws',
 });
 
-onShow(() => {
+onShow(async () => {
   if (requireLogin()) {
-    loadHome();
+    const loaded = await loadHome();
+    if (loaded) resumeCredentialValidation();
   }
 });
 
-onHide(closeLogSocket);
+onHide(() => {
+  closeLogSocket();
+  stopCredentialValidationPolling();
+});
 onUnload(() => {
   closeLogSocket();
   stopRechargePolling();
+  stopCredentialValidationPolling();
 });
 
 async function loadHome() {
@@ -406,11 +415,13 @@ async function loadHome() {
     accountLimit.value = Number(accounts.account_limit || 3);
     canAddAccount.value = Boolean(accounts.can_add_account);
     await maybeShowLoginAnnouncement();
+    return true;
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
     if (error.code === 401) {
       uni.redirectTo({ url: '/pages/login/index' });
     }
+    return false;
   }
 }
 
@@ -590,12 +601,21 @@ function openPasswordDialog(item) {
   passwordDialog.visible = true;
   passwordDialog.account = item;
   passwordDialog.password = '';
+  passwordDialog.validating = false;
+  passwordDialog.validationId = '';
 }
 
 function closePasswordDialog() {
+  if (passwordDialog.validating) return;
+  resetPasswordDialog();
+}
+
+function resetPasswordDialog() {
   passwordDialog.visible = false;
   passwordDialog.account = null;
   passwordDialog.password = '';
+  passwordDialog.validating = false;
+  passwordDialog.validationId = '';
 }
 
 async function submitPassword() {
@@ -603,18 +623,98 @@ async function submitPassword() {
     uni.showToast({ title: t(isSocialLogin(passwordDialog.account) ? 'api.game.require_token' : 'client.add.require_game_credentials'), icon: 'none' });
     return;
   }
+  if (passwordDialog.validating || !passwordDialog.account) return;
   try {
-    await request({
+    const result = await request({
       url: `/api/game-accounts/${passwordDialog.account.id}/credential`,
       method: 'POST',
       data: isSocialLogin(passwordDialog.account)
         ? { token: passwordDialog.password }
         : { game_password: passwordDialog.password },
     });
-    closePasswordDialog();
-    await loadHome();
+    if (!result.validation_id || result.purpose !== 'credential_update') {
+      throw new Error(t('client.home.credential_validation_invalid_response'));
+    }
+    passwordDialog.validating = true;
+    passwordDialog.validationId = result.validation_id;
+    uni.setStorageSync(CREDENTIAL_VALIDATION_PENDING_KEY, {
+      validationId: result.validation_id,
+      accountId: Number(passwordDialog.account.id),
+      purpose: 'credential_update',
+    });
+    pollCredentialValidation();
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
+  }
+}
+
+function resumeCredentialValidation() {
+  const pending = uni.getStorageSync(CREDENTIAL_VALIDATION_PENDING_KEY);
+  if (!pending || pending.purpose !== 'credential_update' || !pending.validationId || !pending.accountId) return;
+  const account = gameAccounts.value.find((item) => Number(item.id) === Number(pending.accountId));
+  if (!account) {
+    uni.removeStorageSync(CREDENTIAL_VALIDATION_PENDING_KEY);
+    return;
+  }
+  passwordDialog.visible = true;
+  passwordDialog.account = account;
+  passwordDialog.password = '';
+  passwordDialog.validating = true;
+  passwordDialog.validationId = pending.validationId;
+  pollCredentialValidation();
+}
+
+async function pollCredentialValidation() {
+  stopCredentialValidationPolling();
+  const validationId = passwordDialog.validationId;
+  if (!passwordDialog.validating || !validationId) return;
+  try {
+    const result = await request({ url: `/api/game-account-validations/${validationId}` });
+    if (result.purpose !== 'credential_update') {
+      throw new Error(t('client.home.credential_validation_invalid_response'));
+    }
+    if (result.status === 'success') {
+      uni.removeStorageSync(CREDENTIAL_VALIDATION_PENDING_KEY);
+      stopCredentialValidationPolling();
+      resetPasswordDialog();
+      await loadHome();
+      uni.showToast({ title: result.message || t('client.home.credential_update_success'), icon: 'success' });
+      return;
+    }
+    if (['rejected', 'timeout', 'error'].includes(result.status)) {
+      uni.removeStorageSync(CREDENTIAL_VALIDATION_PENDING_KEY);
+      passwordDialog.validating = false;
+      passwordDialog.validationId = '';
+      uni.showToast({ title: result.message || t('client.home.credential_validation_failed'), icon: 'none' });
+      return;
+    }
+    if (result.status !== 'verifying') {
+      throw new Error(t('client.home.credential_validation_invalid_response'));
+    }
+  } catch (error) {
+    if (Number(error.code) === 404) {
+      uni.removeStorageSync(CREDENTIAL_VALIDATION_PENDING_KEY);
+      passwordDialog.validating = false;
+      passwordDialog.validationId = '';
+      uni.showToast({ title: error.message, icon: 'none' });
+      return;
+    }
+    if (error.message === t('client.home.credential_validation_invalid_response')) {
+      uni.removeStorageSync(CREDENTIAL_VALIDATION_PENDING_KEY);
+      passwordDialog.validating = false;
+      passwordDialog.validationId = '';
+      uni.showToast({ title: error.message, icon: 'none' });
+      return;
+    }
+    console.warn('Credential validation polling failed; retrying without changing the stored credential', error);
+  }
+  credentialValidationTimer = setTimeout(pollCredentialValidation, 1000);
+}
+
+function stopCredentialValidationPolling() {
+  if (credentialValidationTimer) {
+    clearTimeout(credentialValidationTimer);
+    credentialValidationTimer = null;
   }
 }
 

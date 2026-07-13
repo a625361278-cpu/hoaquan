@@ -204,9 +204,135 @@ class GameAccountLoginValidationServiceTest extends TestCase
         $this->assertSame('verifying', $retried['data']['status']);
     }
 
+    public function testPasswordIsOnlyUpdatedAfterSuccessfulCredentialValidation(): void
+    {
+        [$service, $accounts, $runtime, $store] = $this->credentialUpdateService(1);
+        $started = $service->beginCredentialUpdate(7, 3, ['game_password' => 'new-password']);
+        $duplicateStart = $service->beginCredentialUpdate(7, 3, ['game_password' => 'new-password']);
+        $job = $store->jobs[$started['data']['validation_id']];
+
+        $this->assertSame($started['data']['validation_id'], $duplicateStart['data']['validation_id']);
+        $this->assertCount(1, $runtime->validations);
+        $this->assertSame('credential_update', $started['data']['purpose']);
+        $this->assertSame('player001', $runtime->validations[0]['identity']);
+        $this->assertSame('new-password', $runtime->validations[0]['credential']);
+        $this->assertSame('old-password', (new CredentialCipher('test-key'))->decrypt($accounts->findById(3)['game_password_cipher']));
+
+        $service->completeFromThirdParty('client-validation', [
+            'request_id' => $job['request_id'],
+            'session_id' => $job['session_id'],
+            'code' => 1,
+            'server_name' => 'VN-202',
+            'msg' => '登录成功',
+        ], $this->connectionState($job));
+
+        $this->assertSame('new-password', (new CredentialCipher('test-key'))->decrypt($accounts->findById(3)['game_password_cipher']));
+        $status = $service->status(7, $job['validation_id']);
+        $this->assertSame('success', $status['data']['status']);
+        $this->assertSame('credential_update', $status['data']['purpose']);
+        $this->assertSame(3, $status['data']['account']['id']);
+        $this->assertFalse($service->completeFromThirdParty('client-validation', [
+            'request_id' => $job['request_id'],
+            'session_id' => $job['session_id'],
+            'code' => 1,
+            'server_name' => 'VN-202',
+            'msg' => 'duplicate',
+        ], $this->connectionState($job)));
+        $this->assertSame('new-password', (new CredentialCipher('test-key'))->decrypt($accounts->findById(3)['game_password_cipher']));
+    }
+
+    public function testRejectedSocialTokenValidationKeepsOldToken(): void
+    {
+        [$service, $accounts, , $store] = $this->credentialUpdateService(2);
+        $started = $service->beginCredentialUpdate(7, 3, ['token' => 'new-token']);
+        $job = $store->jobs[$started['data']['validation_id']];
+        $service->completeFromThirdParty('client-validation', [
+            'request_id' => $job['request_id'],
+            'session_id' => $job['session_id'],
+            'code' => 0,
+            'server_name' => '',
+            'msg' => 'Token无效',
+        ], $this->connectionState($job));
+
+        $this->assertSame('old-token', (new CredentialCipher('test-key'))->decrypt($accounts->findById(3)['game_token_cipher']));
+        $this->assertSame('rejected', $service->status(7, $job['validation_id'])['data']['status']);
+    }
+
+    public function testCredentialUpdateRejectsRunningOrDesiredRunningAccount(): void
+    {
+        [$service] = $this->credentialUpdateService(1, 'running', 1);
+        $this->expectException(ApiException::class);
+        $this->expectExceptionCode(409);
+        $service->beginCredentialUpdate(7, 3, ['game_password' => 'new-password']);
+    }
+
+    public function testCredentialUpdateDoesNotCommitWhenAccountStartsDuringValidation(): void
+    {
+        [$service, $accounts, , $store] = $this->credentialUpdateService(2);
+        $started = $service->beginCredentialUpdate(7, 3, ['token' => 'new-token']);
+        $job = $store->jobs[$started['data']['validation_id']];
+        $accounts->updateRuntimeState(7, 3, ['status' => 'starting', 'desired_running' => 1]);
+
+        $service->completeFromThirdParty('client-validation', [
+            'request_id' => $job['request_id'],
+            'session_id' => $job['session_id'],
+            'code' => 1,
+            'server_name' => 'VN-202',
+            'msg' => '登录成功',
+        ], $this->connectionState($job));
+
+        $this->assertSame('old-token', (new CredentialCipher('test-key'))->decrypt($accounts->findById(3)['game_token_cipher']));
+        $this->assertSame('error', $service->status(7, $job['validation_id'])['data']['status']);
+    }
+
+    public function testCredentialUpdateTimeoutKeepsOldCredential(): void
+    {
+        [$service, $accounts, , $store] = $this->credentialUpdateService(3);
+        $started = $service->beginCredentialUpdate(7, 3, ['token' => 'new-google-token']);
+        $job = $store->jobs[$started['data']['validation_id']];
+        $connections = new ArrayThirdPartyScriptConnectionStore();
+        $connections->registerIdle('client-validation');
+        $connections->allocateIdleForValidation($job['validation_id'], $job['session_id'], $job['request_id']);
+        $watcher = new GameAccountLoginValidationWatcher($store, $connections, static function (): void {
+        });
+
+        $watcher->tick($job['expires_at']);
+
+        $this->assertSame('timeout', $service->status(7, $job['validation_id'])['data']['status']);
+        $this->assertSame('old-token', (new CredentialCipher('test-key'))->decrypt($accounts->findById(3)['game_token_cipher']));
+    }
+
     private function service(): array
     {
         $accounts = new ArrayGameAccountRepository([]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $store = new ArrayGameAccountLoginValidationStore();
+        return [
+            new GameAccountLoginValidationService($accounts, $this->config(), 'zh_CN', $runtime, $store),
+            $accounts,
+            $runtime,
+            $store,
+        ];
+    }
+
+    private function credentialUpdateService(int $loginMethod, string $status = 'stopped', int $desiredRunning = 0): array
+    {
+        $cipher = new CredentialCipher('test-key');
+        $accounts = new ArrayGameAccountRepository([[
+            'id' => 3,
+            'user_id' => 7,
+            'display_name' => $loginMethod === 1 ? 'player001' : 'social-uid',
+            'login_method' => $loginMethod,
+            'game_username' => $loginMethod === 1 ? 'player001' : '',
+            'game_uid' => $loginMethod === 1 ? '' : 'social-uid',
+            'game_password_cipher' => $loginMethod === 1 ? $cipher->encrypt('old-password') : null,
+            'game_token_cipher' => $loginMethod === 1 ? null : $cipher->encrypt('old-token'),
+            'channel_code' => 'official_app',
+            'status' => $status,
+            'desired_running' => $desiredRunning,
+            'sync_status' => 'local_unsynced',
+            'config_json' => '{}',
+        ]]);
         $runtime = new ArrayThirdPartyScriptRuntime();
         $store = new ArrayGameAccountLoginValidationStore();
         return [

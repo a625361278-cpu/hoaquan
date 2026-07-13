@@ -164,32 +164,35 @@ class DbGameAccountRepository implements GameAccountRepositoryInterface
         return $this->findByUserId($userId, $accountId) ?? [];
     }
 
-    public function updateCredentials(int $userId, int $accountId, string $encryptedPassword): array
-    {
-        Db::table('ga_game_accounts')
+    public function updateValidatedCredential(
+        int $userId,
+        int $accountId,
+        int $loginMethod,
+        string $identity,
+        string $encryptedCredential,
+        array $activeStatuses
+    ): ?array {
+        $identityColumn = $loginMethod === 1 ? 'game_username' : 'game_uid';
+        $credentialColumn = $loginMethod === 1 ? 'game_password_cipher' : 'game_token_cipher';
+        $query = Db::table('ga_game_accounts')
             ->where('user_id', $userId)
             ->where('id', $accountId)
-            ->update([
-                'game_password_cipher' => $encryptedPassword,
-                'sync_status' => 'local_unsynced',
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
-
-        return $this->findByUserId($userId, $accountId) ?? [];
-    }
-
-    public function updateToken(int $userId, int $accountId, string $encryptedToken): array
-    {
-        Db::table('ga_game_accounts')
-            ->where('user_id', $userId)
-            ->where('id', $accountId)
-            ->update([
-                'game_token_cipher' => $encryptedToken,
-                'sync_status' => 'local_unsynced',
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
-
-        return $this->findByUserId($userId, $accountId) ?? [];
+            ->where('login_method', $loginMethod)
+            ->where($identityColumn, $identity)
+            ->where('desired_running', 0);
+        if ($activeStatuses !== []) {
+            $query->whereNotIn('status', $activeStatuses);
+        }
+        $changed = $query->update([
+            $credentialColumn => $encryptedCredential,
+            'sync_status' => 'local_unsynced',
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        if ($changed !== 1) {
+            return null;
+        }
+        return $this->findByUserId($userId, $accountId)
+            ?? throw new \RuntimeException('Validated credential was updated but account cannot be loaded');
     }
 
     public function updateRuntimeState(int $userId, int $accountId, array $data): array

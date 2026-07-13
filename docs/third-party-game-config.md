@@ -20,7 +20,7 @@ ws://example.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 ## 启动载荷
 
-用户添加游戏账号时，服务端会先占用空闲连接发送 `login` 验证包。凭证字段与 `start` 相同且互斥，但不包含 `config/task_state`。第三方必须在20秒内返回同一 `request_id/session_id` 的 `type=login` 结果；`code` 为整数0或1，`msg` 为字符串，`code=1` 时 `server_name` 必须为非空字符串。只有真实成功结果才会保存账号。正常结果后连接恢复空闲；超时、非法响应或上下文不匹配时连接关闭。
+用户添加游戏账号或为已停止账号修改密码/Token时，服务端都会占用空闲连接发送同一种 `login` 验证包，线上报文不增加用途字段。凭证字段与 `start` 相同且互斥，但不包含 `config/task_state`。第三方必须在20秒内返回同一 `request_id/session_id` 的 `type=login` 结果；`code` 为整数0或1，`msg` 为字符串，`code=1` 时 `server_name` 必须为非空字符串。新增账号只有真实成功才保存；凭证更新只有真实成功才原子覆盖旧密文，失败或状态冲突时旧凭证不变。正常结果后连接恢复空闲；超时、非法响应或上下文不匹配时连接关闭。
 
 正式第三方接入固定使用 WebSocket。用户点击启动后，服务端会从空闲脚本连接中分配一个连接，并向该连接发送下面的 `start` 包。`game_password` 或 `token` 只在启动通信中传递，不写入 `config`；`task_state` 是第三方最近一次已接收的任务数据快照，不写入 `config`。
 

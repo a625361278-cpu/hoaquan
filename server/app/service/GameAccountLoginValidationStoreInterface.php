@@ -14,6 +14,8 @@ interface GameAccountLoginValidationStoreInterface
 
     public function getForUser(int $userId, string $validationId): ?array;
 
+    public function activeCredentialUpdateForAccount(int $userId, int $accountId): ?array;
+
     public function claimResponse(string $validationId, string $requestId, string $sessionId): ?array;
 
     public function claimTimeout(string $validationId): ?array;

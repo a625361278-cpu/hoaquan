@@ -42,6 +42,19 @@ class ArrayGameAccountLoginValidationStore implements GameAccountLoginValidation
         return $job && (int)$job['user_id'] === $userId ? $job : null;
     }
 
+    public function activeCredentialUpdateForAccount(int $userId, int $accountId): ?array
+    {
+        foreach ($this->jobs as $job) {
+            if ((int)$job['user_id'] === $userId
+                && ($job['purpose'] ?? 'account_create') === 'credential_update'
+                && (int)($job['target_account_id'] ?? 0) === $accountId
+                && in_array((string)$job['status'], ['reserving', 'verifying', 'processing'], true)) {
+                return $job;
+            }
+        }
+        return null;
+    }
+
     public function forget(string $validationId): void
     {
         unset($this->jobs[$validationId]);

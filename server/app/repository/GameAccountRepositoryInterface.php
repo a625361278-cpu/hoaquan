@@ -22,9 +22,14 @@ interface GameAccountRepositoryInterface
 
     public function saveLocalConfig(int $userId, int $accountId, array $config, string $syncStatus): array;
 
-    public function updateCredentials(int $userId, int $accountId, string $encryptedPassword): array;
-
-    public function updateToken(int $userId, int $accountId, string $encryptedToken): array;
+    public function updateValidatedCredential(
+        int $userId,
+        int $accountId,
+        int $loginMethod,
+        string $identity,
+        string $encryptedCredential,
+        array $activeStatuses
+    ): ?array;
 
     public function updateRuntimeState(int $userId, int $accountId, array $data): array;
 

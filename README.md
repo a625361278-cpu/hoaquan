@@ -99,7 +99,7 @@ php start.php status
 - 未添加游戏账号时，用户端显示统一风格的添加卡片。
 - 单个用户可同时存在的游戏账号数量由 `ga_system_settings.game_account_max_count` 控制，默认 `3`，后台“运行服务配置”可设置 `1` 至 `100`。所有状态的现有账号都计入数量；删除账号后释放名额。降低上限不会删除已有账号，但超出或达到上限的用户不能继续添加。
 - 添加账号的数量校验在服务端事务中锁定当前用户后执行，避免并发请求突破上限；用户端显示当前数量和上限仅用于提示，不能替代服务端校验。配置缺失时使用默认值 `3`，配置格式错误或超出范围会明确报错。
-- `POST /api/game-accounts` 先返回短期 `validation_id/request_id/session_id/status=verifying`，用户端通过 `GET /api/game-account-validations/{validation_id}` 查询结果。验证任务和加密凭证短期保存在 Redis，成功后才在账号数量限制事务中写入 `ga_game_accounts`；正常 `code=0/1` 后脚本连接恢复空闲，超时、非法响应或上下文不匹配时关闭连接。
+- `POST /api/game-accounts` 先返回短期 `validation_id/request_id/session_id/status=verifying`，用户端通过 `GET /api/game-account-validations/{validation_id}` 查询结果。修改密码或 Token 的 `/credential` 与兼容 `/password` 接口也复用同一异步查询链路，并返回 `purpose=credential_update`。验证任务和加密凭证短期保存在 Redis；新增账号成功后才落库，凭证更新成功后才原子覆盖旧密文。正常 `code=0/1` 后脚本连接恢复空闲，超时、非法响应或上下文不匹配时关闭连接。
 - 等级、水滴、元宝、金币、订单统计等运行资源由第三方通过 WebSocket `status` 推送，服务端按账号保存 Redis 最新快照；未启动、未收到推送或字段缺失时用户端显示默认值。
 - 游戏配置可以保存到本地 `config_json`，同步状态为 `local_unsynced`；启动时会读取这份 JSON 发送给第三方。
 - 用户端点击“保存”会把游戏配置页当前完整配置保存为 `ga_game_accounts.config_json`；第三方读取时返回同一份 JSON，不生成假配置、不省略 `false` 或 `0`。
@@ -198,7 +198,7 @@ php start.php status
 - 后台不再配置第三方 URL、URL 列表或单连接容量；旧 `third_party_ws_url`、`third_party_ws_urls`、`third_party_ws_connection_capacity` 可暂留数据库用于兼容旧数据，但启动逻辑不读取。
 - 常驻进程包括 GatewayWorker 的 Gateway、BusinessWorker、Register，以及 `server/config/process.php` 中的 `game_log_writer`、`game_task_state_writer`、`game_account_auto_restarter` 和 `game_account_expiry_watcher`。脚本连接状态写入 Redis 前缀 `gameassist:third_party_scripts:*`；日志写入 `gameassist:game_logs:queue:{shard}` 分片队列，`shard=account_id%64`，再由多 writer 聚合写入分段表。任务状态写入 `gameassist:game_task_states:queue:{shard}` 分片队列，再由任务状态 writer 聚合后批量 upsert。默认 `GAME_LOG_WRITER_COUNT=8`、`GAME_TASK_STATE_WRITER_COUNT=4`，可按服务器压力调整。
 - 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端先校验账号配额未到期，再解密对应凭证、读取本地配置 JSON、原子占用空闲脚本连接并发送 `start`。`login_method=1` 只发送 `game_username + game_password`，`2/3` 只发送 `game_uid + token`；自动重连使用同一规则。接口成功只表示启动包已发出，不表示第三方登录成功。
-- 后台“运行服务配置”的 Facebook/Google 开关默认开启，关闭后只禁止新增对应登录方式；已有账号仍可启动、自动重连和更新 Token。Token 更新后在下次启动或重连生效，明文不会进入接口响应或日志。
+- 后台“运行服务配置”的 Facebook/Google 开关默认开启，关闭后只禁止新增对应登录方式；已有账号仍可启动、自动重连和验证更新 Token。更新密码或 Token 前账号必须完全停止且 `desired_running=0`；第三方 `login` 返回 `code=1` 后才替换旧凭证，失败、超时或并发状态变化时旧凭证保持不变。验证成功后不自动启动，明文不会进入接口响应、日志或浏览器存储。
 - 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端向已绑定脚本发送 `stop` 后本地状态进入 `stopping` 并写入 `desired_running=0`；收到脚本 `stopped` 或连接关闭确认后才改为 `stopped` 并清空本次普通日志，事件卡片历史不会清空。
 - 异常断线恢复：连接关闭但用户没有手动停止时，服务端不会把账号当作已停止，而是改为 `reconnecting`，保留原 `log_session_id` 和普通日志，等待空闲脚本连接后重发幂等 `start`。第三方应按 `game_username` 判断已有任务并重新绑定，不要重复启动；本协议不使用单独的 `resume` 消息。
 - 事件卡片历史定位为玩家游戏内事件展示，只由第三方 `event` 消息或普通日志中的 `[[EVT]]` 事件 JSON 写入；平台运行状态只写普通日志。

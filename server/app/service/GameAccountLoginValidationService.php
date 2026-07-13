@@ -12,6 +12,8 @@ use Throwable;
 class GameAccountLoginValidationService
 {
     public const TIMEOUT_SECONDS = 20;
+    public const PURPOSE_ACCOUNT_CREATE = 'account_create';
+    public const PURPOSE_CREDENTIAL_UPDATE = 'credential_update';
 
     public function __construct(
         private GameAccountRepositoryInterface $accounts,
@@ -34,11 +36,55 @@ class GameAccountLoginValidationService
             throw new ApiException(I18n::t('api.game.account_limit_reached', ['limit' => $maxAccounts], $this->locale), 409);
         }
 
+        return $this->startValidation($userId, self::PURPOSE_ACCOUNT_CREATE, 0, $prepared);
+    }
+
+    public function beginCredentialUpdate(int $userId, int $accountId, array $payload): array
+    {
+        $account = $this->accounts->findByUserId($userId, $accountId);
+        if (!$account) {
+            throw new ApiException(I18n::t('api.game.account_not_found', [], $this->locale), 404);
+        }
+        $loginMethod = (int)($account['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD);
+        if (!GameAccountLoginMethod::isSupported($loginMethod)) {
+            throw new ApiException(I18n::t('api.game.login_method_invalid', [], $this->locale), 422);
+        }
+        if ($this->accountIsActive($account) || (int)($account['desired_running'] ?? 0) !== 0) {
+            throw new ApiException(I18n::t('api.game.credential_update_requires_stopped', [], $this->locale), 409);
+        }
+
+        if ($loginMethod === GameAccountLoginMethod::ACCOUNT_PASSWORD) {
+            $identity = (string)($account['game_username'] ?? '');
+            $credential = (string)($payload['game_password'] ?? '');
+            if ($identity === '' || trim($credential) === '') {
+                throw new ApiException(I18n::t('api.game.require_game_credentials', [], $this->locale), 422);
+            }
+        } else {
+            $identity = (string)($account['game_uid'] ?? '');
+            $credential = trim((string)($payload['token'] ?? ''));
+            if ($identity === '' || $credential === '') {
+                throw new ApiException(I18n::t('api.game.require_token', [], $this->locale), 422);
+            }
+        }
+        $this->assertThirdPartyReady();
+        return $this->startValidation($userId, self::PURPOSE_CREDENTIAL_UPDATE, $accountId, [
+            'channel_code' => (string)($account['channel_code'] ?? GameAccountService::PREVIEW_CHANNEL),
+            'login_method' => $loginMethod,
+            'identity' => $identity,
+            'credential' => $credential,
+        ]);
+    }
+
+    private function startValidation(int $userId, string $purpose, int $targetAccountId, array $prepared): array
+    {
+
         $now = time();
         $validationId = bin2hex(random_bytes(16));
         $requestId = bin2hex(random_bytes(16));
         $sessionId = bin2hex(random_bytes(12));
         $fingerprint = hash_hmac('sha256', json_encode([
+            $purpose,
+            $targetAccountId,
             $prepared['channel_code'],
             $prepared['login_method'],
             $prepared['identity'],
@@ -47,11 +93,14 @@ class GameAccountLoginValidationService
         $job = [
             'validation_id' => $validationId,
             'user_id' => $userId,
+            'purpose' => $purpose,
+            'target_account_id' => $targetAccountId,
             'status' => 'reserving',
             'request_id' => $requestId,
             'session_id' => $sessionId,
             'client_id' => '',
             'fingerprint' => $fingerprint,
+            'credential_fingerprint' => hash_hmac('sha256', $prepared['credential'], $this->credentialKey()),
             'channel_code' => $prepared['channel_code'],
             'login_method' => $prepared['login_method'],
             'identity' => $prepared['identity'],
@@ -67,10 +116,17 @@ class GameAccountLoginValidationService
 
         $begin = $this->validations->begin($job);
         if ($begin['kind'] === 'existing') {
-            if (($begin['job']['status'] ?? '') === 'success'
+            if ($purpose === self::PURPOSE_ACCOUNT_CREATE
+                && ($begin['job']['status'] ?? '') === 'success'
                 && !$this->accounts->findByUserId($userId, (int)($begin['job']['account_id'] ?? 0))) {
                 $this->validations->forget((string)$begin['job']['validation_id']);
-                return $this->begin($userId, $payload);
+                return $this->startValidation($userId, $purpose, $targetAccountId, $prepared);
+            }
+            if ($purpose === self::PURPOSE_CREDENTIAL_UPDATE
+                && ($begin['job']['status'] ?? '') === 'success'
+                && !$this->credentialMatchesJob($begin['job'])) {
+                $this->validations->forget((string)$begin['job']['validation_id']);
+                return $this->startValidation($userId, $purpose, $targetAccountId, $prepared);
             }
             return ApiResponse::success($this->responseData($begin['job']));
         }
@@ -135,27 +191,51 @@ class GameAccountLoginValidationService
                 $this->validations->complete($validationId, 'rejected', $message);
             } else {
                 $serverName = trim((string)$payload['server_name']);
-                $account = $this->createValidatedAccount($job, $serverName);
+                $purpose = (string)($job['purpose'] ?? self::PURPOSE_ACCOUNT_CREATE);
+                $account = $purpose === self::PURPOSE_CREDENTIAL_UPDATE
+                    ? $this->updateValidatedCredential($job)
+                    : $this->createValidatedAccount($job, $serverName);
                 if ($account === null) {
                     $this->validations->complete(
                         $validationId,
                         'error',
-                        I18n::t('api.game.account_limit_reached', [
-                            'limit' => (int)$this->thirdPartyConfig['max_accounts_per_user'],
-                        ], (string)$job['locale'])
+                        $purpose === self::PURPOSE_CREDENTIAL_UPDATE
+                            ? I18n::t('api.game.credential_update_state_changed', [], (string)$job['locale'])
+                            : I18n::t('api.game.account_limit_reached', [
+                                'limit' => (int)$this->thirdPartyConfig['max_accounts_per_user'],
+                            ], (string)$job['locale'])
                     );
                 } else {
-                    $this->validations->complete($validationId, 'success', $message, (int)$account['id'], $serverName);
+                    $successMessage = $purpose === self::PURPOSE_CREDENTIAL_UPDATE
+                        ? I18n::t(
+                            (int)$job['login_method'] === GameAccountLoginMethod::ACCOUNT_PASSWORD
+                                ? 'api.game.password_updated'
+                                : 'api.game.token_updated',
+                            [],
+                            (string)$job['locale']
+                        )
+                        : $message;
+                    $this->validations->complete($validationId, 'success', $successMessage, (int)$account['id'], $serverName);
                 }
             }
         } catch (Throwable $e) {
-            Log::error('Game account login validation account creation failed', [
+            Log::error('Game account login validation completion failed', [
                 'validation_id' => $validationId,
                 'user_id' => (int)$job['user_id'],
                 'login_method' => (int)$job['login_method'],
                 'error' => $e->getMessage(),
             ]);
-            $this->validations->complete($validationId, 'error', I18n::t('api.game.login_validation_create_failed', [], (string)$job['locale']));
+            $this->validations->complete(
+                $validationId,
+                'error',
+                I18n::t(
+                    ($job['purpose'] ?? self::PURPOSE_ACCOUNT_CREATE) === self::PURPOSE_CREDENTIAL_UPDATE
+                        ? 'api.game.credential_update_failed'
+                        : 'api.game.login_validation_create_failed',
+                    [],
+                    (string)$job['locale']
+                )
+            );
         }
 
         if (!$this->runtime->restoreValidationConnection($reservation)) {
@@ -190,6 +270,23 @@ class GameAccountLoginValidationService
             'display_name' => $identity,
             'remark' => I18n::t('api.game.login_validated_remark', [], (string)$job['locale']),
         ], (int)$this->thirdPartyConfig['max_accounts_per_user']);
+    }
+
+    private function updateValidatedCredential(array $job): ?array
+    {
+        return $this->accounts->updateValidatedCredential(
+            (int)$job['user_id'],
+            (int)($job['target_account_id'] ?? 0),
+            (int)$job['login_method'],
+            (string)$job['identity'],
+            (string)$job['credential_cipher'],
+            [
+                GameAccountService::STARTING_STATUS,
+                GameAccountService::RUNNING_STATUS,
+                GameAccountService::RECONNECTING_STATUS,
+                GameAccountService::STOPPING_STATUS,
+            ]
+        );
     }
 
     private function prepareCredentials(array $payload): array
@@ -237,6 +334,7 @@ class GameAccountLoginValidationService
             'request_id' => (string)$job['request_id'],
             'session_id' => (string)$job['session_id'],
             'status' => $status,
+            'purpose' => (string)($job['purpose'] ?? self::PURPOSE_ACCOUNT_CREATE),
             'expires_in' => max(0, (int)$job['expires_at'] - time()),
         ];
         if (in_array($status, ['success', 'rejected', 'timeout', 'error'], true)) {
@@ -288,6 +386,36 @@ class GameAccountLoginValidationService
             throw new ApiException(I18n::t('api.game.server_config_invalid', [], $this->locale), 503);
         }
         $this->credentialKey();
+    }
+
+    private function accountIsActive(array $account): bool
+    {
+        return in_array((string)($account['status'] ?? ''), [
+            GameAccountService::STARTING_STATUS,
+            GameAccountService::RUNNING_STATUS,
+            GameAccountService::RECONNECTING_STATUS,
+            GameAccountService::STOPPING_STATUS,
+        ], true);
+    }
+
+    private function credentialMatchesJob(array $job): bool
+    {
+        $account = $this->accounts->findByUserId((int)$job['user_id'], (int)($job['target_account_id'] ?? 0));
+        if (!$account || (int)($account['login_method'] ?? 0) !== (int)$job['login_method']) {
+            return false;
+        }
+        $column = (int)$job['login_method'] === GameAccountLoginMethod::ACCOUNT_PASSWORD
+            ? 'game_password_cipher'
+            : 'game_token_cipher';
+        try {
+            $credential = $this->cipher()->decrypt((string)($account[$column] ?? ''));
+        } catch (Throwable) {
+            return false;
+        }
+        return hash_equals(
+            (string)($job['credential_fingerprint'] ?? ''),
+            hash_hmac('sha256', $credential, $this->credentialKey())
+        );
     }
 
     private function credentialKey(): string

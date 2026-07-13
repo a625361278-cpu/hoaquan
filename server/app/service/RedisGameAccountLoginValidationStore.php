@@ -118,6 +118,24 @@ LUA;
         return $job && (int)($job['user_id'] ?? 0) === $userId ? $job : null;
     }
 
+    public function activeCredentialUpdateForAccount(int $userId, int $accountId): ?array
+    {
+        $validationId = $this->redis()->get($this->activeUserKey($userId));
+        if (!is_string($validationId) || $validationId === '') {
+            return null;
+        }
+        $job = $this->job($validationId);
+        if (!$job) {
+            $this->deleteIfMatches($this->activeUserKey($userId), $validationId);
+            return null;
+        }
+        return ($job['purpose'] ?? 'account_create') === 'credential_update'
+            && (int)($job['target_account_id'] ?? 0) === $accountId
+            && in_array((string)($job['status'] ?? ''), ['reserving', 'verifying', 'processing'], true)
+                ? $job
+                : null;
+    }
+
     public function forget(string $validationId): void
     {
         $job = $this->job($validationId);

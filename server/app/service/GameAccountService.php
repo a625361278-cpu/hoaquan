@@ -88,24 +88,12 @@ class GameAccountService
 
     public function createFromLogin(int $userId, array $payload): array
     {
-        return (new GameAccountLoginValidationService(
-            $this->accounts,
-            $this->thirdPartyConfig,
-            $this->locale,
-            $this->scriptRuntime,
-            $this->loginValidations
-        ))->begin($userId, $payload);
+        return $this->loginValidationService()->begin($userId, $payload);
     }
 
     public function loginValidationStatus(int $userId, string $validationId): array
     {
-        return (new GameAccountLoginValidationService(
-            $this->accounts,
-            $this->thirdPartyConfig,
-            $this->locale,
-            $this->scriptRuntime,
-            $this->loginValidations
-        ))->status($userId, $validationId);
+        return $this->loginValidationService()->status($userId, $validationId);
     }
 
     public function configForUser(int $userId, int $accountId): array
@@ -184,6 +172,7 @@ class GameAccountService
         $account = $this->requireAccount($userId, $accountId);
         $this->assertQuotaActive($account);
         $this->assertThirdPartyScriptReady();
+        $this->assertNoCredentialValidation($userId, $accountId);
         $credential = $this->credentialForStart($account);
         $taskState = $this->taskStates->get($accountId);
         $logSessionId = bin2hex(random_bytes(12));
@@ -284,11 +273,9 @@ class GameAccountService
         if ((int)($existing['login_method'] ?? GameAccountLoginMethod::ACCOUNT_PASSWORD) !== GameAccountLoginMethod::ACCOUNT_PASSWORD) {
             throw new ApiException(I18n::t('api.game.password_update_not_supported', [], $this->locale), 422);
         }
-        $account = $this->accounts->updateCredentials($userId, $accountId, $this->cipher()->encrypt($password));
-
-        return ApiResponse::success([
-            'account' => $this->publicAccount($account),
-        ], I18n::t('api.game.password_updated', [], $this->locale));
+        return $this->loginValidationService()->beginCredentialUpdate($userId, $accountId, [
+            'game_password' => $password,
+        ]);
     }
 
     public function updateCredential(int $userId, int $accountId, array $payload): array
@@ -305,15 +292,15 @@ class GameAccountService
         if ($token === '') {
             throw new ApiException(I18n::t('api.game.require_token', [], $this->locale), 422);
         }
-        $account = $this->accounts->updateToken($userId, $accountId, $this->cipher()->encrypt($token));
-        return ApiResponse::success([
-            'account' => $this->publicAccount($account),
-        ], I18n::t('api.game.token_updated', [], $this->locale));
+        return $this->loginValidationService()->beginCredentialUpdate($userId, $accountId, [
+            'token' => $token,
+        ]);
     }
 
     public function delete(int $userId, int $accountId): array
     {
         $account = $this->requireAccount($userId, $accountId);
+        $this->assertNoCredentialValidation($userId, $accountId);
         if ($this->isActiveRuntimeStatus((string)($account['status'] ?? ''))) {
             $this->scriptRuntime->stopAccount($accountId, bin2hex(random_bytes(16)));
         }
@@ -369,6 +356,29 @@ class GameAccountService
             throw new ApiException(I18n::t('api.game.account_not_found', [], $this->locale), 404);
         }
         return $account;
+    }
+
+    private function loginValidationService(): GameAccountLoginValidationService
+    {
+        return new GameAccountLoginValidationService(
+            $this->accounts,
+            $this->thirdPartyConfig,
+            $this->locale,
+            $this->scriptRuntime,
+            $this->loginValidationStore()
+        );
+    }
+
+    private function loginValidationStore(): GameAccountLoginValidationStoreInterface
+    {
+        return $this->loginValidations ??= new RedisGameAccountLoginValidationStore();
+    }
+
+    private function assertNoCredentialValidation(int $userId, int $accountId): void
+    {
+        if ($this->loginValidationStore()->activeCredentialUpdateForAccount($userId, $accountId)) {
+            throw new ApiException(I18n::t('api.game.credential_validation_in_progress', [], $this->locale), 409);
+        }
     }
 
     private function assertThirdPartyScriptReady(): void

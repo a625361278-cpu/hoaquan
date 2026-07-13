@@ -32,6 +32,26 @@ class RedisGameAccountLoginValidationStoreTest extends TestCase
             $redis->arguments[0]
         );
     }
+
+    public function testActiveCredentialUpdateCanBeFoundForTargetAccount(): void
+    {
+        $validationId = str_repeat('a', 32);
+        $prefix = RedisGameAccountLoginValidationStore::PREFIX;
+        $redis = new ActiveValidationRedisClient([
+            $prefix . 'active_users:7' => $validationId,
+            $prefix . 'jobs:' . $validationId => json_encode([
+                'validation_id' => $validationId,
+                'user_id' => 7,
+                'purpose' => 'credential_update',
+                'target_account_id' => 3,
+                'status' => 'verifying',
+            ], JSON_THROW_ON_ERROR),
+        ]);
+        $store = new RedisGameAccountLoginValidationStore($redis);
+
+        $this->assertSame($validationId, $store->activeCredentialUpdateForAccount(7, 3)['validation_id']);
+        $this->assertNull($store->activeCredentialUpdateForAccount(7, 4));
+    }
 }
 
 class IlluminateEvalSignatureRedisClient
@@ -45,5 +65,17 @@ class IlluminateEvalSignatureRedisClient
         $this->arguments = $arguments;
 
         return ['created', (string)$arguments[5]];
+    }
+}
+
+class ActiveValidationRedisClient
+{
+    public function __construct(private array $values)
+    {
+    }
+
+    public function get(string $key): string|false
+    {
+        return $this->values[$key] ?? false;
     }
 }

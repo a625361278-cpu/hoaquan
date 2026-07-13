@@ -157,29 +157,33 @@ class ArrayGameAccountRepository implements GameAccountRepositoryInterface
         throw new \RuntimeException('Account not found in test repository');
     }
 
-    public function updateCredentials(int $userId, int $accountId, string $encryptedPassword): array
-    {
+    public function updateValidatedCredential(
+        int $userId,
+        int $accountId,
+        int $loginMethod,
+        string $identity,
+        string $encryptedCredential,
+        array $activeStatuses
+    ): ?array {
         foreach ($this->accounts as $index => $account) {
-            if ((int)$account['user_id'] === $userId && (int)$account['id'] === $accountId) {
-                $this->accounts[$index]['game_password_cipher'] = $encryptedPassword;
-                $this->accounts[$index]['sync_status'] = 'local_unsynced';
-                return $this->accounts[$index];
+            $currentMethod = (int)($account['login_method'] ?? 1);
+            $currentIdentity = $currentMethod === 1
+                ? (string)($account['game_username'] ?? '')
+                : (string)($account['game_uid'] ?? '');
+            if ((int)$account['user_id'] !== $userId
+                || (int)$account['id'] !== $accountId
+                || $currentMethod !== $loginMethod
+                || $currentIdentity !== $identity
+                || (int)($account['desired_running'] ?? 0) !== 0
+                || in_array((string)($account['status'] ?? ''), $activeStatuses, true)) {
+                continue;
             }
+            $column = $loginMethod === 1 ? 'game_password_cipher' : 'game_token_cipher';
+            $this->accounts[$index][$column] = $encryptedCredential;
+            $this->accounts[$index]['sync_status'] = 'local_unsynced';
+            return $this->accounts[$index];
         }
-
-        throw new \RuntimeException('Account not found in test repository');
-    }
-
-    public function updateToken(int $userId, int $accountId, string $encryptedToken): array
-    {
-        foreach ($this->accounts as $index => $account) {
-            if ((int)$account['user_id'] === $userId && (int)$account['id'] === $accountId) {
-                $this->accounts[$index]['game_token_cipher'] = $encryptedToken;
-                $this->accounts[$index]['sync_status'] = 'local_unsynced';
-                return $this->accounts[$index];
-            }
-        }
-        throw new \RuntimeException('Account not found in test repository');
+        return null;
     }
 
     public function updateRuntimeState(int $userId, int $accountId, array $data): array

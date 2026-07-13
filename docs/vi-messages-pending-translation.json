@@ -1,4 +1,8 @@
 {
+  "api.game.credential_update_requires_stopped": "请先完全停止账号，再更新密码或Token",
+  "api.game.credential_update_failed": "新凭证验证成功但更新失败，原凭证未修改，请重试",
+  "api.game.credential_update_state_changed": "账号状态或身份已变化，原凭证未修改，请停止账号后重试",
+  "api.game.credential_validation_in_progress": "该账号正在验证新凭证，暂不能启动或删除",
   "api.game.login_validation_conflict": "当前已有账号正在验证，请等待验证完成",
   "api.game.login_validation_context_invalid": "第三方登录验证响应与当前请求不匹配",
   "api.game.login_validation_create_failed": "账号验证成功，但保存游戏账号失败，请重试",
@@ -9,5 +13,9 @@
   "client.add.login_validation_rejected": "账号无效，未添加",
   "client.add.login_validation_success": "账号验证成功",
   "client.add.login_validation_timeout": "账号验证超时，请重试",
+  "client.home.credential_update_success": "新凭证验证成功并已更新",
+  "client.home.credential_validation_failed": "验证失败，原凭证未修改",
+  "client.home.credential_validation_invalid_response": "凭证验证返回数据异常",
+  "client.home.credential_verifying": "正在验证新凭证",
   "client.add.verifying": "正在验证账号..."
 }
