@@ -168,7 +168,7 @@ class InMemoryRedisClient
         return $this->ttls[$key] ?? -1;
     }
 
-    public function eval(string $script, array $arguments, int $keyCount): mixed
+    public function eval(string $script, int $keyCount, mixed ...$arguments): mixed
     {
         if (!str_contains($script, "state['state'] = 'idle'")) {
             throw new \RuntimeException('Unsupported in-memory Redis script');

@@ -39,7 +39,7 @@ redis.call('SETEX', KEYS[3], tonumber(ARGV[4]), ARGV[1])
 redis.call('ZADD', KEYS[4], tonumber(ARGV[3]), ARGV[1])
 return {'created', ARGV[2]}
 LUA;
-        $result = $this->redis()->eval($script, [
+        $result = $this->evalScript($script, [
             $this->jobKey($validationId),
             $this->activeUserKey($userId),
             $this->fingerprintKey($userId, $fingerprint),
@@ -74,7 +74,7 @@ job['updated_at'] = tonumber(ARGV[2])
 redis.call('SETEX', KEYS[1], tonumber(ARGV[3]), cjson.encode(job))
 return cjson.encode(job)
 LUA;
-        $result = $this->redis()->eval($script, [
+        $result = $this->evalScript($script, [
             $this->jobKey($validationId),
             $clientId,
             (string)time(),
@@ -103,7 +103,7 @@ if redis.call('GET', KEYS[3]) == ARGV[1] then redis.call('DEL', KEYS[3]) end
 if redis.call('GET', KEYS[4]) == ARGV[1] then redis.call('DEL', KEYS[4]) end
 return 1
 LUA;
-        $this->redis()->eval($script, [
+        $this->evalScript($script, [
             $this->jobKey($validationId),
             $this->deadlinesKey(),
             $this->activeUserKey((int)$job['user_id']),
@@ -178,7 +178,7 @@ redis.call('SETEX', KEYS[1], tonumber(ARGV[2]), cjson.encode(job))
 redis.call('ZREM', KEYS[2], ARGV[3])
 return cjson.encode(job)
 LUA;
-        $result = $this->redis()->eval($script, [
+        $result = $this->evalScript($script, [
             $this->jobKey($validationId),
             $this->deadlinesKey(),
             (string)time(),
@@ -215,7 +215,7 @@ redis.call('SETEX', KEYS[1], tonumber(ARGV[5]), cjson.encode(job))
 redis.call('ZREM', KEYS[2], ARGV[6])
 return cjson.encode(job)
 LUA;
-        $result = $this->redis()->eval($script, [
+        $result = $this->evalScript($script, [
             $this->jobKey($validationId),
             $this->deadlinesKey(),
             $timeout ? '1' : '0',
@@ -237,7 +237,7 @@ LUA;
     private function deleteIfMatches(string $key, string $expected): void
     {
         $script = "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0";
-        $this->redis()->eval($script, [$key, $expected], 1);
+        $this->evalScript($script, [$key, $expected], 1);
     }
 
     private function jobKey(string $id): string
@@ -268,6 +268,11 @@ LUA;
     private function redis(): mixed
     {
         return $this->redis ?? Redis::connection();
+    }
+
+    private function evalScript(string $script, array $arguments, int $keyCount): mixed
+    {
+        return $this->redis()->eval($script, $keyCount, ...$arguments);
     }
 
     private function encode(array $value): string

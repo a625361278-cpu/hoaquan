@@ -199,7 +199,7 @@ redis.call('SREM', KEYS[2], ARGV[6])
 redis.call('SADD', KEYS[3], ARGV[6])
 return cjson.encode(state)
 LUA;
-        $result = $this->redis()->eval($script, [
+        $result = $this->evalScript($script, [
             $key,
             $this->boundKey(),
             $this->idleKey(),
@@ -325,5 +325,10 @@ LUA;
     private function redis(): mixed
     {
         return $this->redis ?? Redis::connection();
+    }
+
+    private function evalScript(string $script, array $arguments, int $keyCount): mixed
+    {
+        return $this->redis()->eval($script, $keyCount, ...$arguments);
     }
 }
