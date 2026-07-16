@@ -47,6 +47,8 @@ RonnyPay 充值订单保存在 `ga_payment_orders`。`bank_account` 使用 `LONG
 
 `ga_system_settings.invite_daily_limit` 控制同一邀请人每日奖励上限，默认 `50`；`invite_same_ip_daily_limit` 控制同邀请人同 IP 每日奖励风控上限，默认 `3`。同步数据库脚本会自动补齐这些配置项。
 
+`ga_system_settings.game_config_visibility_overrides` 保存后台“游戏配置项管理”相对正式默认值的全站可见性覆盖，值为“配置路径 => 布尔值”的 JSON 对象，默认 `{}`。完整 196 行目录由 `client/src/utils/gameConfigSchema.js` 生成到 `shared/game-config-visibility.json`，不能在数据库里另建一份字段目录；损坏 JSON、未知路径、非布尔值或“控制项隐藏但依赖项显示”的矛盾状态会明确报错。后台打开或关闭控制项时会递归联动依赖项，打开依赖项时也会同步打开所需控制项。该设置只控制用户端显示，不修改 `ga_game_accounts.config_json`，也不进入第三方配置响应。`php scripts/sync_database.php` 会补齐该设置，`php scripts/sync_admin.php` 会同步后台菜单。
+
 第三方 WebSocket 使用连接池配置：`third_party_ws_urls` 每行一个连接槽位，`third_party_ws_connection_capacity` 控制单条连接最大承载账号数，默认 `10`。旧 `third_party_ws_url` 仅用于未配置多地址列表时兼容单地址。
 
 后台“第三方连接”菜单来自 `server/plugin/admin/config/menu.php`，同步后写入 `wa_rules`。该页面不存储连接状态到 MySQL；槽位级运行状态由常驻 worker 写入 Redis：`gameassist:third_party_ws:slots:{slot_id}`。账号级运行状态仍写入 `gameassist:third_party_ws:accounts:{account_id}`。

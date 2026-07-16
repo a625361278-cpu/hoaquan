@@ -297,6 +297,7 @@ try {
         'facebook_login_enabled' => ['1', '是否允许新增Facebook登录游戏账号：1是，0否'],
         'google_login_enabled' => ['1', '是否允许新增Google登录游戏账号：1是，0否'],
         'registration_reward_points' => ['1', '新用户注册赠送配额点数，0表示关闭'],
+        'game_config_visibility_overrides' => ['{}', '游戏配置项用户端可见性相对默认值的覆盖JSON'],
         'auth_verification_mode' => ['security_question', '认证方式：security_question密保问题，email_code邮箱验证码'],
         'smtp_enabled' => ['0', 'SMTP是否启用：0否，1是'],
         'smtp_host' => ['', 'SMTP服务器地址'],

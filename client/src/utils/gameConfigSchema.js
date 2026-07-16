@@ -20,11 +20,11 @@ export const PREVIEW_SERVER = {
 };
 
 const QUALITY_OPTIONS = [
-  option('green', 'client.config.option.quality_green'),
-  option('blue', 'client.config.option.quality_blue'),
-  option('purple', 'client.config.option.quality_purple'),
-  option('gold', 'client.config.option.quality_gold'),
-  option('red', 'client.config.option.quality_red'),
+  option('green', 'client.config.option.quality_green', { qualityTone: 'green' }),
+  option('blue', 'client.config.option.quality_blue', { qualityTone: 'blue' }),
+  option('purple', 'client.config.option.quality_purple', { qualityTone: 'purple' }),
+  option('gold', 'client.config.option.quality_gold', { qualityTone: 'gold' }),
+  option('red', 'client.config.option.quality_red', { qualityTone: 'red' }),
 ];
 
 const PLANTING_MODE_OPTIONS = [
@@ -114,7 +114,7 @@ export const CONFIG_SCHEMA = [
           numberItem('basic.reputation.threshold', 'client.config.item.reputation_threshold', 80, '', 'client.config.help.reputation_threshold', {
             visibleWhen: { path: 'basic.reputation.enabled', equals: true },
           }),
-          item('basic.debug', 'client.config.item.item_log', false, 'client.config.help.item_log'),
+          item('basic.debug', 'client.config.item.item_log', true, 'client.config.help.item_log'),
           numberItem('basic.reconnectInterval', 'client.config.item.reconnect_interval', 5, 'client.config.unit.minute', 'client.config.help.reconnect_interval'),
         ],
       },
@@ -917,8 +917,8 @@ function priorityGroupItem(path, labelKey, entries, optionsList, helpKey = '', o
   return { path, labelKey, helpKey, type: 'priorityGroup', entries, options: optionsList, ...options };
 }
 
-function option(value, labelKey) {
-  return { value, labelKey };
+function option(value, labelKey, visual = {}) {
+  return { value, labelKey, ...visual };
 }
 
 function mergeDeep(target, source) {

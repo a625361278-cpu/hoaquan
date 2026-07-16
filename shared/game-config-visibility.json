@@ -1,0 +1,1897 @@
+{
+  "version": 1,
+  "itemCount": 196,
+  "defaultHiddenCount": 33,
+  "tabs": [
+    {
+      "key": "basic",
+      "titleKey": "client.config.tab.basic",
+      "groups": [
+        {
+          "key": "base",
+          "titleKey": "client.config.group.basic_base",
+          "items": [
+            {
+              "path": "basic.reputation.enabled",
+              "labelKey": "client.config.item.reputation_monitor",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.reputation.threshold",
+              "labelKey": "client.config.item.reputation_threshold",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "basic.reputation.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.debug",
+              "labelKey": "client.config.item.item_log",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.reconnectInterval",
+              "labelKey": "client.config.item.reconnect_interval",
+              "type": "numberItem",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "task",
+          "titleKey": "client.config.group.task",
+          "items": [
+            {
+              "path": "basic.task.daily",
+              "labelKey": "client.config.item.daily_task",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.task.weekly",
+              "labelKey": "client.config.item.weekly_task",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.task.main",
+              "labelKey": "client.config.item.main_task",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.task.story",
+              "labelKey": "client.config.item.main_story",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.task.achieve",
+              "labelKey": "client.config.item.flower_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "mail",
+          "titleKey": "client.config.group.mail",
+          "items": [
+            {
+              "path": "basic.mail",
+              "labelKey": "client.config.item.auto_mail",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "benefit",
+          "titleKey": "client.config.group.benefit",
+          "items": [
+            {
+              "path": "basic.benefit.buff",
+              "labelKey": "client.config.item.double_coin",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.benefit.box",
+              "labelKey": "client.config.item.benefit_box",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.benefit.shareRwd",
+              "labelKey": "client.config.item.share_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.benefit.antiFraudBox",
+              "labelKey": "client.config.item.anti_fraud_box",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "daily_wish",
+          "titleKey": "client.config.group.daily_wish",
+          "items": [
+            {
+              "path": "basic.sign.daily",
+              "labelKey": "client.config.item.auto_wish",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.sign.patch",
+              "labelKey": "client.config.item.auto_retroactive",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "pearl",
+          "titleKey": "client.config.group.pearl",
+          "items": [
+            {
+              "path": "basic.pearl.freePearl",
+              "labelKey": "client.config.item.free_pearl",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.pearl.autoHire",
+              "labelKey": "client.config.item.auto_hire",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.pearl.maxHireLevel",
+              "labelKey": "client.config.item.level_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "basic.pearl.autoHire"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.pearl.maxHireTicketUsage",
+              "labelKey": "client.config.item.hire_ticket_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "basic.pearl.autoHire"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.pearl.open",
+              "labelKey": "client.config.item.auto_open_pearl",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.pearl.protectEnabled",
+              "labelKey": "client.config.item.protect_enabled",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.pearl.buyHireBook",
+              "labelKey": "client.config.item.buy_hire_book",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.pearl.maxSpendDmd",
+              "labelKey": "client.config.item.diamond_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "basic.pearl.buyHireBook"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "shop",
+          "titleKey": "client.config.group.shop",
+          "items": [
+            {
+              "path": "basic.shop.videoGift",
+              "labelKey": "client.config.item.video_gift",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.shop.cultivateShop.autoBuy",
+              "labelKey": "client.config.item.material_shop",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.shop.cultivateShop.maxSpendGold",
+              "labelKey": "client.config.item.gold_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "basic.shop.cultivateShop.autoBuy"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.shop.vipShop.autoBuy",
+              "labelKey": "client.config.item.vip_shop",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.shop.vipShop.maxSpendDmd",
+              "labelKey": "client.config.item.diamond_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "basic.shop.vipShop.autoBuy"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.shop.vipShop.maxSpendFloralCoin",
+              "labelKey": "client.config.item.flower_coin_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "basic.shop.vipShop.autoBuy"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "random_event",
+          "titleKey": "client.config.group.random_event",
+          "items": [
+            {
+              "path": "basic.randomEvent.enabled",
+              "labelKey": "client.config.item.random_event",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "cat",
+          "titleKey": "client.config.group.cat",
+          "items": [
+            {
+              "path": "basic.cat.enabled",
+              "labelKey": "client.config.item.cat_switch",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.cat.autoRecall",
+              "labelKey": "client.config.item.auto_recall",
+              "type": "item",
+              "dependsOnPaths": [
+                "basic.cat.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.cat.autoBuyFood",
+              "labelKey": "client.config.item.auto_buy_cat_food",
+              "type": "item",
+              "dependsOnPaths": [
+                "basic.cat.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.cat.autoFeed",
+              "labelKey": "client.config.item.auto_feed_cat",
+              "type": "item",
+              "dependsOnPaths": [
+                "basic.cat.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "basic.cat.autoStroke",
+              "labelKey": "client.config.item.auto_stroke_cat",
+              "type": "item",
+              "dependsOnPaths": [
+                "basic.cat.enabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "plant",
+      "titleKey": "client.config.tab.plant",
+      "groups": [
+        {
+          "key": "cultivate",
+          "titleKey": "client.config.group.cultivate",
+          "items": [
+            {
+              "path": "plant.cultivate.enabled",
+              "labelKey": "client.config.item.auto_cultivate",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.cultivate.videoSpeedup",
+              "labelKey": "client.config.item.video_speedup",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.cultivate.upgrade",
+              "labelKey": "client.config.item.flower_upgrade",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.cultivate.targetLevel",
+              "labelKey": "client.config.item.target_level",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.cultivate.upgrade"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "water",
+          "titleKey": "client.config.group.water",
+          "items": [
+            {
+              "path": "plant.water.enabled",
+              "labelKey": "client.config.item.water_drop",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.water.timedEnabled",
+              "labelKey": "client.config.item.timed_water",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.water.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.water.threshold",
+              "labelKey": "client.config.item.water_threshold",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.water.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.water.forceCollectEnabled",
+              "labelKey": "client.config.item.force_collect_water",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.water.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.water.forceCollectTime",
+              "labelKey": "client.config.item.collect_time",
+              "type": "textItem",
+              "dependsOnPaths": [
+                "plant.water.forceCollectEnabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "flower",
+          "titleKey": "client.config.group.flower",
+          "items": [
+            {
+              "path": "plant.flower.unlockLand",
+              "labelKey": "client.config.item.unlock_land",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.harvestEnabled",
+              "labelKey": "client.config.item.auto_harvest",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.plantEnabled",
+              "labelKey": "client.config.item.auto_plant",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.videoSpeedup",
+              "labelKey": "client.config.item.video_speedup",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.flower.plantEnabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.useSpeedCard",
+              "labelKey": "client.config.item.use_speed_card",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.flower.plantEnabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.speedCardLimit",
+              "labelKey": "client.config.item.speed_card_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.flower.useSpeedCard"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.waterThreshold",
+              "labelKey": "client.config.item.keep_water",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.flower.plantEnabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.taskMode",
+              "labelKey": "client.config.item.task_priority_mode",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.flower.plantEnabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.taskLogEnabled",
+              "labelKey": "client.config.item.task_log",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.flower.plantEnabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.taskPriority",
+              "labelKey": "client.config.item.task_priority",
+              "type": "priorityGroupItem",
+              "dependsOnPaths": [
+                "plant.flower.taskMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.plantingMode",
+              "labelKey": "client.config.item.planting_mode",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "plant.flower.plantEnabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.flowerQuality",
+              "labelKey": "client.config.item.select_quality",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.flower.plantingMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.categoryCount",
+              "labelKey": "client.config.item.select_count",
+              "type": "selectItem",
+              "dependsOnPaths": [
+                "plant.flower.plantingMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.specificFlowers",
+              "labelKey": "client.config.item.select_flower",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.flower.plantingMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.flower.minFlowerLevel",
+              "labelKey": "client.config.item.limit_flower_level",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.flower.plantEnabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "friend",
+          "titleKey": "client.config.group.friend_steal",
+          "items": [
+            {
+              "path": "plant.friendSteal.enabled",
+              "labelKey": "client.config.item.friend_steal",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.friendSteal.includeElf",
+              "labelKey": "client.config.item.steal_elf",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.friendSteal.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.friendSteal.stealMode",
+              "labelKey": "client.config.item.steal_mode",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "plant.friendSteal.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.friendSteal.qualities",
+              "labelKey": "client.config.item.specified_quality",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.friendSteal.stealMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.friendSteal.specificFlowers",
+              "labelKey": "client.config.item.specified_flower",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.friendSteal.stealMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.friendSteal.excludeFlowers",
+              "labelKey": "client.config.item.exclude_flower",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.friendSteal.stealMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.friendSteal.buyCount",
+              "labelKey": "client.config.item.buy_steal_count",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.friendSteal.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.friendSteal.buyStealCount",
+              "labelKey": "client.config.item.buy_count",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.friendSteal.buyCount"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "elf",
+          "titleKey": "client.config.group.elf",
+          "items": [
+            {
+              "path": "plant.elves.plant",
+              "labelKey": "client.config.item.auto_plant_elf",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "plant.elves.selectedIds",
+              "labelKey": "client.config.item.specified_elf",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.elves.plant"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "plant.elves.applyAid",
+              "labelKey": "client.config.item.apply_aid",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.elves.recvAid",
+              "labelKey": "client.config.item.recv_aid",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.elves.helpFriend",
+              "labelKey": "client.config.item.help_friend",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.elves.dispatch",
+              "labelKey": "client.config.item.dispatch_elf",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.elves.speedupDispatch",
+              "labelKey": "client.config.item.speedup_dispatch",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "plant.elves.recvDispatchReward",
+              "labelKey": "client.config.item.recv_dispatch_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "elf_pass",
+          "titleKey": "client.config.group.elf_pass",
+          "items": [
+            {
+              "path": "plant.elves.recvPass",
+              "labelKey": "client.config.item.level_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.elves.recvPassTask",
+              "labelKey": "client.config.item.task_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "flower_pass",
+          "titleKey": "client.config.group.flower_pass",
+          "items": [
+            {
+              "path": "plant.elves.recvFlowerPass",
+              "labelKey": "client.config.item.level_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.elves.recvFlowerPassTask",
+              "labelKey": "client.config.item.task_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "flower_art",
+          "titleKey": "client.config.group.flower_art",
+          "items": [
+            {
+              "path": "plant.art.unlockShelf",
+              "labelKey": "client.config.item.unlock_flower_shelf",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.art.autoPut",
+              "labelKey": "client.config.item.art_auto_put",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.art.sellMode",
+              "labelKey": "client.config.item.market_put_mode",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "plant.art.autoPut"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.art.specifiedVases",
+              "labelKey": "client.config.item.specified_vase",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.art.sellMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.art.specifiedArts",
+              "labelKey": "client.config.item.specified_art",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.art.sellMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.art.flowerArtPerRack",
+              "labelKey": "client.config.item.put_count",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.art.autoPut"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.art.exp",
+              "labelKey": "client.config.item.art_exp",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.art.bookReward",
+              "labelKey": "client.config.item.book_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "flower_market",
+          "titleKey": "client.config.group.flower_market",
+          "items": [
+            {
+              "path": "plant.market.unlockShelf",
+              "labelKey": "client.config.item.market_unlock_shelf",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.autoPut",
+              "labelKey": "client.config.item.market_auto_put",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.putMode",
+              "labelKey": "client.config.item.market_put_strategy",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "plant.market.autoPut"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.specificFlowers",
+              "labelKey": "client.config.item.select_flower",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.market.putMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.priceIndex",
+              "labelKey": "client.config.item.market_price",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "plant.market.autoPut"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.maxSell",
+              "labelKey": "client.config.item.put_count",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.market.autoPut"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.putPassword",
+              "labelKey": "client.config.item.put_password",
+              "type": "textItem",
+              "dependsOnPaths": [
+                "plant.market.autoPut"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.autoBuyPutCount",
+              "labelKey": "client.config.item.auto_buy_put_count",
+              "type": "item",
+              "dependsOnPaths": [
+                "plant.market.autoPut"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.buyPutCount",
+              "labelKey": "client.config.item.buy_count",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.market.autoBuyPutCount"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.autoBuyFromFriend",
+              "labelKey": "client.config.item.friend_market_buy",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.buyMode",
+              "labelKey": "client.config.item.market_sweep_strategy",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "plant.market.autoBuyFromFriend"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.buyQualities",
+              "labelKey": "client.config.item.specified_quality",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.market.buyMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.buyFlowers",
+              "labelKey": "client.config.item.specified_flower",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "plant.market.buyMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "plant.market.minPutTimeDiff",
+              "labelKey": "client.config.item.min_put_time_diff",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "plant.market.autoBuyFromFriend"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "order",
+      "titleKey": "client.config.tab.order",
+      "groups": [
+        {
+          "key": "resident_order",
+          "titleKey": "client.config.group.order_resident",
+          "items": [
+            {
+              "path": "order.resident.normal",
+              "labelKey": "client.config.item.resident_order",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.resident.normalMaxNum",
+              "labelKey": "client.config.item.resident_order_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "order.resident.normal"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.resident.satin",
+              "labelKey": "client.config.item.satin_order",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.resident.satinMaxNum",
+              "labelKey": "client.config.item.satin_order_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "order.resident.satin"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.resident.building",
+              "labelKey": "client.config.item.building_order",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.resident.buildingMaxNum",
+              "labelKey": "client.config.item.building_order_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "order.resident.building"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.resident.qualities",
+              "labelKey": "client.config.item.quality_limit",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "order.resident.building",
+                "order.resident.normal",
+                "order.resident.satin"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "customer_order",
+          "titleKey": "client.config.group.order_customer",
+          "items": [
+            {
+              "path": "order.customer.enabled",
+              "labelKey": "client.config.item.auto_complete",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.customer.rejectEnabled",
+              "labelKey": "client.config.item.auto_reject",
+              "type": "item",
+              "dependsOnPaths": [
+                "order.customer.enabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "palace_order",
+          "titleKey": "client.config.group.order_palace",
+          "items": [
+            {
+              "path": "order.palace.enabled",
+              "labelKey": "client.config.item.auto_complete",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.palace.qualities",
+              "labelKey": "client.config.item.quality_limit",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "order.palace.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.palace.ignoreQuality",
+              "labelKey": "client.config.item.ignore_quality",
+              "type": "item",
+              "dependsOnPaths": [
+                "order.palace.enabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "group_order",
+          "titleKey": "client.config.group.order_group",
+          "items": [
+            {
+              "path": "order.group.enabled",
+              "labelKey": "client.config.item.auto_complete",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.group.oneMore",
+              "labelKey": "client.config.item.one_more_order",
+              "type": "item",
+              "dependsOnPaths": [
+                "order.group.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.group.submitOnlyCultivatedFlowers",
+              "labelKey": "client.config.item.only_cultivated",
+              "type": "item",
+              "dependsOnPaths": [
+                "order.group.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "order.group.qualities",
+              "labelKey": "client.config.item.quality_limit",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "order.group.enabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "union",
+      "titleKey": "client.config.tab.union",
+      "groups": [
+        {
+          "key": "land",
+          "titleKey": "client.config.group.union_land",
+          "items": [
+            {
+              "path": "union.land.harvest",
+              "labelKey": "client.config.item.union_harvest",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.land.plant",
+              "labelKey": "client.config.item.union_plant",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.land.plantMode",
+              "labelKey": "client.config.item.union_plant_mode",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "union.land.plant"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.land.flowers",
+              "labelKey": "client.config.item.specified_quality",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "union.land.plantMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.land.specificFlowers",
+              "labelKey": "client.config.item.specified_flower",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "union.land.plantMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.land.maxFlowerLevel",
+              "labelKey": "client.config.item.max_flower_level",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "union.land.plant"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "build",
+          "titleKey": "client.config.group.union_build",
+          "items": [
+            {
+              "path": "union.build.video",
+              "labelKey": "client.config.item.union_video_build",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.build.coin",
+              "labelKey": "client.config.item.union_coin_build",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.build.dmd",
+              "labelKey": "client.config.item.union_dmd_build",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "share",
+          "titleKey": "client.config.group.union_share",
+          "items": [
+            {
+              "path": "union.flower.share",
+              "labelKey": "client.config.item.union_share",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.flower.shareMode",
+              "labelKey": "client.config.item.share_mode",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "union.flower.share"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.flower.shareQualities",
+              "labelKey": "client.config.item.quality_limit",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "union.flower.shareMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.flower.shareFlowers",
+              "labelKey": "client.config.item.specified_flower",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "union.flower.shareMode"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "touch",
+          "titleKey": "client.config.group.union_touch",
+          "items": [
+            {
+              "path": "union.flower.touch",
+              "labelKey": "client.config.item.union_touch",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.flower.touchMode",
+              "labelKey": "client.config.item.touch_mode",
+              "type": "radioItem",
+              "dependsOnPaths": [
+                "union.flower.touch"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.flower.touchQualities",
+              "labelKey": "client.config.item.quality_limit",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "union.flower.touchMode"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.flower.touchFlowers",
+              "labelKey": "client.config.item.specified_flower",
+              "type": "multiSelectItem",
+              "dependsOnPaths": [
+                "union.flower.touchMode"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "race",
+          "titleKey": "client.config.group.union_race",
+          "items": [
+            {
+              "path": "union.fmlRace.enabled",
+              "labelKey": "client.config.item.union_race_finish",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.autoEnableModules",
+              "labelKey": "client.config.item.union_auto_modules",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.useSpeedCard",
+              "labelKey": "client.config.item.union_speed_card",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.minScore",
+              "labelKey": "client.config.item.union_min_score",
+              "type": "numberItem",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.upgradedMinScore",
+              "labelKey": "client.config.item.union_upgraded_min_score",
+              "type": "numberItem",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.dropLowScore",
+              "labelKey": "client.config.item.union_drop_low_score",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.onlyUpgradeTask",
+              "labelKey": "client.config.item.union_only_upgraded",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.excludeOtherUpgradeTask",
+              "labelKey": "client.config.item.union_exclude_other_upgrade",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.taskTypePriority",
+              "labelKey": "client.config.item.task_priority",
+              "type": "priorityGroupItem",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.autoUpgradeTask",
+              "labelKey": "client.config.item.union_auto_upgrade_task",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.deleteLowScoreTask",
+              "labelKey": "client.config.item.union_delete_low_score",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.deleteTaskMaxScore",
+              "labelKey": "client.config.item.delete_score_limit",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "union.fmlRace.deleteLowScoreTask"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.keepSystemUpgrade",
+              "labelKey": "client.config.item.keep_system_upgrade",
+              "type": "item",
+              "dependsOnPaths": [
+                "union.fmlRace.deleteLowScoreTask"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "union.fmlRace.keepPlayerUpgrade",
+              "labelKey": "client.config.item.keep_player_upgrade",
+              "type": "item",
+              "dependsOnPaths": [
+                "union.fmlRace.deleteLowScoreTask"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "exchange",
+          "titleKey": "client.config.group.union_exchange",
+          "items": [
+            {
+              "path": "union.exchange.autoRecv",
+              "labelKey": "client.config.item.union_exchange",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "energy_forest",
+          "titleKey": "client.config.group.union_energy_forest",
+          "items": [
+            {
+              "path": "union.energyForest.collect",
+              "labelKey": "client.config.item.energy_collect",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "activity",
+      "titleKey": "client.config.tab.activity",
+      "groups": [
+        {
+          "key": "flower_letter",
+          "titleKey": "client.config.group.activity_flower_letter",
+          "items": [
+            {
+              "path": "activity.flowerLetter.enabled",
+              "labelKey": "client.config.item.auto_complete",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.flowerLetter.unlockSlot",
+              "labelKey": "client.config.item.unlock_slot",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.flowerLetter.enabled"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.flowerLetter.autoEnableModules",
+              "labelKey": "client.config.item.auto_open_modules",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.flowerLetter.enabled"
+              ],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "flower_news",
+          "titleKey": "client.config.group.activity_flower_news",
+          "items": [
+            {
+              "path": "activity.flowerNews.enabled",
+              "labelKey": "client.config.item.auto_complete",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.flowerNews.refreshEnabled",
+              "labelKey": "client.config.item.diamond_refresh",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.flowerNews.enabled"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.flowerNews.maxFinishCountPerBatch",
+              "labelKey": "client.config.item.finish_count",
+              "type": "numberItem",
+              "dependsOnPaths": [
+                "activity.flowerNews.enabled"
+              ],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "fish_dry",
+          "titleKey": "client.config.group.activity_fish_dry",
+          "items": [
+            {
+              "path": "activity.fishDry.enabled",
+              "labelKey": "client.config.item.auto_participate",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.fishDry.showResult",
+              "labelKey": "client.config.item.show_result",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.fishDry.enabled"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.fishDry.autoRestart",
+              "labelKey": "client.config.item.restart_on_failure",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.fishDry.enabled"
+              ],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "bubble",
+          "titleKey": "client.config.group.activity_bubble",
+          "items": [
+            {
+              "path": "activity.bubble.enabled",
+              "labelKey": "client.config.item.auto_participate",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "fish_fun",
+          "titleKey": "client.config.group.activity_fish_fun",
+          "items": [
+            {
+              "path": "activity.fishFun.enabled",
+              "labelKey": "client.config.item.auto_participate",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.fishFun.autoClaimEnergy",
+              "labelKey": "client.config.item.energy_reward",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.fishFun.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.fishFun.speed",
+              "labelKey": "client.config.item.game_speed",
+              "type": "selectItem",
+              "dependsOnPaths": [
+                "activity.fishFun.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.fishFun.showResult",
+              "labelKey": "client.config.item.show_result",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.fishFun.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.fishFun.autoRestart",
+              "labelKey": "client.config.item.restart_on_failure",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.fishFun.enabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "flower_story",
+          "titleKey": "client.config.group.activity_flower_story",
+          "items": [
+            {
+              "path": "activity.flowerStory.enabled",
+              "labelKey": "client.config.item.auto_participate",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.flowerStory.autoClaimEnergy",
+              "labelKey": "client.config.item.energy_reward",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.flowerStory.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.flowerStory.speed",
+              "labelKey": "client.config.item.game_speed",
+              "type": "selectItem",
+              "dependsOnPaths": [
+                "activity.flowerStory.enabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "red_packet",
+          "titleKey": "client.config.group.activity_red_packet",
+          "items": [
+            {
+              "path": "activity.redPacket.enabled",
+              "labelKey": "client.config.item.auto_participate",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "recv_luck",
+          "titleKey": "client.config.group.activity_recv_luck",
+          "items": [
+            {
+              "path": "activity.recvLuck.enabled",
+              "labelKey": "client.config.item.auto_receive",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "call",
+          "titleKey": "client.config.group.activity_call",
+          "items": [
+            {
+              "path": "activity.call.enabled",
+              "labelKey": "client.config.item.auto_call",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "family_help",
+          "titleKey": "client.config.group.activity_family_help",
+          "items": [
+            {
+              "path": "activity.familyHelp.enabled",
+              "labelKey": "client.config.item.auto_help",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.familyHelp.recvBoxes",
+              "labelKey": "client.config.item.receive_help_reward",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.familyHelp.enabled"
+              ],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "money_tree",
+          "titleKey": "client.config.group.activity_money_tree",
+          "items": [
+            {
+              "path": "activity.moneyTree.enabled",
+              "labelKey": "client.config.item.auto_money_tree",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "zoo_elim",
+          "titleKey": "client.config.group.activity_zoo_elim",
+          "items": [
+            {
+              "path": "activity.zooGameElim.enabled",
+              "labelKey": "client.config.item.auto_participate",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "lantern",
+          "titleKey": "client.config.group.activity_lantern",
+          "items": [
+            {
+              "path": "activity.lantern.enabled",
+              "labelKey": "client.config.item.auto_answer",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "cake",
+          "titleKey": "client.config.group.activity_cake",
+          "items": [
+            {
+              "path": "activity.cake.enabled",
+              "labelKey": "client.config.item.auto_put",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.cake.autoClaimEnergy",
+              "labelKey": "client.config.item.energy_reward",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.cake.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.cake.useItems",
+              "labelKey": "client.config.item.use_items",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.cake.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.cake.speed",
+              "labelKey": "client.config.item.game_speed",
+              "type": "selectItem",
+              "dependsOnPaths": [
+                "activity.cake.enabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "merge",
+          "titleKey": "client.config.group.activity_merge",
+          "items": [
+            {
+              "path": "activity.merge.enabled",
+              "labelKey": "client.config.item.auto_merge",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.merge.autoClaimEnergy",
+              "labelKey": "client.config.item.energy_reward",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.merge.enabled"
+              ],
+              "defaultVisible": true
+            },
+            {
+              "path": "activity.merge.speed",
+              "labelKey": "client.config.item.game_speed",
+              "type": "selectItem",
+              "dependsOnPaths": [
+                "activity.merge.enabled"
+              ],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "spool",
+          "titleKey": "client.config.group.activity_spool",
+          "items": [
+            {
+              "path": "activity.spool.enabled",
+              "labelKey": "client.config.item.auto_play",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.spool.autoClaimReward",
+              "labelKey": "client.config.item.energy_reward",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.spool.enabled"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.spool.openBox",
+              "labelKey": "client.config.item.open_treasure_box",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.spool.enabled"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.spool.autoRestart",
+              "labelKey": "client.config.item.auto_restart",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.spool.enabled"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.spool.speed",
+              "labelKey": "client.config.item.game_speed_multiplier",
+              "type": "selectItem",
+              "dependsOnPaths": [
+                "activity.spool.enabled"
+              ],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "dragon_boat",
+          "titleKey": "client.config.group.activity_dragon_boat",
+          "items": [
+            {
+              "path": "activity.dragonBoat.enabled",
+              "labelKey": "client.config.item.join_race",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.dragonBoat.autoSign",
+              "labelKey": "client.config.item.sign_in",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.dragonBoat.enabled"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.dragonBoat.autoOpenBox",
+              "labelKey": "client.config.item.open_treasure_box_short",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.dragonBoat.enabled"
+              ],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.dragonBoat.giftBuy",
+              "labelKey": "client.config.item.buy_diamond_item",
+              "type": "item",
+              "dependsOnPaths": [
+                "activity.dragonBoat.enabled"
+              ],
+              "defaultVisible": false
+            }
+          ]
+        },
+        {
+          "key": "honey",
+          "titleKey": "client.config.group.activity_honey",
+          "items": [
+            {
+              "path": "activity.honey.reward",
+              "labelKey": "client.config.item.receive_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": true
+            }
+          ]
+        },
+        {
+          "key": "card",
+          "titleKey": "client.config.group.activity_card",
+          "items": [
+            {
+              "path": "activity.card.reward",
+              "labelKey": "client.config.item.card_reward",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            },
+            {
+              "path": "activity.card.smoke",
+              "labelKey": "client.config.item.card_smoke",
+              "type": "item",
+              "dependsOnPaths": [],
+              "defaultVisible": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

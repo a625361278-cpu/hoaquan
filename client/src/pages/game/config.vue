@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page" @click="closeDropdown">
     <view class="topbar">
       <button class="back-button" @click="back">‹</button>
       <text class="page-title">{{ t('client.config.title') }}</text>
@@ -14,10 +14,10 @@
         {{ t('client.config.local_unsynced_notice') }}
       </view>
 
-      <scroll-view scroll-x class="tabs">
+      <scroll-view v-if="visibleTabs.length > 0" scroll-x class="tabs">
         <view class="tab-row">
           <view
-            v-for="tab in CONFIG_SCHEMA"
+            v-for="tab in visibleTabs"
             :key="tab.key"
             :class="['tab', activeTab === tab.key ? 'active' : '']"
             @click="activeTab = tab.key"
@@ -31,14 +31,22 @@
         <text v-if="!localeReady || loading" class="loading-text">
           {{ localeReady ? t('client.config.loading') : '' }}
         </text>
-        <view v-else v-for="group in activeGroups" :key="group.key" class="group">
-          <view class="group-heading">
-            <view class="group-line" />
-            <text class="group-title">{{ t(group.titleKey) }}</text>
-            <view class="group-line" />
-          </view>
+        <view v-else-if="visibleTabs.length === 0" class="config-empty">
+          {{ t('client.config.visibility_empty') }}
+        </view>
+        <template v-else>
+          <view v-for="group in activeGroups" :key="group.key" class="group">
+            <view class="group-heading">
+              <view class="group-line" />
+              <text class="group-title">{{ t(group.titleKey) }}</text>
+              <view class="group-line" />
+            </view>
 
-          <view v-for="entry in visibleItems(group.items)" :key="entry.path" class="config-row">
+            <view
+              v-for="entry in group.items"
+              :key="entry.path"
+              :class="['config-row', `config-row--${entry.type}`]"
+            >
             <view class="row-label">
               <text class="label-text">{{ t(entry.labelKey) }}</text>
               <view
@@ -112,31 +120,49 @@
                   @click.stop="toggleDropdown(entry.path)"
                 >
                   <view class="selected-tags">
-                    <view v-for="option in selectedOptions(entry)" :key="option.value" class="selected-tag">
+                    <view
+                      v-for="option in selectedOptions(entry)"
+                      :key="option.value"
+                      :class="['selected-tag', ...qualityVisualClasses(option)]"
+                    >
                       <text class="selected-tag-text">{{ optionText(entry, option.value) }}</text>
                       <text class="selected-tag-close" @click.stop="toggleMultiSelect(entry.path, option.value)">×</text>
                     </view>
-                    <input
-                      v-if="isDropdownOpen(entry.path) || selectedOptions(entry).length === 0"
-                      class="select-search"
-                      type="text"
-                      :value="searchKeyword(entry.path)"
-                      :placeholder="selectedOptions(entry).length === 0 ? t('client.config.select.placeholder') : ''"
-                      @click.stop="openDropdown(entry.path)"
-                      @input="setSearchKeyword(entry.path, $event.detail.value)"
-                    />
+                    <text v-if="selectedOptions(entry).length === 0" class="select-placeholder">
+                      {{ t('client.config.select.placeholder') }}
+                    </text>
                   </view>
                   <text class="select-arrow">⌄</text>
                 </view>
-                <view v-if="isDropdownOpen(entry.path)" class="select-dropdown">
+                <view v-if="isDropdownOpen(entry.path)" class="select-dropdown" @click.stop>
+                  <view class="select-dropdown-search">
+                    <input
+                      class="select-search"
+                      type="text"
+                      name="config-option-search"
+                      autocomplete="off"
+                      confirm-type="search"
+                      :value="searchKeyword(entry.path)"
+                      :placeholder="t('client.config.select.search_placeholder')"
+                      :aria-label="t('client.config.select.search_placeholder')"
+                      @input="setSearchKeyword(entry.path, $event.detail.value)"
+                    />
+                  </view>
                   <scroll-view scroll-y class="select-options">
                     <view
                       v-for="option in filteredOptions(entry)"
                       :key="option.value"
-                      :class="['select-option', isMultiSelected(entry.path, option.value) ? 'selected' : '']"
+                      :class="[
+                        'select-option',
+                        ...qualityVisualClasses(option),
+                        isMultiSelected(entry.path, option.value) ? 'selected' : '',
+                      ]"
                       @click.stop="toggleMultiSelect(entry.path, option.value)"
                     >
-                      <text class="select-option-text">{{ optionText(entry, option.value) }}</text>
+                      <view class="select-option-label">
+                        <text v-if="option.qualityTone" class="quality-dot" aria-hidden="true" />
+                        <text class="select-option-text">{{ optionText(entry, option.value) }}</text>
+                      </view>
                       <text v-if="isMultiSelected(entry.path, option.value)" class="select-check">✓</text>
                     </view>
                     <view v-if="filteredOptions(entry).length === 0" class="select-empty">
@@ -156,9 +182,10 @@
                   />
                 </view>
               </view>
+              </view>
             </view>
           </view>
-        </view>
+        </template>
       </view>
     </view>
 
@@ -214,7 +241,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, toRaw } from 'vue';
+import { computed, reactive, ref, toRaw, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { useI18n } from 'vue-i18n';
 import { request, requireLogin } from '../../utils/api';
@@ -234,6 +261,8 @@ const configFlowVisible = ref(false);
 const activeDropdownPath = ref('');
 const selectSearch = reactive({});
 const currentLocale = ref(getLocale());
+const hiddenConfigPaths = ref([]);
+const visibilityReady = ref(false);
 const importDialog = reactive({
   visible: false,
   loading: false,
@@ -242,10 +271,31 @@ const importDialog = reactive({
   accounts: [],
 });
 
+const configItemsByPath = new Map();
+CONFIG_SCHEMA.forEach((tab) => tab.groups.forEach((group) => group.items.forEach((entry) => {
+  configItemsByPath.set(entry.path, entry);
+})));
+const knownConfigPaths = new Set(configItemsByPath.keys());
+const hiddenConfigPathSet = computed(() => new Set(hiddenConfigPaths.value));
+
+const visibleTabs = computed(() => visibilityReady.value ? CONFIG_SCHEMA.map((tab) => ({
+  ...tab,
+  groups: tab.groups.map((group) => ({
+    ...group,
+    items: visibleItems(group.items),
+  })).filter((group) => group.items.length > 0),
+})).filter((tab) => tab.groups.length > 0) : []);
+
 const activeGroups = computed(() => {
-  const tab = CONFIG_SCHEMA.find((item) => item.key === activeTab.value);
+  const tab = visibleTabs.value.find((item) => item.key === activeTab.value);
   return tab ? tab.groups : [];
 });
+
+watch(visibleTabs, (tabs) => {
+  if (!tabs.some((tab) => tab.key === activeTab.value)) {
+    activeTab.value = tabs[0]?.key || '';
+  }
+}, { immediate: true });
 
 const importOptions = computed(() => importDialog.accounts
   .filter((item) => Number(item.id) !== accountId.value && item.has_config)
@@ -284,6 +334,8 @@ async function loadConfig() {
   loading.value = true;
   try {
     const result = await request({ url: `/api/game-accounts/${accountId.value}/config` });
+    hiddenConfigPaths.value = validateHiddenConfigPaths(result.ui_hidden_paths);
+    visibilityReady.value = true;
     account.value = result.account || {};
     Object.assign(config, mergeConfig(result.config || {}));
     return true;
@@ -369,21 +421,77 @@ async function saveConfig() {
 }
 
 function visibleItems(items) {
-  return items.filter((entry) => isVisible(entry.visibleWhen));
+  return items.filter((entry) => isPolicyVisible(entry) && isEntryConfigVisible(entry));
 }
 
-function isVisible(condition) {
+function isPolicyVisible(entry, checking = new Set()) {
+  if (!entry || hiddenConfigPathSet.value.has(entry.path)) {
+    return false;
+  }
+  if (checking.has(entry.path)) {
+    throw new Error(t('client.error.config_visibility_invalid'));
+  }
+  const nextChecking = new Set(checking);
+  nextChecking.add(entry.path);
+  return conditionPaths(entry.visibleWhen).every((path) => {
+    const controllerEntry = configItemsByPath.get(path);
+    return controllerEntry ? isPolicyVisible(controllerEntry, nextChecking) : false;
+  });
+}
+
+function conditionPaths(condition, paths = new Set()) {
+  if (!condition) {
+    return [...paths];
+  }
+  if (Array.isArray(condition)) {
+    condition.forEach((item) => conditionPaths(item, paths));
+  } else if (condition.any) {
+    condition.any.forEach((item) => conditionPaths(item, paths));
+  } else if (condition.all) {
+    condition.all.forEach((item) => conditionPaths(item, paths));
+  } else if (typeof condition.path === 'string') {
+    paths.add(condition.path);
+  }
+  return [...paths];
+}
+
+function validateHiddenConfigPaths(paths) {
+  if (!Array.isArray(paths)
+    || paths.some((path) => typeof path !== 'string' || !knownConfigPaths.has(path))
+    || new Set(paths).size !== paths.length) {
+    throw new Error(t('client.error.config_visibility_invalid'));
+  }
+  return [...paths];
+}
+
+function isEntryConfigVisible(entry, checking = new Set()) {
+  if (!entry) {
+    throw new Error(t('client.error.config_visibility_invalid'));
+  }
+  if (checking.has(entry.path)) {
+    throw new Error(t('client.error.config_visibility_invalid'));
+  }
+  const nextChecking = new Set(checking);
+  nextChecking.add(entry.path);
+  return isVisible(entry.visibleWhen, nextChecking);
+}
+
+function isVisible(condition, checking = new Set()) {
   if (!condition) {
     return true;
   }
   if (Array.isArray(condition)) {
-    return condition.every((item) => isVisible(item));
+    return condition.every((item) => isVisible(item, checking));
   }
   if (condition.any) {
-    return condition.any.some((item) => isVisible(item));
+    return condition.any.some((item) => isVisible(item, checking));
   }
   if (condition.all) {
-    return condition.all.every((item) => isVisible(item));
+    return condition.all.every((item) => isVisible(item, checking));
+  }
+  const controllerEntry = configItemsByPath.get(condition.path);
+  if (!controllerEntry || !isEntryConfigVisible(controllerEntry, checking)) {
+    return false;
   }
   const value = getConfigValue(config, condition.path);
   if (Object.prototype.hasOwnProperty.call(condition, 'equals')) {
@@ -412,12 +520,21 @@ function toggleMultiSelect(path, value) {
   setConfigValue(config, path, next);
 }
 
-function openDropdown(path) {
+function toggleDropdown(path) {
+  if (activeDropdownPath.value === path) {
+    closeDropdown();
+    return;
+  }
+  closeDropdown();
   activeDropdownPath.value = path;
 }
 
-function toggleDropdown(path) {
-  activeDropdownPath.value = activeDropdownPath.value === path ? '' : path;
+function closeDropdown() {
+  const path = activeDropdownPath.value;
+  if (path) {
+    selectSearch[path] = '';
+  }
+  activeDropdownPath.value = '';
 }
 
 function isDropdownOpen(path) {
@@ -441,6 +558,16 @@ function selectedOptions(entry) {
   return selected
     .map((value) => (entry.options || []).find((option) => option.value === value) || { value, labelZh: value, labelVi: value })
     .filter(Boolean);
+}
+
+const QUALITY_TONES = new Set(['green', 'blue', 'purple', 'gold', 'red']);
+
+function qualityVisualClasses(option) {
+  const tone = option?.qualityTone;
+  if (!QUALITY_TONES.has(tone)) {
+    return [];
+  }
+  return ['quality-tone', `quality-tone--${tone}`];
 }
 
 function singleSelectOptions(entry) {
@@ -627,6 +754,14 @@ function cloneConfig(value) {
 .tabs {
   border-bottom: 1px solid #edf0f4;
   white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar,
+.tabs :deep(.uni-scroll-view::-webkit-scrollbar) {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .tab-row {
@@ -934,6 +1069,42 @@ function cloneConfig(value) {
   font-size: 13px;
 }
 
+.quality-tone--green {
+  --quality-color: #15803d;
+  --quality-background: #f0fdf4;
+  --quality-border: #86efac;
+}
+
+.quality-tone--blue {
+  --quality-color: #1d4ed8;
+  --quality-background: #eff6ff;
+  --quality-border: #93c5fd;
+}
+
+.quality-tone--purple {
+  --quality-color: #7e22ce;
+  --quality-background: #faf5ff;
+  --quality-border: #d8b4fe;
+}
+
+.quality-tone--gold {
+  --quality-color: #a16207;
+  --quality-background: #fffbeb;
+  --quality-border: #fde68a;
+}
+
+.quality-tone--red {
+  --quality-color: #b91c1c;
+  --quality-background: #fef2f2;
+  --quality-border: #fca5a5;
+}
+
+.selected-tag.quality-tone {
+  border: 1px solid var(--quality-border);
+  background: var(--quality-background);
+  color: var(--quality-color);
+}
+
 .selected-tag-text {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -948,14 +1119,41 @@ function cloneConfig(value) {
   line-height: 1;
 }
 
-.select-search {
-  flex: 1;
-  min-width: 68px;
-  height: 24px;
-  line-height: 24px;
-  border: 0;
-  color: #111827;
+.selected-tag.quality-tone .selected-tag-close {
+  color: currentColor;
+  opacity: 0.75;
+}
+
+.select-placeholder {
+  overflow: hidden;
+  color: #9ca3af;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 14px;
+}
+
+.select-dropdown-search {
+  padding: 8px;
+  border-bottom: 1px solid #edf0f4;
+  background: #ffffff;
+}
+
+.select-search {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 5px;
+  box-sizing: border-box;
+  background: #f9fafb;
+  color: #111827;
+  line-height: 32px;
+  font-size: 14px;
+}
+
+.select-search:focus {
+  border-color: #22c55e;
+  background: #ffffff;
 }
 
 .select-arrow {
@@ -964,6 +1162,12 @@ function cloneConfig(value) {
   right: 10px;
   color: #6b7280;
   font-size: 18px;
+  transform-origin: center;
+  transition: transform 160ms ease;
+}
+
+.select-box.open .select-arrow {
+  transform: rotate(180deg);
 }
 
 .select-dropdown {
@@ -979,8 +1183,8 @@ function cloneConfig(value) {
 }
 
 .select-options {
-  height: 260px;
-  max-height: 260px;
+  height: 220px;
+  max-height: 220px;
 }
 
 .select-option {
@@ -1000,7 +1204,35 @@ function cloneConfig(value) {
   font-weight: 600;
 }
 
+.select-option.quality-tone {
+  color: var(--quality-color);
+}
+
+.select-option.selected.quality-tone {
+  background: var(--quality-background);
+  color: var(--quality-color);
+}
+
+.select-option-label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.quality-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border: 1px solid var(--quality-border);
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: var(--quality-color);
+}
+
 .select-option-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1011,6 +1243,10 @@ function cloneConfig(value) {
   margin-left: 10px;
   color: #1677ff;
   font-size: 16px;
+}
+
+.select-option.quality-tone .select-check {
+  color: currentColor;
 }
 
 .select-empty {
@@ -1049,6 +1285,18 @@ function cloneConfig(value) {
   text-align: center;
   color: #64748b;
   font-size: 14px;
+}
+
+.config-empty {
+  margin: 18px 0 34px;
+  padding: 46px 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .modal-mask {
@@ -1252,7 +1500,7 @@ function cloneConfig(value) {
   }
 
   .page-title {
-    max-width: calc(100vw - 210px);
+    max-width: calc(100vw - 198px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1260,13 +1508,13 @@ function cloneConfig(value) {
   }
 
   .top-actions {
-    right: 12px;
-    gap: 8px;
+    right: 8px;
+    gap: 6px;
   }
 
   .import-button,
   .save-button {
-    width: 56px;
+    width: 54px;
   }
 
   .config-shell {
@@ -1301,18 +1549,20 @@ function cloneConfig(value) {
   }
 
   .row-label {
-    flex: 1 1 0;
+    flex: 1 1 140px;
     justify-content: flex-start;
     width: auto;
     min-width: 0;
-    max-width: calc(100% - 70px);
+    max-width: none;
+    margin-right: 12px;
     padding-right: 0;
     line-height: 1.4;
   }
 
   .label-text {
     min-width: 0;
-    word-break: break-word;
+    overflow-wrap: anywhere;
+    word-break: normal;
   }
 
   .control-area {
@@ -1327,6 +1577,16 @@ function cloneConfig(value) {
   .control-area--priorityGroup {
     flex: 1 0 100%;
     justify-content: stretch;
+  }
+
+  .config-row--radio .row-label,
+  .config-row--multiSelect .row-label,
+  .config-row--priorityGroup .row-label {
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: 100%;
+    margin-right: 0;
+    margin-bottom: 8px;
   }
 
   .number-control {
@@ -1369,7 +1629,9 @@ function cloneConfig(value) {
 
   .priority-label {
     min-width: 0;
-    word-break: break-word;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.4;
   }
 
   .priority-input {
@@ -1385,6 +1647,62 @@ function cloneConfig(value) {
   .help-tooltip::after {
     left: 14px;
     transform: rotate(45deg);
+  }
+}
+
+@media (max-width: 359px) {
+  .page-title {
+    max-width: calc(100vw - 203px);
+    font-size: 16px;
+  }
+
+  .tab-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    width: 100%;
+    min-width: 100%;
+    height: 38px;
+  }
+
+  .tab {
+    height: 38px;
+    overflow: hidden;
+    line-height: 36px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  .config-row--number .row-label,
+  .config-row--text .row-label,
+  .config-row--select .row-label {
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: 100%;
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+
+  .control-area--number,
+  .control-area--text,
+  .control-area--select {
+    flex: 1 0 100%;
+    justify-content: stretch;
+  }
+
+  .number-control,
+  .text-input,
+  .single-select-control {
+    width: 100%;
+    max-width: none;
+  }
+
+  .number-input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
   }
 }
 </style>

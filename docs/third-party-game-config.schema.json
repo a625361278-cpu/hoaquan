@@ -145,7 +145,7 @@
             },
             "debug": {
               "type": "boolean",
-              "default": false
+              "default": true
             },
             "reconnectInterval": {
               "type": "number",

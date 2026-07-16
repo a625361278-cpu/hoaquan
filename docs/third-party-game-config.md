@@ -648,7 +648,7 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 - `basic.reputation.enabled`：礼仪分监控；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：每10分钟检查礼仪分，低于阈值时自动停止所有任务
 - `basic.reputation.threshold`：礼仪分阈值；控件类型：`number`；数据类型：`number`；默认值：`80`；说明：礼仪分低于此值时停止所有任务
-- `basic.debug`：道具日志；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后显示背包道具的增加和消耗详情
+- `basic.debug`：道具日志；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：开启后显示背包道具的增加和消耗详情
 - `basic.reconnectInterval`：重连间隔；控件类型：`number`；数据类型：`number`；默认值：`5`；说明：自动顶号间隔，建议设置为 5 分钟
 
 #### 任务配置

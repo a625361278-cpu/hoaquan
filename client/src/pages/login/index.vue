@@ -14,18 +14,18 @@
 
         <view class="field">
           <text class="label"><text v-if="mode === 'register'" class="required">*</text> {{ t('client.auth.account') }}</text>
-          <input v-model="account" class="input" :placeholder="t('client.auth.placeholder_account')" />
+          <input v-model="account" class="input" :placeholder="t('client.auth.placeholder_account')" @keydown="handleAuthKeydown" />
         </view>
 
         <view v-if="mode === 'register' && isEmailCodeMode" class="field">
           <text class="label"><text class="required">*</text> {{ t('client.auth.email') }}</text>
-          <input v-model="email" class="input" :placeholder="t('client.auth.placeholder_email')" />
+          <input v-model="email" class="input" :placeholder="t('client.auth.placeholder_email')" @keydown="handleAuthKeydown" />
         </view>
 
         <view v-if="mode === 'register' && isEmailCodeMode" class="field">
           <text class="label"><text class="required">*</text> {{ t('client.auth.email_code') }}</text>
           <view class="code-row">
-            <input v-model="emailCode" class="input code-input" :placeholder="t('client.auth.placeholder_email_code')" />
+            <input v-model="emailCode" class="input code-input" :placeholder="t('client.auth.placeholder_email_code')" @keydown="handleAuthKeydown" />
             <button class="code-button" :disabled="codeSending || cooldown > 0" :loading="codeSending" @click="sendEmailCode">
               {{ cooldown > 0 ? `${cooldown}s` : t('client.auth.send_code') }}
             </button>
@@ -41,13 +41,13 @@
 
         <view v-if="mode === 'register' && isSecurityQuestionMode" class="field">
           <text class="label"><text class="required">*</text> {{ t('client.auth.security_answer') }}</text>
-          <input v-model="securityAnswer" class="input" :placeholder="t('client.auth.placeholder_security_answer')" />
+          <input v-model="securityAnswer" class="input" :placeholder="t('client.auth.placeholder_security_answer')" @keydown="handleAuthKeydown" />
         </view>
 
         <view class="field">
           <text class="label"><text v-if="mode === 'register'" class="required">*</text> {{ t('client.auth.password') }}</text>
           <view class="password-box">
-            <input v-model="password" class="input password-input" password :placeholder="t('client.auth.placeholder_password')" />
+            <input v-model="password" class="input password-input" password :placeholder="t('client.auth.placeholder_password')" @keydown="handleAuthKeydown" />
             <text class="eye">◎</text>
           </view>
         </view>
@@ -55,7 +55,7 @@
         <view v-if="mode === 'register'" class="field">
           <text class="label"><text class="required">*</text> {{ t('client.auth.confirm_password') }}</text>
           <view class="password-box">
-            <input v-model="passwordConfirmation" class="input password-input" password :placeholder="t('client.auth.placeholder_password_again')" />
+            <input v-model="passwordConfirmation" class="input password-input" password :placeholder="t('client.auth.placeholder_password_again')" @keydown="handleAuthKeydown" />
             <text class="eye">◎</text>
           </view>
         </view>
@@ -68,7 +68,7 @@
           <text class="forgot-link" @click="openResetDialog">{{ t('client.auth.forgot_password') }}</text>
         </view>
 
-        <button class="primary" :loading="loading" @click="submit">{{ mode === 'login' ? t('client.auth.login_button') : t('client.auth.register_button') }}</button>
+        <button class="primary" :disabled="loading" :loading="loading" @click="submit">{{ mode === 'login' ? t('client.auth.login_button') : t('client.auth.register_button') }}</button>
         <text class="hint" @click="switchMode(mode === 'login' ? 'register' : 'login')">
           {{ mode === 'login' ? t('client.auth.no_account') : t('client.auth.already_has_account') }}
         </text>
@@ -181,6 +181,38 @@
         </view>
       </view>
     </view>
+
+    <view v-if="registrationSuccessVisible" class="modal-mask registration-success-mask">
+      <view class="registration-success-dialog">
+        <view class="registration-success-head">
+          <view class="registration-success-icon">✓</view>
+          <text class="registration-success-title">{{ t('client.auth.register_success_title') }}</text>
+        </view>
+
+        <view class="registration-credential-table">
+          <view class="registration-credential-row">
+            <text class="registration-credential-label">{{ t('client.auth.account') }}</text>
+            <text class="registration-credential-value">{{ registrationSuccess.account }}</text>
+          </view>
+          <view class="registration-credential-row">
+            <text class="registration-credential-label">{{ t('client.auth.password') }}</text>
+            <text class="registration-credential-value">{{ registrationSuccess.password }}</text>
+          </view>
+        </view>
+
+        <text class="registration-success-notice">{{ t('client.auth.register_success_notice') }}</text>
+
+        <view class="registration-success-actions">
+          <button
+            class="registration-success-button"
+            :disabled="registrationConfirming"
+            @click="confirmRegistrationSuccess"
+          >
+            {{ t('client.auth.register_success_acknowledge') }}
+          </button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -215,6 +247,13 @@ const resetCodeSending = ref(false);
 const resetQuestionLoading = ref(false);
 const resetCooldown = ref(0);
 const resetSecurityQuestion = ref(null);
+const registrationSuccessVisible = ref(false);
+const registrationConfirming = ref(false);
+const registrationSuccess = ref({
+  account: '',
+  password: '',
+  token: '',
+});
 const resetForm = ref({
   account: '',
   email: '',
@@ -441,8 +480,31 @@ async function fetchResetSecurityQuestion() {
   }
 }
 
+function handleAuthKeydown(event) {
+  const keyboardEvent = event?.detail?.originalEvent || event;
+  if (keyboardEvent?.key !== 'Enter'
+    || keyboardEvent?.repeat
+    || keyboardEvent?.isComposing
+    || keyboardEvent?.keyCode === 229) {
+    return;
+  }
+
+  keyboardEvent.preventDefault?.();
+  event?.preventDefault?.();
+  if (loading.value || resetVisible.value || registrationSuccessVisible.value || registrationConfirming.value) {
+    return;
+  }
+
+  submit();
+}
+
 async function submit() {
-  if (mode.value === 'register' && !authConfigLoaded.value) {
+  if (loading.value || registrationSuccessVisible.value || registrationConfirming.value) {
+    return;
+  }
+
+  const submittedMode = mode.value;
+  if (submittedMode === 'register' && !authConfigLoaded.value) {
     uni.showToast({ title: t('client.error.auth_config_unavailable'), icon: 'none' });
     return;
   }
@@ -451,7 +513,7 @@ async function submit() {
     return;
   }
 
-  if (mode.value === 'register') {
+  if (submittedMode === 'register') {
     const missingEmailRegister = isEmailCodeMode.value && (!email.value || !emailCode.value);
     const missingSecurityRegister = isSecurityQuestionMode.value && (!securityQuestionKey.value || !securityAnswer.value);
     if (missingEmailRegister || missingSecurityRegister || !passwordConfirmation.value) {
@@ -466,7 +528,7 @@ async function submit() {
 
   loading.value = true;
   try {
-    const payload = mode.value === 'login'
+    const payload = submittedMode === 'login'
       ? { account: account.value, password: password.value }
       : isEmailCodeMode.value
         ? {
@@ -487,18 +549,60 @@ async function submit() {
           };
 
     const data = await request({
-      url: mode.value === 'login' ? '/api/auth/login' : '/api/auth/register',
+      url: submittedMode === 'login' ? '/api/auth/login' : '/api/auth/register',
       method: 'POST',
       data: payload,
     });
-    setToken(data.token);
-    markLoginAnnouncementPending();
-    uni.reLaunch({ url: '/pages/index/index' });
+
+    if (submittedMode === 'login') {
+      setToken(data.token);
+      markLoginAnnouncementPending();
+      uni.reLaunch({ url: '/pages/index/index' });
+      return;
+    }
+
+    const registeredAccount = typeof data?.user?.account === 'string' ? data.user.account.trim() : '';
+    if (!data?.token || !registeredAccount || !payload.password) {
+      throw new Error(t('client.error.register_response_invalid'));
+    }
+
+    registrationSuccess.value = {
+      account: registeredAccount,
+      password: payload.password,
+      token: data.token,
+    };
+    password.value = '';
+    passwordConfirmation.value = '';
+    registrationSuccessVisible.value = true;
   } catch (error) {
     uni.showToast({ title: error.message, icon: 'none' });
   } finally {
     loading.value = false;
   }
+}
+
+function confirmRegistrationSuccess() {
+  if (registrationConfirming.value) {
+    return;
+  }
+  if (!registrationSuccess.value.token || !registrationSuccess.value.account || !registrationSuccess.value.password) {
+    uni.showToast({ title: t('client.error.register_response_invalid'), icon: 'none' });
+    return;
+  }
+
+  registrationConfirming.value = true;
+  const token = registrationSuccess.value.token;
+  setToken(token);
+  markLoginAnnouncementPending();
+  registrationSuccess.value = {
+    account: '',
+    password: '',
+    token: '',
+  };
+  password.value = '';
+  passwordConfirmation.value = '';
+  registrationSuccessVisible.value = false;
+  uni.reLaunch({ url: '/pages/index/index' });
 }
 
 onUnmounted(() => {
@@ -856,6 +960,114 @@ onUnmounted(() => {
   box-shadow: 0 34rpx 90rpx rgba(0, 0, 0, 0.34);
 }
 
+.registration-success-dialog {
+  width: 680rpx;
+  max-width: 520px;
+  max-height: calc(100vh - 80rpx);
+  overflow-y: auto;
+  padding: 38rpx 38rpx 34rpx;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #152033;
+  box-sizing: border-box;
+  box-shadow: 0 34rpx 90rpx rgba(0, 0, 0, 0.34);
+}
+
+.registration-success-head {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  margin-bottom: 30rpx;
+}
+
+.registration-success-icon {
+  width: 52rpx;
+  height: 52rpx;
+  flex: 0 0 52rpx;
+  line-height: 52rpx;
+  text-align: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #35c6ff, #16a9e8);
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 800;
+  box-shadow: 0 10rpx 24rpx rgba(41, 194, 255, 0.28);
+}
+
+.registration-success-title {
+  font-size: 34rpx;
+  font-weight: 800;
+}
+
+.registration-credential-table {
+  overflow: hidden;
+  border: 1px solid #d8dee9;
+  border-radius: 8px;
+}
+
+.registration-credential-row {
+  display: grid;
+  grid-template-columns: 190rpx minmax(0, 1fr);
+  min-height: 82rpx;
+}
+
+.registration-credential-row + .registration-credential-row {
+  border-top: 1px solid #d8dee9;
+}
+
+.registration-credential-label,
+.registration-credential-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18rpx 20rpx;
+  box-sizing: border-box;
+  font-size: 28rpx;
+}
+
+.registration-credential-label {
+  border-right: 1px solid #d8dee9;
+  background: #f7f9fc;
+  color: #31405a;
+  font-weight: 700;
+}
+
+.registration-credential-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #152033;
+  font-weight: 800;
+}
+
+.registration-success-notice {
+  display: block;
+  margin: 30rpx 0 28rpx;
+  color: #ff5a78;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.registration-success-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.registration-success-button {
+  min-width: 180rpx;
+  height: 70rpx;
+  line-height: 70rpx;
+  margin: 0;
+  padding: 0 30rpx;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #35c6ff, #16a9e8);
+  color: #ffffff;
+  font-size: 27rpx;
+  font-weight: 800;
+  box-shadow: 0 14rpx 32rpx rgba(41, 194, 255, 0.28);
+}
+
 .dialog-head {
   justify-content: space-between;
   margin-bottom: 28rpx;
@@ -1023,6 +1235,25 @@ onUnmounted(() => {
   .reset-dialog {
     width: 100%;
     padding: 30rpx 26rpx;
+  }
+
+  .registration-success-dialog {
+    width: 100%;
+    padding: 32rpx 26rpx 28rpx;
+  }
+
+  .registration-credential-row {
+    grid-template-columns: 150rpx minmax(0, 1fr);
+  }
+
+  .registration-credential-label,
+  .registration-credential-value {
+    padding: 16rpx 14rpx;
+    font-size: 25rpx;
+  }
+
+  .registration-success-button {
+    width: 100%;
   }
 
   .reset-code-row {

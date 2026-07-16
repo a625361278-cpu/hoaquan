@@ -1091,6 +1091,7 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame(0, $result['code']);
         $this->assertSame('any-player - 本地预览区服', $result['data']['account']['display_name']);
         $this->assertSame($config, $result['data']['config']);
+        $this->assertArrayNotHasKey('ui_hidden_paths', $result['data']);
         $this->assertSame('local_unsynced', $result['data']['sync_status']);
         $this->assertSame('2026-07-02 12:00:00', $result['data']['updated_at']);
     }

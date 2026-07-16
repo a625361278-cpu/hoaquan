@@ -120,6 +120,13 @@ return [
                 'weight' => 548,
             ],
             [
+                'title' => '游戏配置项管理',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistConfigVisibilityController',
+                'href' => '/app/admin/game-assist-config-visibility/index',
+                'type' => 1,
+                'weight' => 547,
+            ],
+            [
                 'title' => '第三方配置',
                 'key' => 'plugin\\admin\\app\\controller\\GameAssistThirdPartyConfigController',
                 'href' => '/app/admin/game-assist-third-party-config/index',

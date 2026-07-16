@@ -174,6 +174,7 @@ VALUES
   ('game_account_credential_key', '', '游戏账号密码加密密钥'),
   ('game_account_max_count', '3', '单个用户同时可存在的游戏账号数量上限'),
   ('registration_reward_points', '1', '新用户注册赠送配额点数，0表示关闭'),
+  ('game_config_visibility_overrides', '{}', '游戏配置项用户端可见性相对默认值的覆盖JSON'),
   ('smtp_enabled', '0', 'SMTP是否启用：0否，1是'),
   ('smtp_host', '', 'SMTP服务器地址'),
   ('smtp_port', '587', 'SMTP端口'),

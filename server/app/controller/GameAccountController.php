@@ -6,6 +6,7 @@ use app\repository\DbGameAccountRepository;
 use app\exception\ApiException;
 use app\service\GameAccountLogService;
 use app\service\GameAccountService;
+use app\service\GameConfigVisibilityService;
 use app\service\SystemSettingService;
 use app\support\ApiResponse;
 use app\support\I18n;
@@ -36,7 +37,11 @@ class GameAccountController extends BaseApiController
     public function config(Request $request, int $id): Response
     {
         $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
-        return ApiResponse::json($this->gameAccountService($request)->configForUser($userId, $id));
+        $payload = $this->gameAccountService($request)->configForUser($userId, $id);
+        $payload['data']['ui_hidden_paths'] = (new GameConfigVisibilityService(
+            locale: I18n::localeFromRequest($request)
+        ))->hiddenPaths();
+        return ApiResponse::json($payload);
     }
 
     public function saveConfig(Request $request, int $id): Response
