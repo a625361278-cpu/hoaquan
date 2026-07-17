@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="<?=admin_html_lang()?>">
+<head>
+    <meta charset="utf-8">
+    <title><?=admin_t('admin.payment_config.title')?></title>
+    <link rel="stylesheet" href="/app/admin/component/pear/css/pear.css" />
+    <link rel="stylesheet" href="/app/admin/admin/css/reset.css" />
+    <style>
+        .config-card { max-width: 820px; }
+        .provider-status { margin: 8px 0 18px 110px; color: #6b7280; line-height: 1.7; }
+        .status-ok { color: #15803d; }
+        .status-error { color: #b91c1c; }
+        .form-help { margin-top: 8px; color: #6b7280; font-size: 12px; line-height: 1.5; }
+    </style>
+</head>
+<body class="pear-container">
+<div class="layui-card config-card"><div class="layui-card-body">
+    <form class="layui-form" lay-filter="payment-config-form">
+        <div class="layui-form-item">
+            <label class="layui-form-label"><?=admin_t('admin.payment_config.recharge_amount')?></label>
+            <div class="layui-input-block">
+                <input type="number" name="payment_recharge_amount_vnd" min="1" max="999999999" step="1" required lay-verify="required|number" autocomplete="off" class="layui-input">
+                <div class="form-help"><?=admin_t('admin.payment_config.recharge_amount_help')?></div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><?=admin_t('admin.payment_config.active_provider')?></label>
+            <div class="layui-input-block">
+                <input type="radio" name="payment_active_provider" value="disabled" title="<?=admin_t('admin.payment_config.disabled')?>">
+                <input type="radio" name="payment_active_provider" value="ronnypay" title="MoMoPay">
+                <input type="radio" name="payment_active_provider" value="mkpay" title="MkPay">
+                <div class="form-help"><?=admin_t('admin.payment_config.active_provider_help')?></div>
+            </div>
+        </div>
+        <div id="provider-status" class="provider-status"></div>
+        <div class="layui-form-item">
+            <label class="layui-form-label"><?=admin_t('admin.payment_config.callback_allowed_ips')?></label>
+            <div class="layui-input-block">
+                <textarea name="payment_callback_allowed_ips" class="layui-textarea" rows="4" autocomplete="off"></textarea>
+                <div class="form-help"><?=admin_t('admin.payment_config.callback_allowed_ips_help')?></div>
+            </div>
+        </div>
+        <div class="layui-form-item"><div class="layui-input-block">
+            <button class="pear-btn pear-btn-primary" lay-submit lay-filter="save-config">
+                <i class="layui-icon layui-icon-ok"></i><?=admin_t('admin.payment_config.save')?>
+            </button>
+        </div></div>
+    </form>
+</div></div>
+<script src="/app/admin/component/layui/layui.js?v=2.8.12"></script>
+<script src="/app/admin/component/pear/pear.js"></script>
+<script src="/app/admin/admin/js/permission.js"></script>
+<script>
+layui.use(['form','popup'], function(){
+    const form=layui.form,$=layui.$,popup=layui.popup;
+    const GET_API='/app/admin/game-assist-payment-config/get';
+    const SAVE_API='/app/admin/game-assist-payment-config/save';
+    loadConfig();
+    form.on('submit(save-config)', function(data){
+        $.post(SAVE_API,data.field,function(res){
+            if(Number(res.code)!==0){popup.failure(res.msg||'failed');return;}
+            popup.success('<?=admin_t('admin.common.operation_success')?>',loadConfig);
+        },'json').fail(()=>popup.failure('<?=admin_t('admin.payment_config.save_failed')?>'));
+        return false;
+    });
+    function loadConfig(){
+        $.get(GET_API,function(res){
+            if(Number(res.code)!==0){popup.failure(res.msg||'failed');return;}
+            form.val('payment-config-form',{
+                payment_active_provider:res.data.active_provider||'disabled',
+                payment_recharge_amount_vnd:res.data.recharge_amount_vnd,
+                payment_callback_allowed_ips:res.data.callback_allowed_ips||''
+            });
+            const providers=res.data.providers||{};
+            const lines=['ronnypay','mkpay'].map(code=>{
+                const item=providers[code]||{};
+                const state=item.configured?'<?=admin_t('admin.payment_config.configured')?>':'<?=admin_t('admin.payment_config.not_configured')?>';
+                const css=item.configured?'status-ok':'status-error';
+                const error=item.configuration_error?'：'+layui.util.escape(item.configuration_error):'';
+                return '<div class="'+css+'">'+layui.util.escape(item.label||code)+'：'+state+error+'</div>';
+            });
+            $('#provider-status').html(lines.join(''));
+            form.render();
+        },'json');
+    }
+});
+</script>
+</body>
+</html>

@@ -28,9 +28,6 @@ final class RonnyPayConfig
 
     public function assertCanCreateOrder(): void
     {
-        if (!$this->orderEnabled()) {
-            throw new RuntimeException('RonnyPay 新下单当前未启用');
-        }
         $this->assertApiConfigured();
         $this->assertCallbackConfigured();
         $this->requireValue('notify_url', 'RONNYPAY_NOTIFY_URL');

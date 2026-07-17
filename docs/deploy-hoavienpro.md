@@ -116,7 +116,7 @@ php start.php start -d
 php start.php status
 ```
 
-RonnyPay 首次上线时，先在现有线上 `.env` 中保持：
+支付通道首次上线时，在现有线上 `.env` 中准备 provider 配置；敏感值使用真实服务器密钥，不得写入仓库或命令输出：
 
 ```dotenv
 RONNYPAY_ORDER_ENABLED=0
@@ -127,9 +127,16 @@ RONNYPAY_NOTIFY_URL=https://hoavienpro.com/api/recharge/ronnypay/notify
 RONNYPAY_WALLET_TYPE=1
 RONNYPAY_BANK_CODE=971025
 RONNYPAY_BASE_URL=https://ronnypay.com
+MKPAY_BASE_URL=https://pay.mkpay8888.com
+MKPAY_MERCHANT_ID=<由商户资料填写>
+MKPAY_MERCHANT_SECRET=<仅服务器密钥>
+MKPAY_PRODUCT_CODE=VN01
+MKPAY_NOTIFY_URL=https://hoavienpro.com/api/recharge/mkpay/notify
 ```
 
-RonnyPay 最新文档中的 MoMoPay 正式通道使用 `wallet_type=1` 且同时传 `bank_code=971025` 和用户填写的 `bank_account`。付款账号作为字符串参与 RSA 签名，应用只去除首尾空格并校验非空。取得 RonnyPay 确认的商户号、RSA 位数和 PEM 格式、回调密钥后再填写其余值。完整验收前不得把 `RONNYPAY_ORDER_ENABLED` 改为 `1`。开关关闭不影响回调、后台主动查单和 `payment_reconciler` 处理在途订单。
+RonnyPay 最新文档中的 MoMoPay 正式通道使用 `wallet_type=1` 且同时传 `bank_code=971025` 和用户填写的 `bank_account`。MkPay 只发送 `mch_id/amount/merchant_order_id/product_code/notify_url`，不发送付款资料、`sender_info` 或 `X-Country`。完成环境配置和小额验收前，在后台“支付方式配置”保持“停用”；停用不影响历史订单回调、后台主动查单和 `payment_reconciler`。
+
+`php scripts/sync_database.php` 会在缺失时创建 `payment_recharge_amount_vnd=149000`，不会覆盖线上后台已保存金额。部署后在后台“支付方式配置”确认活动通道和 VND 整数金额；改价只作用于之后创建的新订单，历史订单与幂等重试继续使用订单金额快照。
 
 修改线上 `.env` 后必须执行完整重启：
 
@@ -158,11 +165,12 @@ php start.php status
 支付检查：
 
 ```bash
-mysql -N -e "USE gameassist; SHOW TABLES LIKE 'ga_payment_orders'; SHOW INDEX FROM ga_user_point_transactions WHERE Key_name='uniq_payment_recharge';"
-grep '^RONNYPAY_ORDER_ENABLED=' /data/www/hoavienpro/server/.env
+mysql -N -e "USE gameassist; SELECT name,value FROM ga_system_settings WHERE name IN ('payment_active_provider','payment_recharge_amount_vnd'); SHOW INDEX FROM ga_payment_orders WHERE Key_name='uniq_payment_provider_order'; SHOW INDEX FROM ga_user_point_transactions WHERE Key_name='uniq_payment_recharge';"
+grep -E '^MKPAY_(BASE_URL|MERCHANT_ID|PRODUCT_CODE|NOTIFY_URL)=' /data/www/hoavienpro/server/.env
+test -n "$(grep '^MKPAY_MERCHANT_SECRET=' /data/www/hoavienpro/server/.env | cut -d= -f2-)" && echo 'MKPAY_MERCHANT_SECRET configured'
 ```
 
-首轮部署预期 `RONNYPAY_ORDER_ENABLED=0`。此时用户发起新订单应明确返回“RonnyPay 新下单当前未启用”，后台支付订单页可正常打开，`payment_reconciler` 进程必须为 `[OK]`。
+首轮部署预期 `payment_active_provider=disabled`、`payment_recharge_amount_vnd=149000`。此时用户端应明确提示当前没有可用支付方式，后台支付配置和支付订单页可正常打开，`payment_reconciler` 必须为 `[OK]`。完成 MkPay 签名联调与小额支付闭环并确认金额后，再从后台单选切换为 MkPay。
 
 接口检查：
 

@@ -227,7 +227,7 @@
 
         <text class="recharge-section-title">{{ t('client.recharge.package') }}</text>
         <view class="recharge-package-card">
-          <text class="recharge-price">{{ RECHARGE_PRICE }}</text>
+          <text class="recharge-price">{{ rechargePrice }}</text>
           <text class="recharge-quota">{{ t('client.recharge.quota') }}</text>
           <text class="recharge-limit">{{ t('client.recharge.limit') }}</text>
           <text class="recharge-selected">✓</text>
@@ -235,7 +235,7 @@
 
         <view class="recharge-pay-method">
           <text>{{ t('client.recharge.pay_method') }}</text>
-          <text class="recharge-pending">{{ recharge.channel || t('client.recharge.channel_configured') }}</text>
+          <text class="recharge-pending">{{ recharge.channel || t('client.recharge.channel_disabled') }}</text>
         </view>
 
         <view v-if="!recharge.order" class="recharge-payer-form">
@@ -254,7 +254,7 @@
 
         <view class="recharge-actions">
           <button class="recharge-cancel" @click="closeRecharge">{{ t('client.recharge.cancel') }}</button>
-          <button v-if="!recharge.order" class="recharge-pay-button" :disabled="recharge.submitting" @click="openPaymentWindow">{{ recharge.submitting ? t('client.recharge.creating') : t('client.recharge.pay', { amount: RECHARGE_PRICE }) }}</button>
+          <button v-if="!recharge.order" class="recharge-pay-button" :disabled="recharge.submitting" @click="openPaymentWindow">{{ recharge.submitting ? t('client.recharge.creating') : t('client.recharge.pay', { amount: rechargePrice }) }}</button>
         </view>
       </view>
     </view>
@@ -302,7 +302,6 @@ const actionLoading = ref(false);
 const logsTailId = 'log-tail';
 const BASE_QUOTA_COST = 10;
 const BASE_QUOTA_DAYS = 11;
-const RECHARGE_PRICE = '149000.00 VND';
 let logTimer = null;
 let logSocket = null;
 let rechargeTimer = null;
@@ -320,10 +319,16 @@ const recharge = reactive({
   submitting: false,
   order: null,
   status: '',
+  provider: '',
   channel: '',
+  packageCode: '',
+  totalFee: '',
+  currency: '',
   pollStartedAt: 0,
   pollStopped: false,
 });
+
+const rechargePrice = computed(() => `${recharge.totalFee} ${recharge.currency}`);
 
 watch(() => recharge.customerMobile, (value, previousValue) => {
   const previousMobile = String(previousValue || '').trim();
@@ -956,12 +961,33 @@ function goProfile() {
   uni.navigateTo({ url: '/pages/profile/index' });
 }
 
-function goPointRecharge() {
+async function goPointRecharge() {
   if (quotaDialog.visible) {
     closeQuotaDialog();
   }
   resetRecharge();
-  rechargeVisible.value = true;
+  try {
+    const config = await request({ url: '/api/recharge/config' });
+    if (!config.enabled) {
+      uni.showToast({ title: t('client.recharge.payment_unavailable'), icon: 'none' });
+      return;
+    }
+    const packageConfig = config.package;
+    if (!packageConfig
+      || packageConfig.code !== 'quota_30'
+      || !/^\d+\.\d{2}$/.test(String(packageConfig.total_fee || ''))
+      || packageConfig.currency !== 'VND') {
+      throw new Error(t('client.recharge.config_invalid'));
+    }
+    recharge.provider = config.provider || '';
+    recharge.channel = paymentProviderLabel(recharge.provider);
+    recharge.packageCode = packageConfig.code;
+    recharge.totalFee = String(packageConfig.total_fee);
+    recharge.currency = packageConfig.currency;
+    rechargeVisible.value = true;
+  } catch (error) {
+    uni.showToast({ title: error.message, icon: 'none' });
+  }
 }
 
 function closeRecharge() {
@@ -994,7 +1020,7 @@ async function openPaymentWindow() {
       url: '/api/recharge/orders',
       method: 'POST',
       data: {
-        package_code: 'quota_30',
+        package_code: recharge.packageCode,
         customer_name: recharge.customerName.trim(),
         customer_mobile: recharge.customerMobile.trim(),
         bank_account: recharge.bankAccount.trim(),
@@ -1033,16 +1059,32 @@ function resetRecharge() {
   recharge.submitting = false;
   recharge.order = null;
   recharge.status = '';
+  recharge.provider = '';
   recharge.channel = '';
+  recharge.packageCode = '';
+  recharge.totalFee = '';
+  recharge.currency = '';
   recharge.pollStartedAt = 0;
   recharge.pollStopped = false;
 }
 
 function applyRechargeOrder(order) {
   if (!order) return;
+  if (!/^\d+\.\d{2}$/.test(String(order.total_fee || '')) || order.currency !== 'VND') {
+    throw new Error(t('client.recharge.config_invalid'));
+  }
   recharge.order = order;
   recharge.status = order.status || '';
-  recharge.channel = t('client.recharge.channel_configured');
+  recharge.provider = order.provider || recharge.provider;
+  recharge.channel = paymentProviderLabel(recharge.provider);
+  recharge.totalFee = String(order.total_fee);
+  recharge.currency = order.currency;
+}
+
+function paymentProviderLabel(provider) {
+  if (provider === 'ronnypay') return t('client.recharge.channel_ronnypay');
+  if (provider === 'mkpay') return t('client.recharge.channel_mkpay');
+  return t('client.recharge.channel_disabled');
 }
 
 function startRechargePolling() {

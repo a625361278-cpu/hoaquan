@@ -23,6 +23,14 @@
                     </div>
 
                     <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.user_rules.invite_reward_min_role_level')?></label>
+                        <div class="layui-input-block">
+                            <input type="number" name="invite_reward_min_role_level" min="1" max="9999" step="1" required lay-verify="required|number" autocomplete="off" class="layui-input">
+                            <div class="form-help"><?=admin_t('admin.user_rules.invite_reward_min_role_level_help')?></div>
+                        </div>
+                    </div>
+
+                    <div class="layui-form-item">
                         <div class="layui-input-block">
                             <button class="pear-btn pear-btn-primary" lay-submit lay-filter="save-config">
                                 <i class="layui-icon layui-icon-ok"></i><?=admin_t('admin.user_rules.save')?>
@@ -58,7 +66,8 @@
                     $.get(GET_API, function(res) {
                         if (res.code) return layui.popup.failure(res.msg);
                         form.val("user-rule-config-form", {
-                            registration_reward_points: res.data.registration_reward_points
+                            registration_reward_points: res.data.registration_reward_points,
+                            invite_reward_min_role_level: res.data.invite_reward_min_role_level
                         });
                         form.render();
                     });

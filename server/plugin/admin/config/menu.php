@@ -120,6 +120,13 @@ return [
                 'weight' => 548,
             ],
             [
+                'title' => '支付方式配置',
+                'key' => 'plugin\\admin\\app\\controller\\GameAssistPaymentConfigController',
+                'href' => '/app/admin/game-assist-payment-config/index',
+                'type' => 1,
+                'weight' => 546,
+            ],
+            [
                 'title' => '游戏配置项管理',
                 'key' => 'plugin\\admin\\app\\controller\\GameAssistConfigVisibilityController',
                 'href' => '/app/admin/game-assist-config-visibility/index',

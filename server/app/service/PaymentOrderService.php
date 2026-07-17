@@ -2,7 +2,7 @@
 
 namespace app\service;
 
-use app\exception\RonnyPayException;
+use app\exception\PaymentProviderException;
 use Illuminate\Database\QueryException;
 use InvalidArgumentException;
 use RuntimeException;
@@ -13,24 +13,47 @@ final class PaymentOrderService
 {
     public const PACKAGE_CODE = 'quota_30';
     public const POINTS = '30.00';
-    public const TOTAL_FEE = '149000.00';
-    private const RONNYPAY_VN_TOTAL_FEE = '149000';
     public const CURRENCY = 'VND';
     private const QUERY_DELAYS_MINUTES = [1, 5, 15, 30, 60];
 
+    private SystemSettingService $settings;
+    private PaymentProviderRegistry $providers;
+
     public function __construct(
-        private ?RonnyPayConfig $config = null,
-        private ?RonnyPayGatewayInterface $gateway = null,
-        private ?RonnyPaySigner $signer = null
+        ?SystemSettingService $settings = null,
+        ?PaymentProviderRegistry $providers = null
     ) {
-        $this->config ??= new RonnyPayConfig();
-        $this->signer ??= new RonnyPaySigner();
-        $this->gateway ??= new GuzzleRonnyPayGateway($this->config, $this->signer);
+        $this->settings = $settings ?? new SystemSettingService();
+        $this->providers = $providers ?? new PaymentProviderRegistry();
+    }
+
+    public function config(): array
+    {
+        $providerCode = $this->settings->paymentActiveProvider();
+        $amounts = $this->configuredAmounts();
+        $enabled = false;
+        if ($providerCode !== SystemSettingService::PAYMENT_PROVIDER_DISABLED) {
+            try {
+                $this->providers->get($providerCode)->assertCanCreateOrder();
+                $enabled = true;
+            } catch (RuntimeException) {
+                $enabled = false;
+            }
+        }
+        return [
+            'enabled' => $enabled,
+            'provider' => $providerCode,
+            'package' => [
+                'code' => self::PACKAGE_CODE,
+                'points' => self::POINTS,
+                'currency' => self::CURRENCY,
+                'total_fee' => $amounts['total_fee'],
+            ],
+        ];
     }
 
     public function create(int $userId, array $input): array
     {
-        $this->config->assertCanCreateOrder();
         $packageCode = trim((string)($input['package_code'] ?? ''));
         if ($packageCode !== self::PACKAGE_CODE) {
             throw new InvalidArgumentException('不支持的充值套餐');
@@ -39,7 +62,7 @@ final class PaymentOrderService
         $mobile = $this->requiredText($input, 'customer_mobile', 64, '付款人手机号');
         $bankAccount = trim((string)($input['bank_account'] ?? ''));
         if ($bankAccount === '') {
-            throw new InvalidArgumentException('MoMo付款账号不能为空');
+            throw new InvalidArgumentException('付款帐号不能为空');
         }
         $idempotencyKey = trim((string)($input['idempotency_key'] ?? ''));
         if (!preg_match('/^[A-Za-z0-9_-]{16,64}$/', $idempotencyKey)) {
@@ -54,16 +77,25 @@ final class PaymentOrderService
             return $this->publicOrder($existing);
         }
 
+        $amounts = $this->configuredAmounts();
+        $providerCode = $this->settings->paymentActiveProvider();
+        if ($providerCode === SystemSettingService::PAYMENT_PROVIDER_DISABLED) {
+            throw new RuntimeException('当前未启用支付方式');
+        }
+        $provider = $this->providers->get($providerCode);
+        $provider->assertCanCreateOrder();
+        $metadata = $provider->orderMetadata();
+
         $now = date('Y-m-d H:i:s');
         $merchantOrder = $this->merchantOrder();
         try {
             Db::table('ga_payment_orders')->insert([
                 'user_id' => $userId,
-                'provider' => 'ronnypay',
+                'provider' => $providerCode,
                 'package_code' => self::PACKAGE_CODE,
                 'points' => self::POINTS,
                 'currency' => self::CURRENCY,
-                'total_fee' => self::TOTAL_FEE,
+                'total_fee' => $amounts['total_fee'],
                 'customer_name' => $name,
                 'customer_mobile' => $mobile,
                 'bank_account' => $bankAccount,
@@ -71,8 +103,9 @@ final class PaymentOrderService
                 'merchant_order' => $merchantOrder,
                 'status' => 'creating',
                 'country' => 'VN',
-                'wallet_type' => $this->config->walletType(),
-                'bank_code' => $this->config->bankCode(),
+                'product_code' => (string)($metadata['product_code'] ?? ''),
+                'wallet_type' => (string)($metadata['wallet_type'] ?? ''),
+                'bank_code' => (string)($metadata['bank_code'] ?? ''),
                 'query_attempts' => 0,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -85,25 +118,20 @@ final class PaymentOrderService
             throw $e;
         }
 
+        $orderContext = [
+            'merchant_order' => $merchantOrder,
+            'provider_order_number' => '',
+            'total_fee' => $amounts['total_fee'],
+            'provider_amount' => $amounts['provider_amount'],
+            'customer_name' => $name,
+            'customer_mobile' => $mobile,
+            'bank_account' => $bankAccount,
+        ];
         try {
-            $data = $this->gateway->createOrder([
-                'merchant_order' => $merchantOrder,
-                'total_fee' => self::RONNYPAY_VN_TOTAL_FEE,
-                'customer_name' => $name,
-                'customer_mobile' => $mobile,
-                'bank_account' => $bankAccount,
-            ]);
-            $this->validateProviderData($data, $merchantOrder, true);
-            Db::table('ga_payment_orders')->where('merchant_order', $merchantOrder)->update([
-                'provider_order_number' => trim((string)$data['order_number']),
-                'pay_url' => trim((string)$data['pay_url']),
-                'status' => 'pending',
-                'next_query_at' => date('Y-m-d H:i:s', time() + 60),
-                'last_error_code' => '',
-                'last_error_message' => '',
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
-        } catch (RonnyPayException $e) {
+            $result = $provider->createOrder($orderContext);
+            $this->assertResultMatchesOrder($result, $this->requireOrder($merchantOrder));
+            $this->storeCreationResult($merchantOrder, $result);
+        } catch (PaymentProviderException $e) {
             $status = $e->isTransient() ? 'unknown' : 'create_failed';
             Db::table('ga_payment_orders')->where('merchant_order', $merchantOrder)->update([
                 'status' => $status,
@@ -112,7 +140,8 @@ final class PaymentOrderService
                 'last_error_message' => mb_substr($e->getMessage(), 0, 255),
                 'updated_at' => date('Y-m-d H:i:s'),
             ]);
-            Log::warning('RonnyPay create failed', [
+            Log::warning('Payment create failed', [
+                'provider' => $providerCode,
                 'merchant_order' => $merchantOrder,
                 'status' => $status,
                 'provider_code' => $e->providerCode(),
@@ -130,6 +159,15 @@ final class PaymentOrderService
         return $this->publicOrder($this->requireOrder($merchantOrder));
     }
 
+    private function configuredAmounts(): array
+    {
+        $providerAmount = (string)$this->settings->paymentRechargeAmountVnd();
+        return [
+            'total_fee' => $providerAmount . '.00',
+            'provider_amount' => $providerAmount,
+        ];
+    }
+
     public function getForUser(int $userId, string $merchantOrder): array
     {
         $row = Db::table('ga_payment_orders')
@@ -142,55 +180,44 @@ final class PaymentOrderService
         return $this->publicOrder((array)$row);
     }
 
-    public function handleCallback(array $parameters): void
+    public function handleCallback(string $providerCode, array $parameters): void
     {
-        $this->config->assertCallbackConfigured();
-        if (!$this->signer->verifyCallback($parameters, $this->config->callbackSecret())) {
-            Log::warning('RonnyPay callback signature invalid', [
-                'merchant_order' => (string)($parameters['merchant_order'] ?? ''),
-                'remote_order' => (string)($parameters['order_number'] ?? ''),
-            ]);
-            throw new InvalidArgumentException('回调签名无效');
-        }
-        $merchantOrder = trim((string)($parameters['merchant_order'] ?? ''));
+        $provider = $this->providers->get($providerCode);
+        $result = $provider->parseCallback($parameters);
+        $merchantOrder = trim((string)($result['merchant_order'] ?? ''));
         $order = $this->requireOrder($merchantOrder);
-        $this->validateProviderData($parameters, $merchantOrder, false, $order);
-        $status = strtolower(trim((string)$parameters['status']));
-        if (!in_array($status, ['pending', 'success', 'fail'], true)) {
-            throw new InvalidArgumentException('RonnyPay 回调状态无效');
+        if ((string)$order['provider'] !== $providerCode) {
+            throw new InvalidArgumentException('回调支付通道与订单不一致');
         }
-        if ($status === 'success') {
-            $this->creditSuccess($merchantOrder, $parameters, true);
-            return;
-        }
-        $this->updateNonSuccessStatus($merchantOrder, $status, $parameters, true);
+        $this->assertResultMatchesOrder($result, $order);
+        $this->applyResult($merchantOrder, $result, true);
     }
 
     public function query(string $merchantOrder): array
     {
-        $this->config->assertApiConfigured();
         $order = $this->requireOrder($merchantOrder);
         if ((string)$order['status'] === 'success') {
             return $this->publicOrder($order);
         }
+        $providerCode = (string)$order['provider'];
         try {
-            $data = $this->gateway->queryOrder($merchantOrder);
-            $this->validateProviderData($data, $merchantOrder, false, $order);
-            $status = strtolower(trim((string)($data['status'] ?? '')));
-            if (!in_array($status, ['pending', 'success', 'fail'], true)) {
-                throw new RonnyPayException('RonnyPay 查单状态无效', false);
-            }
-            if ($status === 'success') {
-                $this->creditSuccess($merchantOrder, $data, false);
-            } else {
-                $this->updateNonSuccessStatus($merchantOrder, $status, $data, false);
-            }
-        } catch (RonnyPayException $e) {
+            $result = $this->providers->get($providerCode)->queryOrder($order);
+            $this->assertResultMatchesOrder($result, $order);
+            $this->applyResult($merchantOrder, $result, false);
+        } catch (PaymentProviderException $e) {
             $this->scheduleNextQuery($merchantOrder, $e->providerCode(), $e->getMessage());
-            Log::warning('RonnyPay query failed', [
+            Log::warning('Payment query failed', [
+                'provider' => $providerCode,
                 'merchant_order' => $merchantOrder,
                 'provider_code' => $e->providerCode(),
                 'http_status' => $e->httpStatus(),
+            ]);
+        } catch (RuntimeException $e) {
+            $this->scheduleNextQuery($merchantOrder, 'configuration_error', $e->getMessage());
+            Log::error('Payment query configuration failed', [
+                'provider' => $providerCode,
+                'merchant_order' => $merchantOrder,
+                'message' => $e->getMessage(),
             ]);
         }
         return $this->publicOrder($this->requireOrder($merchantOrder));
@@ -198,7 +225,6 @@ final class PaymentOrderService
 
     public function reconcileDue(int $limit = 50): int
     {
-        $this->config->assertApiConfigured();
         $orders = Db::table('ga_payment_orders')
             ->whereIn('status', ['pending', 'unknown'])
             ->whereNotNull('next_query_at')
@@ -208,7 +234,14 @@ final class PaymentOrderService
             ->pluck('merchant_order')
             ->all();
         foreach ($orders as $merchantOrder) {
-            $this->query((string)$merchantOrder);
+            try {
+                $this->query((string)$merchantOrder);
+            } catch (\Throwable $e) {
+                Log::error('Payment reconcile order failed', [
+                    'merchant_order' => (string)$merchantOrder,
+                    'message' => $e->getMessage(),
+                ]);
+            }
         }
         return count($orders);
     }
@@ -218,6 +251,7 @@ final class PaymentOrderService
         $row = (array)$order;
         return [
             'merchant_order' => (string)$row['merchant_order'],
+            'provider' => (string)$row['provider'],
             'provider_order_number' => (string)($row['provider_order_number'] ?? ''),
             'package_code' => (string)$row['package_code'],
             'points' => (string)$row['points'],
@@ -227,10 +261,43 @@ final class PaymentOrderService
             'pay_url' => (string)($row['pay_url'] ?? ''),
             'wallet_type' => (string)($row['wallet_type'] ?? ''),
             'bank_code' => (string)($row['bank_code'] ?? ''),
+            'product_code' => (string)($row['product_code'] ?? ''),
             'created_at' => (string)$row['created_at'],
             'credited_at' => (string)($row['credited_at'] ?? ''),
             'last_error' => (string)($row['last_error_message'] ?? ''),
         ];
+    }
+
+    private function storeCreationResult(string $merchantOrder, array $result): void
+    {
+        $status = (string)$result['status'];
+        if ($status === 'success') {
+            $this->creditSuccess($merchantOrder, $result, false);
+            return;
+        }
+        $now = date('Y-m-d H:i:s');
+        Db::table('ga_payment_orders')->where('merchant_order', $merchantOrder)->update([
+            'provider_order_number' => trim((string)$result['provider_order_number']),
+            'pay_url' => trim((string)($result['pay_url'] ?? '')),
+            'status' => $status,
+            'next_query_at' => in_array($status, ['pending', 'unknown'], true) ? date('Y-m-d H:i:s', time() + 60) : null,
+            'last_error_code' => '',
+            'last_error_message' => '',
+            'updated_at' => $now,
+        ]);
+    }
+
+    private function applyResult(string $merchantOrder, array $result, bool $fromCallback): void
+    {
+        $status = (string)$result['status'];
+        if ($status === 'success') {
+            $this->creditSuccess($merchantOrder, $result, $fromCallback);
+            return;
+        }
+        if (!in_array($status, ['pending', 'unknown', 'fail'], true)) {
+            throw new RuntimeException('规范化支付状态无效：' . $status);
+        }
+        $this->updateNonSuccessStatus($merchantOrder, $status, $result, $fromCallback);
     }
 
     private function creditSuccess(string $merchantOrder, array $providerData, bool $fromCallback): void
@@ -262,12 +329,13 @@ final class PaymentOrderService
                 'balance' => $balanceAfter,
                 'updated_at' => $now,
             ]);
+            $providerLabel = $this->providers->get((string)$order->provider)->label();
             Db::table('ga_user_point_transactions')->insert([
                 'user_id' => (int)$order->user_id,
                 'type' => 'recharge',
                 'amount' => (string)$order->points,
                 'balance_after' => $balanceAfter,
-                'description' => 'RonnyPay 充值 ' . (string)$order->merchant_order,
+                'description' => $providerLabel . ' 充值 ' . (string)$order->merchant_order,
                 'related_user_id' => null,
                 'related_role_id' => '',
                 'related_payment_order_id' => (int)$order->id,
@@ -276,7 +344,8 @@ final class PaymentOrderService
             ]);
             Db::table('ga_payment_orders')->where('id', (int)$order->id)->update([
                 'status' => 'success',
-                'provider_order_number' => trim((string)($providerData['order_number'] ?? $order->provider_order_number)),
+                'provider_order_number' => trim((string)($providerData['provider_order_number'] ?? $order->provider_order_number)),
+                'pay_url' => trim((string)($providerData['pay_url'] ?? $order->pay_url)),
                 'utr' => trim((string)($providerData['utr'] ?? $order->utr)),
                 'credited_at' => $now,
                 'notified_at' => $fromCallback ? $now : $order->notified_at,
@@ -296,20 +365,22 @@ final class PaymentOrderService
             return;
         }
         $now = date('Y-m-d H:i:s');
+        $attempts = (int)$order['query_attempts'] + ($fromCallback ? 0 : 1);
         $updates = [
             'status' => $status,
-            'provider_order_number' => trim((string)($data['order_number'] ?? $order['provider_order_number'] ?? '')),
+            'provider_order_number' => trim((string)($data['provider_order_number'] ?? $order['provider_order_number'] ?? '')),
+            'pay_url' => trim((string)($data['pay_url'] ?? $order['pay_url'] ?? '')),
             'utr' => trim((string)($data['utr'] ?? $order['utr'] ?? '')),
+            'query_attempts' => $attempts,
             'updated_at' => $now,
         ];
         if ($fromCallback) {
             $updates['notified_at'] = $now;
         } else {
             $updates['last_queried_at'] = $now;
-            $updates['query_attempts'] = (int)$order['query_attempts'] + 1;
         }
-        $updates['next_query_at'] = $status === 'pending'
-            ? $this->nextQueryAt((int)($updates['query_attempts'] ?? $order['query_attempts']))
+        $updates['next_query_at'] = in_array($status, ['pending', 'unknown'], true)
+            ? $this->nextQueryAt($attempts)
             : null;
         Db::table('ga_payment_orders')->where('merchant_order', $merchantOrder)->where('status', '<>', 'success')->update($updates);
     }
@@ -338,45 +409,22 @@ final class PaymentOrderService
         return date('Y-m-d H:i:s', time() + self::QUERY_DELAYS_MINUTES[$index] * 60);
     }
 
-    private function validateProviderData(array $data, string $merchantOrder, bool $creation, ?array $localOrder = null): void
+    private function assertResultMatchesOrder(array $result, array $order): void
     {
-        if (trim((string)($data['merchant_id'] ?? '')) !== $this->config->merchantId()) {
-            throw new RonnyPayException('RonnyPay 响应商户号不一致', false);
+        if (trim((string)($result['merchant_order'] ?? '')) !== (string)$order['merchant_order']) {
+            throw new PaymentProviderException('支付平台响应商户订单号不一致', false);
         }
-        if (trim((string)($data['merchant_order'] ?? '')) !== $merchantOrder) {
-            throw new RonnyPayException('RonnyPay 响应商户订单号不一致', false);
+        if (PaymentAmount::normalize($result['total_fee'] ?? '', '支付平台') !== PaymentAmount::normalize($order['total_fee'], '本地订单')) {
+            throw new PaymentProviderException('支付平台响应金额不一致', false);
         }
-        $expectedAmount = $localOrder['total_fee'] ?? self::TOTAL_FEE;
-        if ($this->normalizeAmount($data['total_fee'] ?? '') !== $this->normalizeAmount($expectedAmount)) {
-            throw new RonnyPayException('RonnyPay 响应金额不一致', false);
-        }
-        $remoteOrder = trim((string)($data['order_number'] ?? ''));
+        $remoteOrder = trim((string)($result['provider_order_number'] ?? ''));
         if ($remoteOrder === '') {
-            throw new RonnyPayException('RonnyPay 响应缺少平台订单号', false);
+            throw new PaymentProviderException('支付平台响应缺少平台订单号', false);
         }
-        if ($localOrder && !empty($localOrder['provider_order_number']) && !hash_equals((string)$localOrder['provider_order_number'], $remoteOrder)) {
-            throw new RonnyPayException('RonnyPay 平台订单号不一致', false);
+        $existingRemoteOrder = trim((string)($order['provider_order_number'] ?? ''));
+        if ($existingRemoteOrder !== '' && !hash_equals($existingRemoteOrder, $remoteOrder)) {
+            throw new PaymentProviderException('支付平台订单号不一致', false);
         }
-        if ($creation) {
-            if (strtolower(trim((string)($data['status'] ?? ''))) !== 'pending') {
-                throw new RonnyPayException('RonnyPay 下单响应状态不是 pending', false);
-            }
-            $payUrl = trim((string)($data['pay_url'] ?? ''));
-            if (filter_var($payUrl, FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($payUrl, PHP_URL_SCHEME)) !== 'https') {
-                throw new RonnyPayException('RonnyPay 下单响应支付链接无效', false);
-            }
-        }
-    }
-
-    private function normalizeAmount(mixed $amount): string
-    {
-        $value = trim((string)$amount);
-        if (!preg_match('/^\d+(?:\.\d{1,2})?$/', $value)) {
-            throw new RonnyPayException('RonnyPay 金额格式无效', false);
-        }
-        [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '');
-        $whole = ltrim($whole, '0');
-        return ($whole === '' ? '0' : $whole) . '.' . str_pad($fraction, 2, '0');
     }
 
     private function decimalToCents(string $value): int

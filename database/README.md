@@ -23,13 +23,19 @@
 
 `ga_announcements` 默认不插入任何公告。用户端登录公告必须由后台“公告管理”录入并启用，系统不会生成默认公告来伪装运营内容。
 
-邀请功能使用 `ga_users.invite_code`、`ga_users.invited_by_user_id`、`ga_users.bound_role_id`、`ga_users.invite_rewarded_at` 和 `ga_user_point_transactions`。注册时只记录邀请关系；被邀请用户添加游戏账号并启动成功，第三方返回 `started` 后，系统用 `role_id` 自动绑定角色并给邀请人增加 1 点、写入点数流水；第三方未返回 `role_id` 时使用用户填写的 `game_username`。
+邀请功能使用 `ga_users.invite_code`、`ga_users.invited_by_user_id`、`ga_users.bound_role_id`、`ga_users.invite_rewarded_at` 和 `ga_user_point_transactions`。注册时只记录邀请关系；第三方返回匹配当前运行上下文的真实 `started` 后，系统用 `role_id` 自动绑定角色，第三方未返回时使用用户填写的 `game_username`。绑定本身不发奖；只有同一游戏账号保持真实运行、账号角色与用户绑定角色一致，且后续真实 `status.level` 达到后台阈值时才给邀请人增加 1 点并写入流水。
 
 配额功能使用同一个 `ga_users.balance` 余额池。邀请奖励和后台赠送都会增加余额；用户把配额分配到游戏账号时会立即扣除余额并更新 `ga_game_accounts.expire_time`，账号不启动也按自然时间消耗，删除游戏账号不退回余额。
 
-RonnyPay 充值订单保存在 `ga_payment_orders`。`bank_account` 使用 `LONGTEXT` 保存用户提交的 MoMo 付款账号快照，应用层只去除首尾空格并校验非空，不进行长度或字符类型限制，也不会转换为数值，因此前导零会被保留。为兼容升级前的历史订单，同步脚本新增该字段时允许旧行为空；修改上线后创建的新订单必须写入该字段。
+MoMoPay/RonnyPay 与 MkPay 充值订单统一保存在 `ga_payment_orders`，`provider` 决定回调和查单路由，`product_code` 保存 MkPay 产品码快照。`bank_account` 使用 `LONGTEXT` 保存用户提交的付款帐号快照，只去除首尾空格并校验非空，不转换为数值，因此前导零会被保留；MkPay 不接收该字段。平台订单号唯一约束为 `(provider, provider_order_number)`，不同平台的同名订单号可以共存。
 
-新用户注册赠送由 `ga_system_settings.registration_reward_points` 控制，默认 1 点，0 表示关闭。用户创建、初始余额和 `ga_user_point_transactions(type=registration_reward)` 流水在同一事务中提交，只影响后续新注册用户，不补发历史账号；它与角色绑定后给邀请人的邀请奖励是两笔独立业务。
+`ga_system_settings.payment_active_provider` 只允许 `disabled`、`ronnypay`、`mkpay`；它只决定新订单通道，不改变历史订单。同步脚本仅在该配置缺失时根据旧 `RONNYPAY_ORDER_ENABLED` 初始化，已存在的后台选择不会被覆盖。
+
+`ga_system_settings.payment_recharge_amount_vnd` 保存 `quota_30` 套餐的 VND 整数金额，默认 `149000`，只允许 `1` 至 `999999999`。新订单创建时一次读取该值，并把两位小数金额快照写入 `ga_payment_orders.total_fee`；历史订单、幂等重试、回调和查单继续使用订单快照。同步脚本只在配置缺失时补齐默认值并更新说明，不覆盖后台已保存金额。
+
+`ga_system_settings.payment_callback_allowed_ips` 保存支付回调来源 IP 白名单，多个 IPv4/IPv6 地址可用换行、逗号、分号、空格或竖线分隔，留空时不校验来源 IP。配置后 RonnyPay 与 MkPay 回调请求的真实 IP 必须精确命中白名单；非法白名单配置会让回调处理失败并暴露配置错误，不会静默放行。
+
+新用户注册赠送由 `ga_system_settings.registration_reward_points` 控制，默认 1 点，0 表示关闭。用户创建、初始余额和 `ga_user_point_transactions(type=registration_reward)` 流水在同一事务中提交，只影响后续新注册用户，不补发历史账号；它与角色等级达标后给邀请人的邀请奖励是两笔独立业务。
 
 账号延期规则固定为基础套餐 `10` 点兑换 `11` 天，额外配额 `N` 点增加 `N` 天；延期起点为 `max(当前时间, 当前账号 expire_time)`。扣点写入 `ga_user_point_transactions(type=quota_consume)`，后台赠送写入 `ga_user_point_transactions(type=admin_grant)`。
 
@@ -45,7 +51,7 @@ RonnyPay 充值订单保存在 `ga_payment_orders`。`bank_account` 使用 `LONG
 
 第三方任务数据使用 `ga_game_account_task_states` 保存每个游戏账号的最新落库快照；`task_state_save` 进入 Redis 队列时还会记录一份 pending 最新快照，供 `start.task_state` 和 `task_state_get` 优先读取，writer 落库后按 hash 精确清理 pending 快照。
 
-`ga_system_settings.invite_daily_limit` 控制同一邀请人每日奖励上限，默认 `50`；`invite_same_ip_daily_limit` 控制同邀请人同 IP 每日奖励风控上限，默认 `3`。同步数据库脚本会自动补齐这些配置项。
+`ga_system_settings.invite_reward_min_role_level` 控制邀请奖励最低角色等级，默认 `30`，只允许 `1` 至 `9999` 的整数。同步脚本只在配置缺失时补齐并更新说明，不覆盖后台保存值。旧库中的 `invite_daily_limit`、`invite_same_ip_daily_limit` 行为便于回滚可以保留，但新代码、新库和同步脚本不再读取或创建，邀请奖励不再受每日数量或 IP 限制。
 
 `ga_system_settings.game_config_visibility_overrides` 保存后台“游戏配置项管理”相对正式默认值的全站可见性覆盖，值为“配置路径 => 布尔值”的 JSON 对象，默认 `{}`。完整 196 行目录由 `client/src/utils/gameConfigSchema.js` 生成到 `shared/game-config-visibility.json`，不能在数据库里另建一份字段目录；损坏 JSON、未知路径、非布尔值或“控制项隐藏但依赖项显示”的矛盾状态会明确报错。后台打开或关闭控制项时会递归联动依赖项，打开依赖项时也会同步打开所需控制项。该设置只控制用户端显示，不修改 `ga_game_accounts.config_json`，也不进入第三方配置响应。`php scripts/sync_database.php` 会补齐该设置，`php scripts/sync_admin.php` 会同步后台菜单。
 

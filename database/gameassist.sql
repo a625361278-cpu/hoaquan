@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS `ga_payment_orders` (
   `status` varchar(32) NOT NULL COMMENT '订单状态',
   `pay_url` text DEFAULT NULL COMMENT '支付链接',
   `country` varchar(8) NOT NULL DEFAULT 'VN' COMMENT '国家',
+  `product_code` varchar(64) NOT NULL DEFAULT '' COMMENT '支付产品编码快照',
   `wallet_type` varchar(64) NOT NULL DEFAULT '' COMMENT '钱包类型',
   `bank_code` varchar(64) NOT NULL DEFAULT '' COMMENT '银行或通道编码',
   `utr` varchar(128) NOT NULL DEFAULT '' COMMENT '支付参考号',
@@ -143,7 +144,7 @@ CREATE TABLE IF NOT EXISTS `ga_payment_orders` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_payment_merchant_order` (`merchant_order`),
-  UNIQUE KEY `uniq_payment_provider_order` (`provider_order_number`),
+  UNIQUE KEY `uniq_payment_provider_order` (`provider`,`provider_order_number`),
   UNIQUE KEY `uniq_payment_user_idempotency` (`user_id`, `idempotency_key`),
   KEY `idx_payment_reconcile` (`status`, `next_query_at`),
   KEY `idx_payment_user_created` (`user_id`, `created_at`)
@@ -174,6 +175,10 @@ VALUES
   ('game_account_credential_key', '', '游戏账号密码加密密钥'),
   ('game_account_max_count', '3', '单个用户同时可存在的游戏账号数量上限'),
   ('registration_reward_points', '1', '新用户注册赠送配额点数，0表示关闭'),
+  ('invite_reward_min_role_level', '30', '邀请奖励最低角色等级，允许1至9999'),
+  ('payment_active_provider', 'disabled', '活动支付方式：disabled、ronnypay或mkpay'),
+  ('payment_recharge_amount_vnd', '149000', '充值套餐金额，VND整数，只影响新订单'),
+  ('payment_callback_allowed_ips', '', '支付回调来源IP白名单，多个IP可用换行、逗号、分号、空格或竖线分隔，留空不校验'),
   ('game_config_visibility_overrides', '{}', '游戏配置项用户端可见性相对默认值的覆盖JSON'),
   ('smtp_enabled', '0', 'SMTP是否启用：0否，1是'),
   ('smtp_host', '', 'SMTP服务器地址'),
@@ -182,9 +187,7 @@ VALUES
   ('smtp_password', '', 'SMTP密码或授权码'),
   ('smtp_encryption', 'tls', 'SMTP加密方式：tls、ssl、none'),
   ('smtp_from_email', '', '发件邮箱'),
-  ('smtp_from_name', 'Hoa Quán', '发件名称'),
-  ('invite_daily_limit', '50', '同一邀请人每日邀请奖励上限'),
-  ('invite_same_ip_daily_limit', '3', '同一邀请人同IP每日邀请奖励风控上限')
+  ('smtp_from_name', 'Hoa Quán', '发件名称')
 ON DUPLICATE KEY UPDATE
   `remark` = VALUES(`remark`);
 

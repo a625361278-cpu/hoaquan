@@ -19,6 +19,13 @@ final class PaymentOrderAdminService
         if ($status !== '') {
             $query->where('payment.status', $status);
         }
+        $provider = trim((string)($filters['provider'] ?? ''));
+        if ($provider !== '') {
+            if (!in_array($provider, ['ronnypay', 'mkpay'], true)) {
+                throw new InvalidArgumentException('支付通道筛选值无效');
+            }
+            $query->where('payment.provider', $provider);
+        }
         $user = trim((string)($filters['user'] ?? ''));
         if ($user !== '') {
             $query->where(function ($where) use ($user): void {

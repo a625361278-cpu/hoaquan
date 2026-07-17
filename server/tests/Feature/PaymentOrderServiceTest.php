@@ -4,12 +4,19 @@ namespace tests\Feature;
 
 use app\exception\RonnyPayException;
 use app\service\PaymentOrderService;
+use app\service\PaymentProviderRegistry;
+use app\service\MkPayConfig;
+use app\service\MkPayProvider;
+use app\service\MkPaySigner;
 use app\service\RonnyPayConfig;
+use app\service\RonnyPayProvider;
 use app\service\RonnyPaySigner;
+use app\service\SystemSettingService;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use support\Db;
 use tests\Support\FakeRonnyPayGateway;
+use tests\Support\FakeMkPayGateway;
 
 final class PaymentOrderServiceTest extends TestCase
 {
@@ -48,6 +55,46 @@ final class PaymentOrderServiceTest extends TestCase
         $this->assertSame('00123 payer account / A', (string)Db::table('ga_payment_orders')->where('user_id', $userId)->value('bank_account'));
     }
 
+    public function testRechargeConfigAndNewOrderUseConfiguredServerAmount(): void
+    {
+        $userId = $this->createUser('0.00');
+        $gateway = new FakeRonnyPayGateway($this->pendingCreateData());
+        $service = $this->service($gateway, 180000);
+
+        $config = $service->config();
+        $order = $service->create($userId, $this->createInput() + ['total_fee' => '1.00']);
+
+        $this->assertSame('180000.00', $config['package']['total_fee']);
+        $this->assertSame('180000.00', $order['total_fee']);
+        $this->assertSame('180000', $gateway->lastCreateOrder['total_fee']);
+        $this->assertSame('180000.00', (string)Db::table('ga_payment_orders')->where('merchant_order', $order['merchant_order'])->value('total_fee'));
+    }
+
+    public function testMkPayStoresPayerSnapshotButDoesNotPassItToGateway(): void
+    {
+        $userId = $this->createUser('0.00');
+        $gateway = new FakeMkPayGateway([
+            'pay_order_id' => 'MK-001',
+            'product_type' => 'PAY',
+            'currency' => 'VND',
+            'redirect_url' => 'https://pay.example.com/checkout/MK-001',
+            'qr_code_url' => '',
+            'status_code' => 1,
+        ]);
+
+        $order = $this->mkPayService($gateway, 175000)->create($userId, $this->createInput());
+
+        $this->assertSame('mkpay', $order['provider']);
+        $this->assertSame(['merchant_order', 'amount'], array_keys($gateway->lastCreateOrder));
+        $this->assertSame('175000', $gateway->lastCreateOrder['amount']);
+        $this->assertSame('175000.00', $order['total_fee']);
+        $row = (array)Db::table('ga_payment_orders')->where('merchant_order', $order['merchant_order'])->first();
+        $this->assertSame('Nguyen Van A', $row['customer_name']);
+        $this->assertSame('0901234567', $row['customer_mobile']);
+        $this->assertSame('00123 payer account / A', $row['bank_account']);
+        $this->assertSame('VN01', $row['product_code']);
+    }
+
     public function testCreateRejectsEmptyBankAccountBeforeWritingOrder(): void
     {
         $userId = $this->createUser('0.00');
@@ -55,7 +102,7 @@ final class PaymentOrderServiceTest extends TestCase
         $input['bank_account'] = " \t ";
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('MoMo付款账号不能为空');
+        $this->expectExceptionMessage('付款帐号不能为空');
         try {
             $this->service(new FakeRonnyPayGateway($this->pendingCreateData()))->create($userId, $input);
         } finally {
@@ -79,6 +126,37 @@ final class PaymentOrderServiceTest extends TestCase
         $this->assertSame('00123 payer account / A', (string)Db::table('ga_payment_orders')->where('merchant_order', $first['merchant_order'])->value('bank_account'));
     }
 
+    public function testIdempotentRetryKeepsOriginalAmountAfterAdminPriceChange(): void
+    {
+        $userId = $this->createUser('0.00');
+        $input = $this->createInput();
+        $firstGateway = new FakeRonnyPayGateway($this->pendingCreateData());
+        $first = $this->service($firstGateway, 149000)->create($userId, $input);
+        $secondGateway = new FakeRonnyPayGateway($this->pendingCreateData());
+
+        $second = $this->service($secondGateway, 200000)->create($userId, $input);
+
+        $this->assertSame($first['merchant_order'], $second['merchant_order']);
+        $this->assertSame('149000.00', $second['total_fee']);
+        $this->assertSame(0, $secondGateway->createCalls);
+    }
+
+    public function testIdempotentRetryReturnsOriginalOrderAfterPaymentsAreDisabled(): void
+    {
+        $userId = $this->createUser('0.00');
+        $input = $this->createInput();
+        $first = $this->service(new FakeRonnyPayGateway($this->pendingCreateData()))->create($userId, $input);
+        $disabledSettings = new class extends SystemSettingService {
+            public function paymentActiveProvider(): string { return 'disabled'; }
+        };
+        $disabledService = new PaymentOrderService($disabledSettings, new PaymentProviderRegistry([]));
+
+        $second = $disabledService->create($userId, $input);
+
+        $this->assertSame($first['merchant_order'], $second['merchant_order']);
+        $this->assertSame('ronnypay', $second['provider']);
+    }
+
     public function testCreateRejectsMissingCallbackSecretBeforeWritingOrder(): void
     {
         $userId = $this->createUser('0.00');
@@ -92,7 +170,7 @@ final class PaymentOrderServiceTest extends TestCase
             'bank_code' => '',
             'base_url' => 'https://ronnypay.com',
         ]);
-        $service = new PaymentOrderService($config, new FakeRonnyPayGateway($this->pendingCreateData()), new RonnyPaySigner());
+        $service = $this->serviceWithConfig($config, new FakeRonnyPayGateway($this->pendingCreateData()));
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('RONNYPAY_CALLBACK_SECRET 未配置');
@@ -134,8 +212,8 @@ final class PaymentOrderServiceTest extends TestCase
         $order = $service->create($userId, $this->createInput());
         $callback = $this->signedCallback($order);
 
-        $service->handleCallback($callback);
-        $service->handleCallback($callback);
+        $service->handleCallback('ronnypay', $callback);
+        $service->handleCallback('ronnypay', $callback);
 
         $this->assertSame('32.00', (string)Db::table('ga_users')->where('id', $userId)->value('balance'));
         $this->assertSame(1, Db::table('ga_user_point_transactions')->where('user_id', $userId)->where('type', 'recharge')->count());
@@ -147,8 +225,8 @@ final class PaymentOrderServiceTest extends TestCase
         $userId = $this->createUser('0.00');
         $service = $this->service(new FakeRonnyPayGateway($this->pendingCreateData()));
         $order = $service->create($userId, $this->createInput());
-        $service->handleCallback($this->signedCallback($order));
-        $service->handleCallback($this->signedCallback($order, 'fail'));
+        $service->handleCallback('ronnypay', $this->signedCallback($order));
+        $service->handleCallback('ronnypay', $this->signedCallback($order, 'fail'));
 
         $this->assertSame('success', (string)Db::table('ga_payment_orders')->where('merchant_order', $order['merchant_order'])->value('status'));
         $this->assertSame('30.00', (string)Db::table('ga_users')->where('id', $userId)->value('balance'));
@@ -174,6 +252,28 @@ final class PaymentOrderServiceTest extends TestCase
         $this->assertSame(1, $gateway->queryCalls);
     }
 
+    public function testQueryUsesOriginalProviderAfterNewOrdersAreDisabled(): void
+    {
+        $userId = $this->createUser('0.00');
+        $gateway = new FakeRonnyPayGateway($this->pendingCreateData(), [
+            'merchant_id' => 'merchant-test',
+            'order_number' => 'RP-001',
+            'status' => 'success',
+            'total_fee' => '149000',
+        ]);
+        $order = $this->service($gateway)->create($userId, $this->createInput());
+        $disabledSettings = new class extends SystemSettingService {
+            public function paymentActiveProvider(): string { return 'disabled'; }
+        };
+        $provider = new RonnyPayProvider($this->config(), $gateway, new RonnyPaySigner());
+        $disabledService = new PaymentOrderService($disabledSettings, new PaymentProviderRegistry([$provider]));
+
+        $queried = $disabledService->query($order['merchant_order']);
+
+        $this->assertSame('success', $queried['status']);
+        $this->assertSame('30.00', (string)Db::table('ga_users')->where('id', $userId)->value('balance'));
+    }
+
     public function testQuerySuccessThenCallbackStillCreditsOnce(): void
     {
         $userId = $this->createUser('0.00');
@@ -187,7 +287,7 @@ final class PaymentOrderServiceTest extends TestCase
         $order = $service->create($userId, $this->createInput());
 
         $service->query($order['merchant_order']);
-        $service->handleCallback($this->signedCallback($order));
+        $service->handleCallback('ronnypay', $this->signedCallback($order));
 
         $this->assertSame('30.00', (string)Db::table('ga_users')->where('id', $userId)->value('balance'));
         $this->assertSame(1, Db::table('ga_user_point_transactions')->where('user_id', $userId)->where('type', 'recharge')->count());
@@ -204,9 +304,38 @@ final class PaymentOrderServiceTest extends TestCase
         $service->getForUser($otherId, $order['merchant_order']);
     }
 
-    private function service(FakeRonnyPayGateway $gateway): PaymentOrderService
+    private function service(FakeRonnyPayGateway $gateway, int $amount = 149000): PaymentOrderService
     {
-        return new PaymentOrderService($this->config(), $gateway, new RonnyPaySigner());
+        return $this->serviceWithConfig($this->config(), $gateway, $amount);
+    }
+
+    private function serviceWithConfig(RonnyPayConfig $config, FakeRonnyPayGateway $gateway, int $amount = 149000): PaymentOrderService
+    {
+        $settings = new class($amount) extends SystemSettingService {
+            public function __construct(private int $amount) {}
+            public function paymentActiveProvider(): string { return 'ronnypay'; }
+            public function paymentRechargeAmountVnd(): int { return $this->amount; }
+        };
+        $provider = new RonnyPayProvider($config, $gateway, new RonnyPaySigner());
+        return new PaymentOrderService($settings, new PaymentProviderRegistry([$provider]));
+    }
+
+    private function mkPayService(FakeMkPayGateway $gateway, int $amount = 149000): PaymentOrderService
+    {
+        $settings = new class($amount) extends SystemSettingService {
+            public function __construct(private int $amount) {}
+            public function paymentActiveProvider(): string { return 'mkpay'; }
+            public function paymentRechargeAmountVnd(): int { return $this->amount; }
+        };
+        $config = new MkPayConfig([
+            'base_url' => 'https://pay.example.com',
+            'merchant_id' => 'merchant-test',
+            'merchant_secret' => 'test-secret',
+            'product_code' => 'VN01',
+            'notify_url' => 'https://example.com/api/recharge/mkpay/notify',
+        ]);
+        $provider = new MkPayProvider($config, $gateway, new MkPaySigner());
+        return new PaymentOrderService($settings, new PaymentProviderRegistry([$provider]));
     }
 
     private function config(): RonnyPayConfig

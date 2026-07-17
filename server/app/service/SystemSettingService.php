@@ -6,12 +6,27 @@ use support\Db;
 
 class SystemSettingService
 {
+    public const PAYMENT_PROVIDER_DISABLED = 'disabled';
+    public const PAYMENT_PROVIDER_RONNYPAY = 'ronnypay';
+    public const PAYMENT_PROVIDER_MKPAY = 'mkpay';
+    public const PAYMENT_PROVIDERS = [
+        self::PAYMENT_PROVIDER_DISABLED,
+        self::PAYMENT_PROVIDER_RONNYPAY,
+        self::PAYMENT_PROVIDER_MKPAY,
+    ];
     public const DEFAULT_GAME_ACCOUNT_MAX_COUNT = 3;
     public const MIN_GAME_ACCOUNT_MAX_COUNT = 1;
     public const MAX_GAME_ACCOUNT_MAX_COUNT = 100;
     public const DEFAULT_REGISTRATION_REWARD_POINTS = 1;
     public const MIN_REGISTRATION_REWARD_POINTS = 0;
     public const MAX_REGISTRATION_REWARD_POINTS = 1000;
+    public const DEFAULT_INVITE_REWARD_MIN_ROLE_LEVEL = 30;
+    public const MIN_INVITE_REWARD_MIN_ROLE_LEVEL = 1;
+    public const MAX_INVITE_REWARD_MIN_ROLE_LEVEL = 9999;
+    public const DEFAULT_PAYMENT_RECHARGE_AMOUNT_VND = 149000;
+    public const MIN_PAYMENT_RECHARGE_AMOUNT_VND = 1;
+    public const MAX_PAYMENT_RECHARGE_AMOUNT_VND = 999999999;
+    public const PAYMENT_CALLBACK_ALLOWED_IPS = 'payment_callback_allowed_ips';
 
     public const THIRD_PARTY_SETTING_NAMES = [
         'third_party_enabled',
@@ -88,12 +103,14 @@ class SystemSettingService
 
     public function saveSettings(array $settings): void
     {
-        foreach ($settings as $name => $value) {
-            Db::table('ga_system_settings')->updateOrInsert(
-                ['name' => $name],
-                ['value' => (string)$value]
-            );
-        }
+        Db::connection()->transaction(function () use ($settings): void {
+            foreach ($settings as $name => $value) {
+                Db::table('ga_system_settings')->updateOrInsert(
+                    ['name' => $name],
+                    ['value' => (string)$value]
+                );
+            }
+        });
     }
 
     public function smtpConfig(): array
@@ -147,6 +164,52 @@ class SystemSettingService
             throw new \RuntimeException('注册赠送点数配置超出允许范围：' . $value);
         }
         return $value;
+    }
+
+    public function inviteRewardMinRoleLevel(): int
+    {
+        $raw = trim($this->get('invite_reward_min_role_level', (string)self::DEFAULT_INVITE_REWARD_MIN_ROLE_LEVEL));
+        if (!preg_match('/^\d+$/', $raw)) {
+            throw new \RuntimeException('邀请奖励最低角色等级配置不是有效整数：' . $raw);
+        }
+
+        $value = (int)$raw;
+        if ($value < self::MIN_INVITE_REWARD_MIN_ROLE_LEVEL || $value > self::MAX_INVITE_REWARD_MIN_ROLE_LEVEL) {
+            throw new \RuntimeException('邀请奖励最低角色等级配置超出允许范围：' . $value);
+        }
+        return $value;
+    }
+
+    public function paymentActiveProvider(): string
+    {
+        $legacyEnabled = in_array(strtolower(trim(app_env('RONNYPAY_ORDER_ENABLED', '0'))), ['1', 'true', 'yes', 'on'], true);
+        $provider = trim($this->get(
+            'payment_active_provider',
+            $legacyEnabled ? self::PAYMENT_PROVIDER_RONNYPAY : self::PAYMENT_PROVIDER_DISABLED
+        ));
+        if (!in_array($provider, self::PAYMENT_PROVIDERS, true)) {
+            throw new \RuntimeException('支付方式配置错误：' . $provider);
+        }
+        return $provider;
+    }
+
+    public function paymentRechargeAmountVnd(): int
+    {
+        $raw = trim($this->get('payment_recharge_amount_vnd', (string)self::DEFAULT_PAYMENT_RECHARGE_AMOUNT_VND));
+        if (!preg_match('/^\d+$/', $raw)) {
+            throw new \RuntimeException('充值金额配置不是有效的VND整数：' . $raw);
+        }
+
+        $value = (int)$raw;
+        if ($value < self::MIN_PAYMENT_RECHARGE_AMOUNT_VND || $value > self::MAX_PAYMENT_RECHARGE_AMOUNT_VND) {
+            throw new \RuntimeException('充值金额配置超出允许范围：' . $value);
+        }
+        return $value;
+    }
+
+    public function paymentCallbackAllowedIps(): string
+    {
+        return trim($this->get(self::PAYMENT_CALLBACK_ALLOWED_IPS, ''));
     }
 
     public function get(string $name, string $default = ''): string

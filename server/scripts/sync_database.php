@@ -22,6 +22,15 @@ function ensureTableEngine(string $table, string $engine): void
     }
 }
 
+function indexColumns(string $table, string $index): array
+{
+    $rows = Db::select(
+        'SELECT COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? ORDER BY SEQ_IN_INDEX',
+        [$table, $index]
+    );
+    return array_map(static fn ($row): string => (string)$row->COLUMN_NAME, $rows);
+}
+
 try {
     $schema = Db::schema();
 
@@ -242,6 +251,7 @@ try {
             $table->string('status', 32)->comment('订单状态');
             $table->text('pay_url')->nullable()->comment('支付链接');
             $table->string('country', 8)->default('VN')->comment('国家');
+            $table->string('product_code', 64)->default('')->comment('支付产品编码快照');
             $table->string('wallet_type', 64)->default('')->comment('钱包类型');
             $table->string('bank_code', 64)->default('')->comment('银行或通道编码');
             $table->string('utr', 128)->default('')->comment('支付参考号');
@@ -255,7 +265,7 @@ try {
             $table->dateTime('created_at')->useCurrent()->comment('创建时间');
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate()->comment('更新时间');
             $table->unique('merchant_order', 'uniq_payment_merchant_order');
-            $table->unique('provider_order_number', 'uniq_payment_provider_order');
+            $table->unique(['provider', 'provider_order_number'], 'uniq_payment_provider_order');
             $table->unique(['user_id', 'idempotency_key'], 'uniq_payment_user_idempotency');
             $table->index(['status', 'next_query_at'], 'idx_payment_reconcile');
             $table->index(['user_id', 'created_at'], 'idx_payment_user_created');
@@ -264,6 +274,21 @@ try {
     if (!$schema->hasColumn('ga_payment_orders', 'bank_account')) {
         $schema->table('ga_payment_orders', function ($table) {
             $table->longText('bank_account')->nullable()->after('customer_mobile')->comment('付款账号快照；仅新订单必填');
+        });
+    }
+    if (!$schema->hasColumn('ga_payment_orders', 'product_code')) {
+        $schema->table('ga_payment_orders', function ($table) {
+            $table->string('product_code', 64)->default('')->after('country')->comment('支付产品编码快照');
+        });
+    }
+    if (indexColumns('ga_payment_orders', 'uniq_payment_provider_order') !== ['provider', 'provider_order_number']) {
+        if ($schema->hasIndex('ga_payment_orders', 'uniq_payment_provider_order')) {
+            $schema->table('ga_payment_orders', function ($table) {
+                $table->dropUnique('uniq_payment_provider_order');
+            });
+        }
+        $schema->table('ga_payment_orders', function ($table) {
+            $table->unique(['provider', 'provider_order_number'], 'uniq_payment_provider_order');
         });
     }
     ensureTableEngine('ga_payment_orders', 'InnoDB');
@@ -282,6 +307,7 @@ try {
         });
     }
 
+    $legacyRonnyPayEnabled = in_array(strtolower(trim(app_env('RONNYPAY_ORDER_ENABLED', '0'))), ['1', 'true', 'yes', 'on'], true);
     $settings = [
         'third_party_enabled' => ['0', '第三方接口是否启用：0否，1是'],
         'third_party_base_url' => ['', '第三方接口地址'],
@@ -297,6 +323,10 @@ try {
         'facebook_login_enabled' => ['1', '是否允许新增Facebook登录游戏账号：1是，0否'],
         'google_login_enabled' => ['1', '是否允许新增Google登录游戏账号：1是，0否'],
         'registration_reward_points' => ['1', '新用户注册赠送配额点数，0表示关闭'],
+        'invite_reward_min_role_level' => ['30', '邀请奖励最低角色等级，允许1至9999'],
+        'payment_active_provider' => [$legacyRonnyPayEnabled ? 'ronnypay' : 'disabled', '活动支付方式：disabled、ronnypay或mkpay'],
+        'payment_recharge_amount_vnd' => ['149000', '充值套餐金额，VND整数，只影响新订单'],
+        'payment_callback_allowed_ips' => ['', '支付回调来源IP白名单，多个IP可用换行、逗号、分号、空格或竖线分隔，留空不校验'],
         'game_config_visibility_overrides' => ['{}', '游戏配置项用户端可见性相对默认值的覆盖JSON'],
         'auth_verification_mode' => ['security_question', '认证方式：security_question密保问题，email_code邮箱验证码'],
         'smtp_enabled' => ['0', 'SMTP是否启用：0否，1是'],
@@ -307,8 +337,6 @@ try {
         'smtp_encryption' => ['tls', 'SMTP加密方式：tls、ssl、none'],
         'smtp_from_email' => ['', '发件邮箱'],
         'smtp_from_name' => ['Hoa Quán', '发件名称'],
-        'invite_daily_limit' => ['50', '同一邀请人每日邀请奖励上限'],
-        'invite_same_ip_daily_limit' => ['3', '同一邀请人同IP每日邀请奖励风控上限'],
         'game_log_queue_shards' => ['64', '日志队列分片数量，当前代码固定为64'],
         'game_log_writer_count' => [app_env('GAME_LOG_WRITER_COUNT', '8'), '日志写入进程数量，建议1万账号使用8'],
     ];

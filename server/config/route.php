@@ -40,9 +40,11 @@ Route::group('/api', function () {
     Route::get('/me', [app\controller\AuthController::class, 'me']);
     Route::get('/profile', [app\controller\ProfileController::class, 'show']);
     Route::get('/announcements/latest', [app\controller\AnnouncementController::class, 'latest']);
+    Route::get('/recharge/config', [app\controller\RechargeController::class, 'config']);
     Route::post('/recharge/orders', [app\controller\RechargeController::class, 'store']);
     Route::get('/recharge/orders/{merchant_order}', [app\controller\RechargeController::class, 'show']);
-    Route::post('/recharge/ronnypay/notify', [app\controller\RechargeController::class, 'notify']);
+    Route::post('/recharge/ronnypay/notify', [app\controller\RechargeController::class, 'notifyRonnyPay']);
+    Route::post('/recharge/mkpay/notify', [app\controller\RechargeController::class, 'notifyMkPay']);
     Route::get('/game-accounts', [app\controller\GameAccountController::class, 'index']);
     Route::post('/game-accounts', [app\controller\GameAccountController::class, 'store']);
     Route::get('/game-account-validations/{validationId}', [app\controller\GameAccountController::class, 'loginValidation']);

@@ -107,8 +107,8 @@ php start.php status
 - 用户端每次进入游戏配置页都会展示“配置修改流程”提示，提醒先停止程序、修改配置、保存配置、再启动程序；该提示只说明流程，不替代真实保存接口。
 - 用户端个人中心展示邀请码、推广人数、我的点数、邀请链接复制、角色绑定提示、修改密码和交易历史；角色绑定不需要用户手动填写，游戏账号启动成功后自动绑定。卡密兑换、福利卡和售后群未接入真实业务，用户端不展示入口，后端也不暴露不可用接口。
 - 每个 `ga_users` 用户拥有唯一 `invite_code`。邀请链接进入注册页时会携带邀请码；注册只记录邀请关系，不立即发奖励。
-- 邀请奖励触发条件是被邀请的新用户添加游戏账号并启动成功。第三方 `started` 回包确认后，系统自动绑定角色并发放奖励；角色唯一标识只使用 `role_id`，第三方未返回时使用用户填写的 `game_username`，`display_name` 仅用于展示。
-- 邀请奖励为邀请人 `balance + 1` 点，并写入 `ga_user_point_transactions`；同一被邀请用户最多奖励一次，同一个 `role_id` 全平台最多奖励一次，同一邀请人每日奖励上限由 `ga_system_settings.invite_daily_limit` 控制，默认 `50`；同邀请人同 IP 每日奖励风控上限由 `invite_same_ip_daily_limit` 控制，默认 `3`。
+- 邀请奖励必须依次满足：被邀请用户添加游戏账号、服务端收到匹配当前 `request_id/session_id` 的真实 `started` 并成功绑定角色、同一游戏账号在真实 `status.level` 中上报达到后台阈值。`started` 只确认运行与绑定，不再立即发奖；`status` 先到或后到都由同一奖励服务复核。角色唯一标识只使用 `role_id`，第三方未返回时使用用户填写的 `game_username`，`display_name` 仅用于展示。
+- 邀请奖励等级阈值由 `ga_system_settings.invite_reward_min_role_level` 控制，默认 `30`，后台“用户规则配置”允许设置 `1` 至 `9999`。等级只接受 JSON 整数或纯数字字符串；缺失、负数、小数或非数字不触发。奖励为邀请人 `balance + 1` 点并写入 `ga_user_point_transactions`；同一被邀请用户和同一个 `role_id` 均最多奖励一次，不再限制邀请人每日奖励数量或注册 IP。
 - `ga_users.bound_role_id` 持久保存已绑定角色，删除游戏账号不会清除用户已绑定角色；`ga_user_point_transactions` 通过 `uniq_invite_reward_user(type, related_user_id)` 在数据库层限制同一个被邀请账号只能产生一次邀请奖励流水。
 - 用户 `ga_users.balance` 是可分配配额余额。用户给某个游戏账号延期时会立即扣余额并写入 `ga_game_accounts.expire_time`，不依赖账号是否启动；删除账号不退还已分配配额。
 - 游戏账号延期固定使用基础套餐 `10` 点兑换 `11` 天，额外配额 `N` 点增加 `N` 天；总扣点 `10 + N`，总天数 `11 + N`，延期起点为 `max(当前时间, 当前账号 expire_time)`。扣点流水写入 `ga_user_point_transactions(type=quota_consume)`。
@@ -124,10 +124,11 @@ php start.php status
 - 新用户注册赠送点数由 `ga_system_settings.registration_reward_points` 控制，默认 `1`，后台“用户规则配置”允许设置 `0` 至 `1000` 的整数，`0` 表示关闭。仅对配置生效后的新注册用户执行，不补发历史用户。
 - 创建用户、设置初始余额和写入 `ga_user_point_transactions(type=registration_reward)` 在同一事务内完成；任一步失败都会回滚注册。注册赠送归新用户所有，与角色绑定后发给邀请人的 `1` 点邀请奖励相互独立。
 - 登录公告来自后台 `ga_announcements` 的最新启用记录；没有启用公告时用户端不弹窗，不使用前端假公告。
-- 用户端“点数充值”已接入 RonnyPay 正式订单链路，首版固定套餐为 `quota_30`：`30.00` 点、`149000.00 VND`。姓名、手机号和 MoMo 付款账号只写入当前 `ga_payment_orders` 订单快照，不修改用户长期资料；客户端传入的金额和点数不会参与计价。付款账号按字符串原样保存和签名，仅去除首尾空格并校验非空，不限制长度或字符类型。
-- 创建订单使用用户与 `idempotency_key` 唯一约束防止重复下单；创建超时或 RonnyPay `502/503` 保留原商户订单并进入 `unknown`，由 `payment_reconciler` 查单，不自动换单。订单状态固定为 `creating/pending/unknown/success/fail/create_failed`，其中 `success` 不允许回退。
-- RonnyPay 成功回调和主动查单共用同一个事务入账流程：锁定订单和用户、写入 `ga_user_point_transactions(type=recharge)`、增加 `30.00` 点、标记订单入账。`uniq_payment_recharge(type, related_payment_order_id)` 保证一笔支付订单最多入账一次。
-- 用户端同步打开空白支付窗口，下单成功后再跳转到 RonnyPay `pay_url`，避免浏览器拦截；原页面每 3 秒查询本地订单，5 分钟后停止自动轮询并提供手动刷新。临时支付静态页已删除。
+- 用户端“点数充值”支持 MoMoPay（内部 provider=`ronnypay`）和 MkPay 代收，套餐代码固定为 `quota_30`、到账点数固定为 `30.00`；实际支付金额由 `ga_system_settings.payment_recharge_amount_vnd` 配置，默认 `149000 VND`。活动通道来自 `ga_system_settings.payment_active_provider`，后台只允许 `disabled/ronnypay/mkpay` 单选；回调来源白名单来自 `ga_system_settings.payment_callback_allowed_ips`，留空不校验，配置后所有支付回调请求 IP 必须精确命中。通道、金额和白名单修改只影响后续回调入口校验与新订单创建，历史订单仍使用自身 provider 与金额快照回调、查单和入账。
+- 付款人姓名、手机号和付款帐号只写入当前 `ga_payment_orders` 订单快照，不修改用户长期资料。MkPay 下单不发送这三项；RonnyPay 仍按其合同发送。客户端传入的金额和点数不参与计价，付款帐号按字符串保存并保留前导零。
+- 创建订单使用用户与 `idempotency_key` 唯一约束防止重复下单；创建超时保留原商户订单并进入 `unknown`，由 `payment_reconciler` 按订单 provider 查单，不自动换通道或换单。订单状态固定为 `creating/pending/unknown/success/fail/create_failed`，其中 `success` 不允许回退。
+- 两个支付通道的成功回调和主动查单共用同一个事务入账流程：锁定订单和用户、写入 `ga_user_point_transactions(type=recharge)`、增加 `30.00` 点、标记订单入账。`uniq_payment_recharge(type, related_payment_order_id)` 保证一笔支付订单最多入账一次。
+- 用户端创建订单前读取 `GET /api/recharge/config`；停用或配置不完整时不打开支付窗口。下单成功后跳转订单 `pay_url`，原页面每 3 秒查询本地订单，5 分钟后停止自动轮询并提供手动刷新。
 
 ## 本地账号
 
@@ -150,28 +151,31 @@ php start.php status
 - GameAssist 用户后台允许查看、启用/禁用、重置密码和“添加配额”。添加配额只增加产品用户 `ga_users.balance`，必须填写正整数点数，可填写备注；成功后写入 `ga_user_point_transactions(type=admin_grant)` 和 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`。
 - 后台“会员管理 / 配额日志”是只读审计页面，包含“管理员添加记录”和“用户使用记录”两个标签。前者读取 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`，展示哪个管理员给哪个产品用户添加了多少配额；后者读取 `ga_user_point_transactions(type=quota_consume)`，展示用户在什么时间给哪个游戏账号消耗了多少配额。游戏账号删除后流水不删除，页面保留原始账号ID和延期说明并明确标记账号已删除。
 - “配额日志”权限自动跟随“GameAssist用户”菜单权限，不提供独立角色权限开关；`server/scripts/sync_admin.php` 会同步菜单并修正现有角色的关联权限。页面不提供修改、删除、补写或邀请奖励流水展示。
-- 后台“会员管理 / 支付订单”是只读页面，可按状态、用户、商户订单号和 RonnyPay 平台订单号筛选，并允许对非成功订单主动查单。后台不提供手工改成功、补点或删除订单；手机号在列表中脱敏展示。
+- 后台“会员管理 / 支付订单”是只读页面，可按支付通道、状态、用户、商户订单号和平台订单号筛选，并允许对非成功订单按其原 provider 主动查单。后台不提供手工改成功、补点或删除订单；手机号和付款帐号在列表中脱敏展示。
+- 后台“支付方式配置”同时维护活动支付通道、`quota_30` 套餐的 VND 整数金额和支付回调白名单 IP。金额只允许 `1` 至 `999999999`；多个白名单 IP 可用换行、逗号、分号、空格或竖线分隔，只允许精确 IPv4/IPv6 地址，不支持 CIDR。保存通道、金额和白名单在同一数据库事务中完成，选择配置不完整的通道或填写非法 IP 会明确拒绝。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
 - 后台“运行服务配置”负责编辑运行服务启用状态、每个用户最多游戏账号数、连接池 Token 和我方 WebSocket 地址；账号数量限制独立于运行服务启用开关。签名密钥为选填，仅用于历史 HTTP 接口签名校验。后台“脚本连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
-- 后台“用户规则配置”维护新用户注册赠送点数；修改后只影响后续注册，已有用户余额和历史流水不会被重算。
+- 后台“用户规则配置”维护新用户注册赠送点数和邀请奖励最低角色等级。注册赠送修改后只影响后续注册；邀请等级阈值立即作用于后续真实 `status`，不会扫描历史数据或撤销已发奖励。
 
-## RonnyPay 配置
+## 支付通道配置
 
 - 私钥必须在本机或服务器离线生成并放在仓库外，只把公钥交给 RonnyPay。仓库、日志、后台和用户接口都不能保存或返回私钥、回调密钥。
 - 可使用 `php server/scripts/generate_ronnypay_keypair.php D:\\GameAssist-secrets\\ronnypay 2048` 离线生成；脚本拒绝覆盖已有文件。RSA 位数和 PEM 格式仍须先由 RonnyPay 确认。
-- 正式环境变量为 `RONNYPAY_ORDER_ENABLED`、`RONNYPAY_MERCHANT_ID`、`RONNYPAY_PRIVATE_KEY_PATH`、`RONNYPAY_CALLBACK_SECRET`、`RONNYPAY_NOTIFY_URL`、`RONNYPAY_WALLET_TYPE`、`RONNYPAY_BANK_CODE`；`RONNYPAY_BASE_URL` 默认 `https://ronnypay.com`。
+- RonnyPay 正式环境变量为 `RONNYPAY_MERCHANT_ID`、`RONNYPAY_PRIVATE_KEY_PATH`、`RONNYPAY_CALLBACK_SECRET`、`RONNYPAY_NOTIFY_URL`、`RONNYPAY_WALLET_TYPE`、`RONNYPAY_BANK_CODE`；`RONNYPAY_BASE_URL` 默认 `https://ronnypay.com`。旧 `RONNYPAY_ORDER_ENABLED` 仅在首次补建 `payment_active_provider` 时迁移旧启用状态，之后不再作为新订单开关。
 - 当前 MoMoPay 正式通道按 RonnyPay 最新文档使用 `RONNYPAY_WALLET_TYPE=1`、`RONNYPAY_BANK_CODE=971025`；两项与用户填写的 `bank_account` 会同时参与下单请求和 RSA 签名，不能留空。用户界面只显示 `MoMoPay`，不暴露内部通道值。
-- 越南通道要求 `total_fee` 为整数字符串：订单表和用户页面仍使用规范金额 `149000.00`，发给 RonnyPay 并参与 RSA 签名的值固定为 `149000`；回调和查单金额核对兼容两种等值格式。
-- 上线配置和双方验收完成前必须保持 `RONNYPAY_ORDER_ENABLED=0`。关闭开关只拒绝新下单，不阻断已创建订单的回调、主动查单和补偿进程。
+- 越南通道要求 provider 金额为 VND 整数字符串。服务端创建新订单时只读取一次 `payment_recharge_amount_vnd`，订单表和用户页面保存两位小数格式，例如配置 `149000` 时保存 `149000.00`；发给 RonnyPay/MkPay 的值为 `149000`。回调和查单始终与订单自身金额快照核对，幂等重试不会因后台改价而改变原订单金额。
+- `payment_callback_allowed_ips` 为空时支付回调保持原有验签和订单校验流程；配置后 RonnyPay 与 MkPay 回调都会先读取请求真实 IP 并要求精确命中白名单。白名单配置本身格式异常会返回回调处理失败并写错误日志，不静默放行；来源 IP 不在白名单会返回失败并写拒绝日志。
+- MkPay 使用 `MKPAY_BASE_URL`、`MKPAY_MERCHANT_ID`、`MKPAY_MERCHANT_SECRET`、`MKPAY_PRODUCT_CODE`、`MKPAY_NOTIFY_URL`。密钥只写服务器 `.env`，不得进入仓库、数据库、后台响应或日志。当前 PAY 产品码为 `VN01`，请求不发送 `X-Country`、`sender_info` 或付款资料。
+- MkPay 下单固定调用 `/api/v1/pay`，请求 JSON 只含 `mch_id/amount/merchant_order_id/product_code/notify_url`；查单使用 `/api/v1/query-by-moid`。请求以实际 JSON 原文计算 `HMAC-SHA256(timestamp + body)`，回调地址为 `POST /api/recharge/mkpay/notify`。
 - 下单请求按 ASCII 字段名排序，排除空值和 `sign`，使用带尾部 `&` 的 `key=value&` 原文做 RSA-SHA256，再转换成无 padding 的 Base64URL。回调按排序后的 `key=value` 连接并追加 `&key=回调密钥`，计算小写 MD5并恒定时间比较。
 - 回调地址为 `POST /api/recharge/ronnypay/notify`，验签和订单、平台单号、商户号、金额核对全部成功后才返回纯文本 `success`。非法签名、未知订单、金额或订单号不一致会明确失败并写脱敏日志。
-- `payment_reconciler` 每 60 秒最多查询 50 笔 `pending/unknown`，按 1、5、15、30、60 分钟退避。只有 RonnyPay 的真实回调或查单结果能把订单改为支付成功。
+- `payment_reconciler` 每 60 秒最多查询 50 笔 `pending/unknown`，按 1、5、15、30、60 分钟退避。只有订单对应 provider 的真实回调或查单结果能把订单改为支付成功；停用当前通道不会阻断历史订单。
 
 ## 邀请与个人中心
 
 - 个人中心接口：`GET /api/profile`，需要 Bearer token，返回用户信息、邀请码、邀请链接、推广人数、角色绑定状态和最近点数流水。
 - 角色绑定没有用户端手动接口。用户添加游戏账号并启动成功后，GatewayWorker 收到第三方脚本 `started` 回包，会自动用 `role_id` 绑定当前用户；第三方未返回 `role_id` 时使用用户填写的游戏账号。
-- 自动绑定成功后，如果当前用户来自有效邀请、该用户未触发过邀请奖励、该 `role_id` 未奖励过且邀请人当天未超过上限，系统即时给邀请人增加 `1` 点配额并记录流水。
+- 自动绑定成功后不会立即发奖。只有绑定账号保持 `running + desired_running=1`，其 `third_party_account_id` 与用户 `bound_role_id` 完全一致，并在真实 `status.level` 达到后台阈值时，系统才给有效邀请人增加 `1` 点配额并记录流水。历史已绑定但未奖励的用户不会批量补发，下一次真实达标 `status` 可以触发。
 
 ## 用户认证与找回密码
 

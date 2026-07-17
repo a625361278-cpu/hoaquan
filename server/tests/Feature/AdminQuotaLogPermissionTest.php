@@ -3,18 +3,18 @@
 namespace tests\Feature;
 
 use PHPUnit\Framework\TestCase;
+use plugin\admin\app\model\Role;
 use plugin\admin\app\service\GameAssistQuotaLogPermission;
-use support\Db;
 
 class AdminQuotaLogPermissionTest extends TestCase
 {
     public function testQuotaLogPermissionFollowsGameAssistUserPermission(): void
     {
-        $connection = Db::connection();
+        $connection = (new Role())->getConnection();
         $connection->beginTransaction();
 
         try {
-            [$userRuleId, $quotaLogRuleId] = $this->ensureRules();
+            [$userRuleId, $quotaLogRuleId] = $this->ensureRules($connection);
 
             $withUser = GameAssistQuotaLogPermission::normalizeRuleString('999999,' . $userRuleId);
             $withoutUser = GameAssistQuotaLogPermission::normalizeRuleString('999999,' . $quotaLogRuleId);
@@ -29,20 +29,20 @@ class AdminQuotaLogPermissionTest extends TestCase
 
     public function testSyncExistingRolesAddsAndRemovesDerivedPermission(): void
     {
-        $connection = Db::connection();
+        $connection = (new Role())->getConnection();
         $connection->beginTransaction();
 
         try {
-            [$userRuleId, $quotaLogRuleId] = $this->ensureRules();
+            [$userRuleId, $quotaLogRuleId] = $this->ensureRules($connection);
             $now = date('Y-m-d H:i:s');
-            $withUserRoleId = (int)Db::table('wa_roles')->insertGetId([
+            $withUserRoleId = (int)$connection->table('wa_roles')->insertGetId([
                 'name' => 'quota-with-user-' . bin2hex(random_bytes(3)),
                 'rules' => (string)$userRuleId,
                 'created_at' => $now,
                 'updated_at' => $now,
                 'pid' => 1,
             ]);
-            $withoutUserRoleId = (int)Db::table('wa_roles')->insertGetId([
+            $withoutUserRoleId = (int)$connection->table('wa_roles')->insertGetId([
                 'name' => 'quota-without-user-' . bin2hex(random_bytes(3)),
                 'rules' => (string)$quotaLogRuleId,
                 'created_at' => $now,
@@ -52,8 +52,8 @@ class AdminQuotaLogPermissionTest extends TestCase
 
             GameAssistQuotaLogPermission::syncExistingRoles();
 
-            $withUserRules = explode(',', (string)Db::table('wa_roles')->where('id', $withUserRoleId)->value('rules'));
-            $withoutUserRules = explode(',', (string)Db::table('wa_roles')->where('id', $withoutUserRoleId)->value('rules'));
+            $withUserRules = explode(',', (string)$connection->table('wa_roles')->where('id', $withUserRoleId)->value('rules'));
+            $withoutUserRules = explode(',', (string)$connection->table('wa_roles')->where('id', $withoutUserRoleId)->value('rules'));
             $this->assertContains((string)$quotaLogRuleId, $withUserRules);
             $this->assertNotContains((string)$quotaLogRuleId, $withoutUserRules);
         } finally {
@@ -61,13 +61,13 @@ class AdminQuotaLogPermissionTest extends TestCase
         }
     }
 
-    private function ensureRules(): array
+    private function ensureRules($connection): array
     {
-        $userRuleId = Db::table('wa_rules')->where('key', GameAssistQuotaLogPermission::USER_RULE_KEY)->value('id');
-        $quotaLogRuleId = Db::table('wa_rules')->where('key', GameAssistQuotaLogPermission::QUOTA_LOG_RULE_KEY)->value('id');
+        $userRuleId = $connection->table('wa_rules')->where('key', GameAssistQuotaLogPermission::USER_RULE_KEY)->value('id');
+        $quotaLogRuleId = $connection->table('wa_rules')->where('key', GameAssistQuotaLogPermission::QUOTA_LOG_RULE_KEY)->value('id');
         $now = date('Y-m-d H:i:s');
         if (!$userRuleId) {
-            $userRuleId = Db::table('wa_rules')->insertGetId([
+            $userRuleId = $connection->table('wa_rules')->insertGetId([
                 'title' => 'GameAssist用户',
                 'icon' => '',
                 'key' => GameAssistQuotaLogPermission::USER_RULE_KEY,
@@ -80,7 +80,7 @@ class AdminQuotaLogPermissionTest extends TestCase
             ]);
         }
         if (!$quotaLogRuleId) {
-            $quotaLogRuleId = Db::table('wa_rules')->insertGetId([
+            $quotaLogRuleId = $connection->table('wa_rules')->insertGetId([
                 'title' => '配额日志',
                 'icon' => '',
                 'key' => GameAssistQuotaLogPermission::QUOTA_LOG_RULE_KEY,

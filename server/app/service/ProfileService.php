@@ -10,7 +10,6 @@ use support\Db;
 
 class ProfileService
 {
-    private const INVITE_REWARD_AMOUNT = '1.00';
     private const ROLE_ID_PATTERN = '/^[^\p{C}\s]{1,128}$/u';
 
     public function __construct(
@@ -36,7 +35,7 @@ class ProfileService
                 'code' => $inviteCode,
                 'link' => $this->buildInviteLink($origin, $inviteCode),
                 'invited_count' => $this->rewardedInviteCount($userId),
-                'daily_limit' => $this->inviteDailyLimit(),
+                'min_role_level' => $this->settings->inviteRewardMinRoleLevel(),
             ],
             'role_binding' => [
                 'role_id' => $user['bound_role_id'] ?? null,
@@ -56,7 +55,7 @@ class ProfileService
         return $this->bindRoleForUser($userId, $this->startedRoleId($account, $payload));
     }
 
-    private function bindRoleForUser(int $userId, string $roleId, string $ipAddress = ''): array
+    private function bindRoleForUser(int $userId, string $roleId): array
     {
         $roleId = trim($roleId);
         if (!preg_match(self::ROLE_ID_PATTERN, $roleId)) {
@@ -78,10 +77,7 @@ class ProfileService
             throw new ApiException($this->t('api.profile.role_used'), 409);
         }
         $now = date('Y-m-d H:i:s');
-        $rewarded = false;
-        $rewardMessage = '';
-
-        Db::connection()->transaction(function () use ($userId, $roleId, $ipAddress, $now, &$rewarded, &$rewardMessage) {
+        Db::connection()->transaction(function () use ($userId, $roleId, $now) {
             $updated = Db::table('ga_users')
                 ->where('id', $userId)
                 ->whereNull('bound_role_id')
@@ -94,65 +90,6 @@ class ProfileService
             if ($updated !== 1) {
                 throw new ApiException($this->t('api.profile.role_already_bound'), 409);
             }
-
-            $freshUser = $this->requireUser($userId);
-            $inviterId = (int)($freshUser['invited_by_user_id'] ?? 0);
-            if ($inviterId <= 0 || !empty($freshUser['invite_rewarded_at'])) {
-                return;
-            }
-            if ($this->roleRewardedBefore($roleId)) {
-                return;
-            }
-            if ($inviterId === $userId) {
-                $rewardMessage = $this->t('api.profile.self_invite_ignored');
-                return;
-            }
-            $rewardIpAddress = trim($ipAddress) ?: (string)($freshUser['invite_registered_ip'] ?? '');
-            if ($this->todayInviteRewardCount($inviterId) >= $this->inviteDailyLimit()) {
-                $rewardMessage = $this->t('api.profile.invite_daily_limit_reached');
-                return;
-            }
-            if ($rewardIpAddress !== '' && $this->todayInviteRewardCountByIp($inviterId, $rewardIpAddress) >= $this->inviteSameIpDailyLimit()) {
-                $rewardMessage = $this->t('api.profile.invite_ip_risk_blocked');
-                return;
-            }
-
-            $inviter = $this->users->findActiveById($inviterId);
-            if (!$inviter) {
-                $rewardMessage = $this->t('api.profile.inviter_not_found');
-                return;
-            }
-
-            Db::table('ga_users')
-                ->where('id', $inviterId)
-                ->update([
-                    'balance' => Db::raw('balance + 1'),
-                    'updated_at' => $now,
-                ]);
-
-            $balanceAfter = (string)(Db::table('ga_users')->where('id', $inviterId)->value('balance') ?? '0.00');
-            Db::table('ga_user_point_transactions')->insert([
-                'user_id' => $inviterId,
-                'type' => 'invite_reward',
-                'amount' => self::INVITE_REWARD_AMOUNT,
-                'balance_after' => $balanceAfter,
-                'description' => $this->t('api.profile.invite_reward_description', [
-                    'account' => (string)$freshUser['account'],
-                    'role' => $roleId,
-                ]),
-                'related_user_id' => $userId,
-                'related_role_id' => $roleId,
-                'ip_address' => $rewardIpAddress,
-                'created_at' => $now,
-            ]);
-
-            Db::table('ga_users')
-                ->where('id', $userId)
-                ->update([
-                    'invite_rewarded_at' => $now,
-                    'updated_at' => $now,
-                ]);
-            $rewarded = true;
         });
 
         return ApiResponse::success([
@@ -160,8 +97,8 @@ class ProfileService
                 'role_id' => $roleId,
                 'bound_at' => $now,
             ],
-            'rewarded' => $rewarded,
-            'reward_message' => $rewardMessage,
+            'rewarded' => false,
+            'reward_message' => '',
         ], $this->t('api.profile.role_bind_success'));
     }
 
@@ -236,45 +173,6 @@ class ProfileService
             ->where('bound_role_id', $roleId)
             ->where('id', '<>', $userId)
             ->exists();
-    }
-
-    private function roleRewardedBefore(string $roleId): bool
-    {
-        return Db::table('ga_user_point_transactions')
-            ->where('type', 'invite_reward')
-            ->where('related_role_id', $roleId)
-            ->exists();
-    }
-
-    private function todayInviteRewardCount(int $inviterId): int
-    {
-        return Db::table('ga_user_point_transactions')
-            ->where('user_id', $inviterId)
-            ->where('type', 'invite_reward')
-            ->where('created_at', '>=', date('Y-m-d 00:00:00'))
-            ->count();
-    }
-
-    private function todayInviteRewardCountByIp(int $inviterId, string $ipAddress): int
-    {
-        return Db::table('ga_user_point_transactions')
-            ->where('user_id', $inviterId)
-            ->where('type', 'invite_reward')
-            ->where('ip_address', trim($ipAddress))
-            ->where('created_at', '>=', date('Y-m-d 00:00:00'))
-            ->count();
-    }
-
-    private function inviteDailyLimit(): int
-    {
-        $limit = (int)$this->settings->get('invite_daily_limit', '50');
-        return max(1, $limit);
-    }
-
-    private function inviteSameIpDailyLimit(): int
-    {
-        $limit = (int)$this->settings->get('invite_same_ip_daily_limit', '3');
-        return max(1, $limit);
     }
 
     private function buildInviteLink(string $origin, string $inviteCode): string

@@ -10,7 +10,30 @@ use support\Db;
 
 class ProfileServiceInviteTest extends TestCase
 {
-    public function testStartedAccountOnlyRewardsInvitationOnceForSameUser(): void
+    public function testProfileInviteReturnsMinimumRoleLevelWithoutLegacyDailyLimit(): void
+    {
+        $connection = Db::connection();
+        $connection->beginTransaction();
+
+        try {
+            [$inviterId] = $this->createInvitePair('profile_threshold');
+            $settings = new class extends SystemSettingService {
+                public function inviteRewardMinRoleLevel(): int
+                {
+                    return 42;
+                }
+            };
+
+            $summary = (new ProfileService(new DbUserRepository(), $settings))->summary($inviterId, 'https://example.com');
+
+            $this->assertSame(42, $summary['data']['invite']['min_role_level']);
+            $this->assertArrayNotHasKey('daily_limit', $summary['data']['invite']);
+        } finally {
+            $connection->rollBack();
+        }
+    }
+
+    public function testStartedAccountOnlyBindsRoleAndDoesNotRewardInvitation(): void
     {
         $connection = Db::connection();
         $connection->beginTransaction();
@@ -57,10 +80,10 @@ class ProfileServiceInviteTest extends TestCase
             $first = $service->bindStartedAccount($account, $payload);
             $second = $service->bindStartedAccount($account, $payload);
 
-            $this->assertTrue($first['data']['rewarded']);
+            $this->assertFalse($first['data']['rewarded']);
             $this->assertFalse($second['data']['rewarded']);
-            $this->assertSame('1.00', (string)Db::table('ga_users')->where('id', $inviterId)->value('balance'));
-            $this->assertSame(1, Db::table('ga_user_point_transactions')->where('user_id', $inviterId)->where('type', 'invite_reward')->count());
+            $this->assertSame('0.00', (string)Db::table('ga_users')->where('id', $inviterId)->value('balance'));
+            $this->assertSame(0, Db::table('ga_user_point_transactions')->where('user_id', $inviterId)->where('type', 'invite_reward')->count());
         } finally {
             $connection->rollBack();
         }
@@ -85,8 +108,8 @@ class ProfileServiceInviteTest extends TestCase
 
             $boundRoleId = (string)Db::table('ga_users')->where('id', $inviteeId)->value('bound_role_id');
             $this->assertSame('player_' . $suffix . '@example.com', $boundRoleId);
-            $this->assertTrue($result['data']['rewarded']);
-            $this->assertSame('1.00', (string)Db::table('ga_users')->where('id', $inviterId)->value('balance'));
+            $this->assertFalse($result['data']['rewarded']);
+            $this->assertSame('0.00', (string)Db::table('ga_users')->where('id', $inviterId)->value('balance'));
         } finally {
             $connection->rollBack();
         }
@@ -109,10 +132,11 @@ class ProfileServiceInviteTest extends TestCase
             $first = $service->bindStartedAccount($account, ['role_id' => 'role_a_' . $suffix]);
             $second = $service->bindStartedAccount($account, ['role_id' => 'role_b_' . $suffix]);
 
-            $this->assertTrue($first['data']['rewarded']);
+            $this->assertFalse($first['data']['rewarded']);
             $this->assertFalse($second['data']['rewarded']);
-            $this->assertSame('1.00', (string)Db::table('ga_users')->where('id', $inviterId)->value('balance'));
-            $this->assertSame(1, Db::table('ga_user_point_transactions')->where('user_id', $inviterId)->where('type', 'invite_reward')->count());
+            $this->assertSame('role_a_' . $suffix, (string)Db::table('ga_users')->where('id', $inviteeId)->value('bound_role_id'));
+            $this->assertSame('0.00', (string)Db::table('ga_users')->where('id', $inviterId)->value('balance'));
+            $this->assertSame(0, Db::table('ga_user_point_transactions')->where('user_id', $inviterId)->where('type', 'invite_reward')->count());
         } finally {
             $connection->rollBack();
         }
@@ -146,8 +170,8 @@ class ProfileServiceInviteTest extends TestCase
                 $this->assertSame('该角色ID已被其他账号绑定', $exception->getMessage());
             }
 
-            $this->assertTrue($first['data']['rewarded']);
-            $this->assertSame('1.00', (string)Db::table('ga_users')->where('id', $firstInviterId)->value('balance'));
+            $this->assertFalse($first['data']['rewarded']);
+            $this->assertSame('0.00', (string)Db::table('ga_users')->where('id', $firstInviterId)->value('balance'));
             $this->assertSame('0.00', (string)Db::table('ga_users')->where('id', $secondInviterId)->value('balance'));
         } finally {
             $connection->rollBack();

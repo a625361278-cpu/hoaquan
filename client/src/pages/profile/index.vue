@@ -155,7 +155,7 @@ function goBack() {
 function showInviteHelp() {
   uni.showModal({
     title: t('client.profile.invite_count'),
-    content: t('client.profile.invite_code_help'),
+    content: t('client.profile.invite_code_help', { level: invite.value.min_role_level }),
     showCancel: false,
   });
 }

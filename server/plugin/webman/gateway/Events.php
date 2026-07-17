@@ -13,6 +13,7 @@ use app\service\GameAccountTaskStateService;
 use app\service\GameLogMessage;
 use app\service\GameLogQueue;
 use app\service\GatewayThirdPartyScriptRuntime;
+use app\service\InviteRewardService;
 use app\service\ProfileService;
 use app\service\RedisThirdPartyScriptConnectionStore;
 use app\service\SystemSettingService;
@@ -252,15 +253,21 @@ class Events
             'auto_restart_last_error' => '',
         ]);
 
+        $roleBound = false;
         try {
             (new ProfileService(new DbUserRepository(), new SystemSettingService()))->bindStartedAccount($updated, array_merge($payload, [
                 'role_id' => $roleId,
             ]));
+            $roleBound = true;
         } catch (Throwable $e) {
             Log::error('Failed to bind role after script started', ['account_id' => $accountId, 'error' => $e->getMessage()]);
             self::appendLogLines($accountId, [GameLogMessage::localized('ERROR', 'client.logs.system.role_bind_failed', [
                 'error' => $e->getMessage(),
             ])], $sessionId);
+        }
+        if ($roleBound) {
+            $resources = self::resources()->resourcesForAccount($accountId);
+            self::tryGrantInviteReward($accountId, $resources['level'] ?? null, 'started');
         }
         self::appendLogLines($accountId, [GameLogMessage::localized('INFO', 'client.logs.system.game_started')], $sessionId);
     }
@@ -398,11 +405,64 @@ class Events
 
     private static function saveStatusPayload(int $accountId, array $payload): void
     {
-        $result = self::resources()->saveStatusPayload($accountId, $payload);
+        $reportedLevel = self::reportedLevel($payload);
+        $result = self::resources()->saveStatusPayload($accountId, self::withoutStructuredLevel($payload));
         if (($result['unknown_keys'] ?? []) !== []) {
             Log::warning('Third-party status contains unknown resource fields', [
                 'account_id' => $accountId,
                 'unknown_keys' => $result['unknown_keys'],
+            ]);
+        }
+        self::tryGrantInviteReward($accountId, $reportedLevel, 'status');
+    }
+
+    private static function reportedLevel(array $payload): mixed
+    {
+        $source = $payload['resources'] ?? $payload;
+        return is_array($source) && array_key_exists('level', $source) ? $source['level'] : null;
+    }
+
+    private static function withoutStructuredLevel(array $payload): array
+    {
+        if (isset($payload['resources']) && is_array($payload['resources'])) {
+            if (isset($payload['resources']['level'])
+                && (is_array($payload['resources']['level']) || is_object($payload['resources']['level']))) {
+                unset($payload['resources']['level']);
+            }
+            return $payload;
+        }
+        if (isset($payload['level']) && (is_array($payload['level']) || is_object($payload['level']))) {
+            unset($payload['level']);
+        }
+        return $payload;
+    }
+
+    private static function tryGrantInviteReward(int $accountId, mixed $reportedLevel, string $source): void
+    {
+        try {
+            $result = (new InviteRewardService())->tryGrantForAccountLevel($accountId, $reportedLevel);
+            if (($result['rewarded'] ?? false) === true) {
+                Log::info('Invite reward granted from real game status', [
+                    'account_id' => $accountId,
+                    'source' => $source,
+                    'level' => $result['level'],
+                    'min_level' => $result['min_level'],
+                ]);
+                return;
+            }
+            if (($result['reason'] ?? '') === 'level_invalid') {
+                Log::warning('Third-party status contains invalid role level', [
+                    'account_id' => $accountId,
+                    'source' => $source,
+                    'level_type' => get_debug_type($reportedLevel),
+                    'level_value' => is_scalar($reportedLevel) ? substr((string)$reportedLevel, 0, 64) : '',
+                ]);
+            }
+        } catch (Throwable $e) {
+            Log::error('Failed to evaluate invite reward', [
+                'account_id' => $accountId,
+                'source' => $source,
+                'error' => $e->getMessage(),
             ]);
         }
     }

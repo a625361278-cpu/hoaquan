@@ -73,7 +73,7 @@
           {{ mode === 'login' ? t('client.auth.no_account') : t('client.auth.already_has_account') }}
         </text>
         <view v-if="inviteCode" class="invite-tip">
-          <text>{{ t('client.profile.invite_code_help') }}</text>
+          <text>{{ t('client.profile.invite_registration_help') }}</text>
           <text class="invite-code">{{ inviteCode }}</text>
         </view>
         <view class="language-switch">

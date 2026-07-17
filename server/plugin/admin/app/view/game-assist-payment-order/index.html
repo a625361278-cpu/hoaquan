@@ -20,6 +20,7 @@
                     </select>
                 </div>
             </div>
+            <div class="layui-form-item"><label class="layui-form-label"><?=admin_t('admin.payment_orders.provider')?></label><div class="layui-input-block"><select name="provider"><option value=""><?=admin_t('admin.common.all')?></option><option value="ronnypay">MoMoPay</option><option value="mkpay">MkPay</option></select></div></div>
             <div class="layui-form-item"><label class="layui-form-label"><?=admin_t('admin.payment_orders.user')?></label><div class="layui-input-block"><input name="user" class="layui-input"></div></div>
             <div class="layui-form-item"><label class="layui-form-label"><?=admin_t('admin.payment_orders.merchant_order')?></label><div class="layui-input-block"><input name="merchant_order" class="layui-input"></div></div>
             <div class="layui-form-item"><label class="layui-form-label"><?=admin_t('admin.payment_orders.provider_order')?></label><div class="layui-input-block"><input name="provider_order_number" class="layui-input"></div></div>
@@ -40,10 +41,11 @@ layui.use(['table','form','popup'], function(){
     table.render({elem:'#data-table',id:'data-table',url:'/app/admin/game-assist-payment-order/select',page:{limit:20,limits:[20,50,100]},toolbar:'#toolbar',defaultToolbar:['filter','exports'],skin:'line',size:'lg',cols:[[
         {field:'id',title:'ID',width:80,sort:true},{field:'created_at',title:'<?=admin_t('admin.payment_orders.created_at')?>',width:170},
         {title:'<?=admin_t('admin.payment_orders.user')?>',minWidth:170,templet:d=>layui.util.escape((d.user_account||('#'+d.user_id))+(d.user_nickname?' / '+d.user_nickname:''))},
+        {field:'provider',title:'<?=admin_t('admin.payment_orders.provider')?>',width:110,templet:d=>d.provider==='ronnypay'?'MoMoPay':(d.provider==='mkpay'?'MkPay':layui.util.escape(d.provider||''))},
         {field:'merchant_order',title:'<?=admin_t('admin.payment_orders.merchant_order')?>',minWidth:250},{field:'provider_order_number',title:'<?=admin_t('admin.payment_orders.provider_order')?>',minWidth:210},
         {field:'status',title:'<?=admin_t('admin.payment_orders.status')?>',width:120},{field:'total_fee',title:'<?=admin_t('admin.payment_orders.amount')?>',width:130},
         {field:'points',title:'<?=admin_t('admin.payment_orders.points')?>',width:100},{field:'customer_name',title:'<?=admin_t('admin.payment_orders.payer')?>',width:130},
-        {field:'customer_mobile_masked',title:'<?=admin_t('admin.payment_orders.mobile')?>',width:150},{field:'credited_at',title:'<?=admin_t('admin.payment_orders.credited_at')?>',width:170},
+        {field:'customer_mobile_masked',title:'<?=admin_t('admin.payment_orders.mobile')?>',width:150},{field:'bank_account_masked',title:'<?=admin_t('admin.payment_orders.payment_account')?>',width:150},{field:'credited_at',title:'<?=admin_t('admin.payment_orders.credited_at')?>',width:170},
         {field:'last_error_message',title:'<?=admin_t('admin.payment_orders.last_error')?>',minWidth:220},{title:'<?=admin_t('admin.common.operation')?>',toolbar:'#row-tools',fixed:'right',width:110}
     ]]});
     form.on('submit(query)', data=>{where=data.field;table.reload('data-table',{page:{curr:1},where});return false;});
