@@ -11,11 +11,13 @@
       </view>
     </view>
 
+    <!-- User-side language switching is temporarily hidden; client locale is locked to Vietnamese in utils/i18n.js.
     <view class="language-switch">
       <text :class="['language-option', currentLocale === 'zh_CN' ? 'active' : '']" @click="changeLocale('zh_CN')">{{ t('client.language.zh_CN') }}</text>
       <text class="language-divider">/</text>
       <text :class="['language-option', currentLocale === 'vi' ? 'active' : '']" @click="changeLocale('vi')">{{ t('client.language.vi') }}</text>
     </view>
+    -->
 
     <view class="account-grid">
       <view v-for="item in gameAccounts" :key="item.id" class="account-card">
@@ -238,14 +240,16 @@
           <text class="recharge-pending">{{ recharge.channel || t('client.recharge.channel_disabled') }}</text>
         </view>
 
+        <!-- Payer info is temporarily hidden. MkPay does not need these fields; RonnyPay still validates them server-side if enabled.
         <view v-if="!recharge.order" class="recharge-payer-form">
           <text class="recharge-section-title">{{ t('client.recharge.payer_info') }}</text>
           <input v-model="recharge.customerName" class="recharge-input" :placeholder="t('client.recharge.customer_name')" maxlength="128" />
           <input v-model="recharge.customerMobile" class="recharge-input" :placeholder="t('client.recharge.customer_mobile')" maxlength="64" />
           <input v-model="recharge.bankAccount" class="recharge-input" :placeholder="t('client.recharge.bank_account')" maxlength="-1" />
         </view>
+        -->
 
-        <view v-else class="recharge-order-status">
+        <view v-if="recharge.order" class="recharge-order-status">
           <text>{{ t('client.recharge.merchant_order') }}：{{ recharge.order.merchant_order }}</text>
           <text>{{ t('client.recharge.order_status') }}：{{ rechargeStatusText }}</text>
           <text v-if="recharge.order.last_error" class="recharge-error">{{ recharge.order.last_error }}</text>
@@ -269,13 +273,20 @@
           <text class="announcement-close" @click="closeAnnouncement">×</text>
         </view>
         <view class="announcement-content">
-          <text
+          <view
             v-for="(block, index) in announcement.blocks"
             :key="index"
             :class="['announcement-line', `announcement-${block.color || 'default'}`]"
           >
-            {{ block.text }}
-          </text>
+            <text
+              v-for="(segment, segmentIndex) in announcementSegments(block)"
+              :key="`${index}-${segmentIndex}`"
+              :class="segment.type === 'link' ? 'announcement-link' : ''"
+              @click="segment.type === 'link' && openAnnouncementLink(segment.url)"
+            >
+              {{ segment.text }}
+            </text>
+          </view>
         </view>
       </view>
     </view>
@@ -288,7 +299,7 @@ import { onHide, onShow, onUnload } from '@dcloudio/uni-app';
 import { useI18n } from 'vue-i18n';
 import { API_BASE_URL, CREDENTIAL_VALIDATION_PENDING_KEY, consumeLoginAnnouncementPending, getToken, request, requireLogin } from '../../utils/api';
 import { translateGameLogLine } from '../../utils/gameLogI18n';
-import { getLocale, switchLocale } from '../../utils/i18n';
+import { getLocale } from '../../utils/i18n';
 
 const { t } = useI18n();
 const user = ref({});
@@ -296,7 +307,6 @@ const gameAccounts = ref([]);
 const accountLimit = ref(3);
 const canAddAccount = ref(true);
 const rechargeVisible = ref(false);
-const currentLocale = ref(getLocale());
 const activeMenuId = ref(null);
 const actionLoading = ref(false);
 const logsTailId = 'log-tail';
@@ -459,9 +469,23 @@ function closeAnnouncement() {
   announcement.blocks = [];
 }
 
-async function changeLocale(locale) {
-  currentLocale.value = await switchLocale(locale);
-  logs.category = t('client.logs.all');
+function announcementSegments(block) {
+  if (Array.isArray(block?.segments) && block.segments.length > 0) {
+    return block.segments;
+  }
+  return [{ type: 'text', text: block?.text || '' }];
+}
+
+function openAnnouncementLink(url) {
+  if (!/^https?:\/\//i.test(url || '')) {
+    uni.showToast({ title: t('client.announcement.invalid_content'), icon: 'none' });
+    return;
+  }
+  if (typeof window !== 'undefined' && window.open) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  uni.navigateTo({ url });
 }
 
 function resourceValue(item, key) {
@@ -996,10 +1020,6 @@ function closeRecharge() {
 }
 
 async function openPaymentWindow() {
-  if (!recharge.customerName.trim() || !recharge.customerMobile.trim() || !recharge.bankAccount.trim()) {
-    uni.showToast({ title: t('client.recharge.payer_required'), icon: 'none' });
-    return;
-  }
   let paymentWindow = null;
   // #ifdef H5
   paymentWindow = window.open('about:blank', '_blank');
@@ -1021,9 +1041,6 @@ async function openPaymentWindow() {
       method: 'POST',
       data: {
         package_code: recharge.packageCode,
-        customer_name: recharge.customerName.trim(),
-        customer_mobile: recharge.customerMobile.trim(),
-        bank_account: recharge.bankAccount.trim(),
         idempotency_key: recharge.idempotencyKey,
       },
     });
@@ -2034,6 +2051,11 @@ async function refreshRechargeOrder() {
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.announcement-link {
+  color: #1677ff;
+  text-decoration: underline;
 }
 
 .announcement-red {

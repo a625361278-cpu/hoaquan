@@ -47,6 +47,10 @@
         <input v-model="form.token" class="input" password maxlength="-1" :placeholder="t('client.add.placeholder_token')" />
       </view>
       <text class="hint">{{ t(form.login_method === 1 ? 'client.add.preview_login_hint' : 'client.add.social_login_hint') }}</text>
+      <view v-if="form.login_method !== 1" class="tutorial-grid">
+        <button class="tutorial-button" @click="openTutorial('android')">{{ t('client.add.tutorial_android') }}</button>
+        <button class="tutorial-button" @click="openTutorial('ios')">{{ t('client.add.tutorial_ios') }}</button>
+      </view>
     </view>
 
     <view class="actions">
@@ -54,6 +58,34 @@
       <button class="primary" :disabled="submitting" @click="nextStep">
         {{ currentStep < 2 ? t('client.add.next') : (submitting ? t('client.add.verifying') : t('client.add.confirm')) }}
       </button>
+    </view>
+
+    <view v-if="tutorialDialog.visible" class="modal-mask" @click="closeTutorial">
+      <view class="tutorial-dialog" @click.stop>
+        <view class="tutorial-head">
+          <text class="tutorial-title">{{ activeTutorial.title }}</text>
+          <text class="tutorial-close" @click="closeTutorial">×</text>
+        </view>
+        <scroll-view class="tutorial-body" scroll-y>
+          <text class="tutorial-doc-title">{{ activeTutorial.docTitle }}</text>
+          <view class="tutorial-step" v-for="(step, index) in activeTutorial.steps" :key="step.text">
+            <text class="tutorial-step-index">{{ index + 1 }}</text>
+            <text class="tutorial-step-text">{{ step.text }}</text>
+            <image
+              v-for="image in step.images"
+              :key="image"
+              class="tutorial-image"
+              :src="image"
+              mode="widthFix"
+              @click="previewTutorialImage(image)"
+            />
+          </view>
+        </scroll-view>
+        <view class="tutorial-actions">
+          <button class="tutorial-secondary" @click="closeTutorial">{{ t('client.add.tutorial_close') }}</button>
+          <button class="tutorial-primary" @click="downloadTutorial">{{ t('client.add.tutorial_download') }}</button>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -70,6 +102,10 @@ const PENDING_VALIDATION_KEY = 'gameassist_pending_account_validation';
 const currentStep = ref(1);
 const submitting = ref(false);
 const supportedLoginMethods = ref([]);
+const tutorialDialog = reactive({
+  visible: false,
+  type: 'android',
+});
 const loginMethods = computed(() => LOGIN_METHOD_OPTIONS.filter(item => supportedLoginMethods.value.includes(item.value)));
 const form = reactive({
   channel_code: PREVIEW_CHANNEL.code,
@@ -84,6 +120,43 @@ const stepItems = [
   { value: 1, labelKey: 'client.add.step_channel' },
   { value: 2, labelKey: 'client.add.step_login' },
 ];
+
+const SOCIAL_LOGIN_TUTORIALS = {
+  android: {
+    titleKey: 'client.add.tutorial_android_title',
+    docTitle: 'Android 安卓 (Hướng dẫn liên kết cho tài khoản đăng nhập FB và Google)',
+    download: '/static/tutorials/social-login/android/android-social-login.docx',
+    steps: [
+      { text: 'Đăng nhập vào game và nhấn vào cửa sổ nổi của SDK để hiển thị giao diện SDK', images: ['/static/tutorials/social-login/android/step-01.png'] },
+      { text: 'Tắt kết nối mạng rồi nhấn ngay vào nút nạp', images: ['/static/tutorials/social-login/android/step-02.png', '/static/tutorials/social-login/android/step-03.png'] },
+      { text: 'Sau khi hiện ra trang nạp thì sao chép đường link (URL) của trang nạp.', images: ['/static/tutorials/social-login/android/step-04.png'] },
+      { text: 'Từ đường link, lấy token đăng nhập.', images: [] },
+      { text: 'Dùng token và UID của tài khoản để thực hiện liên kết', images: ['/static/tutorials/social-login/android/step-05.png'] },
+      { text: 'Lưu ý: Bạn nhấn ở cửa sổ nổi là sẽ hiển thị thông tin UID nha (UID: MXXXXX)', images: ['/static/tutorials/social-login/android/step-06.png'] },
+    ],
+  },
+  ios: {
+    titleKey: 'client.add.tutorial_ios_title',
+    docTitle: 'IOS (Hướng dẫn liên kết cho tài khoản đăng nhập bằng Facebook và Google ở hệ điều hành IOS)',
+    download: '/static/tutorials/social-login/ios/ios-social-login.docx',
+    steps: [
+      { text: 'Mở game và vào giao diện Nạp Web trong game', images: ['/static/tutorials/social-login/ios/step-01.png'] },
+      { text: 'Sau đó vào Cài đặt -> Cellular -> Cellular Data -> Show All, rồi thực hiện tắt quyền sử dụng dữ liệu mạng của trình duyệt (Safari hoặc trình duyệt được sử dụng)', images: ['/static/tutorials/social-login/ios/step-02.png'] },
+      { text: 'Quay lại game và nhấn vào nút chuyển sang trang Nạp Web.', images: ['/static/tutorials/social-login/ios/step-03.png'] },
+      { text: 'Lúc này trình duyệt sẽ mở, rồi bạn nhấn lấy token đăng nhập từ URL nha', images: ['/static/tutorials/social-login/ios/step-04.png', '/static/tutorials/social-login/ios/step-05.png'] },
+      { text: 'Dùng token và UID của tài khoản để thực hiện liên kết', images: ['/static/tutorials/social-login/ios/step-06.png'] },
+      { text: 'Lưu ý: Bạn nhấn ở cửa sổ nổi là sẽ hiển thị thông tin UID nha (UID: MXXXXX)', images: ['/static/tutorials/social-login/ios/step-07.png'] },
+    ],
+  },
+};
+
+const activeTutorial = computed(() => {
+  const tutorial = SOCIAL_LOGIN_TUTORIALS[tutorialDialog.type] || SOCIAL_LOGIN_TUTORIALS.android;
+  return {
+    ...tutorial,
+    title: t(tutorial.titleKey),
+  };
+});
 
 requireLogin();
 onShow(async () => {
@@ -110,6 +183,45 @@ async function loadLoginMethods() {
 
 function previousStep() {
   currentStep.value = Math.max(1, currentStep.value - 1);
+}
+
+function openTutorial(type) {
+  tutorialDialog.type = type;
+  tutorialDialog.visible = true;
+}
+
+function closeTutorial() {
+  tutorialDialog.visible = false;
+}
+
+function previewTutorialImage(image) {
+  const urls = activeTutorial.value.steps.flatMap(step => step.images || []);
+  uni.previewImage({ urls, current: image });
+}
+
+function downloadTutorial() {
+  const url = activeTutorial.value.download;
+  if (typeof document !== 'undefined') {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = url.split('/').pop();
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }
+  uni.downloadFile({
+    url,
+    success: result => {
+      if (result.statusCode !== 200) {
+        uni.showToast({ title: t('client.add.tutorial_download_failed'), icon: 'none' });
+        return;
+      }
+      uni.openDocument({ filePath: result.tempFilePath });
+    },
+    fail: () => uni.showToast({ title: t('client.add.tutorial_download_failed'), icon: 'none' }),
+  });
 }
 
 async function nextStep() {
@@ -391,6 +503,29 @@ function back() {
   margin-top: 28rpx;
 }
 
+.tutorial-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+  margin-top: 28rpx;
+}
+
+.tutorial-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 84rpx;
+  padding: 0 18rpx;
+  line-height: 1.3;
+  margin: 0;
+  border: 2rpx solid #f7b500;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.28);
+  color: #f5a400;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
 .primary,
 .ghost {
   width: 220rpx;
@@ -411,5 +546,160 @@ function back() {
   border: 1px solid #d6e2eb;
   background: rgba(255, 255, 255, 0.8);
   color: #475467;
+}
+
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 72rpx 28rpx 32rpx;
+  background: rgba(15, 23, 42, 0.34);
+  box-sizing: border-box;
+}
+
+.tutorial-dialog {
+  width: calc(100vw - 56rpx);
+  max-width: 680px;
+  height: 72vh;
+  max-height: calc(100vh - 104rpx);
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24rpx 70rpx rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+}
+
+.tutorial-head,
+.tutorial-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tutorial-head {
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 28rpx 30rpx 20rpx;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.tutorial-title {
+  min-width: 0;
+  color: #111827;
+  font-size: 30rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.tutorial-close {
+  flex-shrink: 0;
+  width: 48rpx;
+  height: 48rpx;
+  color: #98a2b3;
+  font-size: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+}
+
+.tutorial-body {
+  flex: 1;
+  min-height: 0;
+  padding: 24rpx 30rpx;
+  box-sizing: border-box;
+}
+
+.tutorial-doc-title {
+  display: block;
+  margin-bottom: 26rpx;
+  color: #111827;
+  font-size: 28rpx;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.tutorial-step {
+  margin-bottom: 28rpx;
+}
+
+.tutorial-step-index {
+  display: inline-block;
+  width: 38rpx;
+  height: 38rpx;
+  margin-right: 12rpx;
+  border-radius: 50%;
+  background: #29b6f6;
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 800;
+  line-height: 38rpx;
+  text-align: center;
+}
+
+.tutorial-step-text {
+  color: #253244;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.tutorial-image {
+  display: block;
+  width: 100%;
+  max-width: 560rpx;
+  margin: 18rpx auto 0;
+  border-radius: 8px;
+  border: 1px solid #e5edf5;
+}
+
+.tutorial-actions {
+  justify-content: flex-end;
+  gap: 16rpx;
+  padding: 20rpx 30rpx 28rpx;
+  border-top: 1px solid #eef2f7;
+}
+
+.tutorial-secondary,
+.tutorial-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180rpx;
+  height: 72rpx;
+  padding: 0 14rpx;
+  line-height: 1.2;
+  margin: 0;
+  border-radius: 8px;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.tutorial-secondary {
+  border: 1px solid #d6e2eb;
+  background: #fff;
+  color: #475467;
+}
+
+.tutorial-primary {
+  background: #29b6f6;
+  color: #fff;
+}
+
+@media (max-width: 420px) {
+  .tutorial-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tutorial-actions {
+    flex-direction: column;
+  }
+
+  .tutorial-secondary,
+  .tutorial-primary {
+    width: 100%;
+  }
 }
 </style>

@@ -9,6 +9,8 @@ use RuntimeException;
 class AnnouncementService
 {
     private const COLOR_PREFIXES = ['red', 'green', 'blue'];
+    private const URL_PATTERN = '/https?:\/\/[^\s<>"\']+/iu';
+    private const URL_TRAILING_PUNCTUATION = ".,!?;:，。！？；：（）()[]{}<>“”\"'";
 
     public function __construct(private AnnouncementRepositoryInterface $announcements)
     {
@@ -57,6 +59,7 @@ class AnnouncementService
                 $blocks[] = [
                     'text' => $line,
                     'color' => $color,
+                    'segments' => $this->parseSegments($line),
                 ];
             }
         }
@@ -66,5 +69,58 @@ class AnnouncementService
         }
 
         return $blocks;
+    }
+
+    private function parseSegments(string $line): array
+    {
+        if (!preg_match_all(self::URL_PATTERN, $line, $matches, PREG_OFFSET_CAPTURE)) {
+            return [['type' => 'text', 'text' => $line]];
+        }
+
+        $segments = [];
+        $offset = 0;
+        foreach ($matches[0] as [$matchedUrl, $position]) {
+            $position = (int)$position;
+            if ($position > $offset) {
+                $this->appendTextSegment($segments, substr($line, $offset, $position - $offset));
+            }
+
+            $url = rtrim($matchedUrl, self::URL_TRAILING_PUNCTUATION);
+            $trailing = substr($matchedUrl, strlen($url));
+            if ($url !== '') {
+                $segments[] = [
+                    'type' => 'link',
+                    'text' => $url,
+                    'url' => $url,
+                ];
+            }
+            if ($trailing !== '') {
+                $this->appendTextSegment($segments, $trailing);
+            }
+
+            $offset = $position + strlen($matchedUrl);
+        }
+
+        if ($offset < strlen($line)) {
+            $this->appendTextSegment($segments, substr($line, $offset));
+        }
+
+        return array_values(array_filter($segments, static fn (array $segment): bool => $segment['text'] !== ''));
+    }
+
+    private function appendTextSegment(array &$segments, string $text): void
+    {
+        if ($text === '') {
+            return;
+        }
+        $lastIndex = count($segments) - 1;
+        if ($lastIndex >= 0 && ($segments[$lastIndex]['type'] ?? '') === 'text') {
+            $segments[$lastIndex]['text'] .= $text;
+            return;
+        }
+        $segments[] = [
+            'type' => 'text',
+            'text' => $text,
+        ];
     }
 }

@@ -11,6 +11,7 @@ use app\service\GameAccountResourceService;
 use app\service\GameAccountService;
 use app\service\GameAccountTaskStateService;
 use app\service\GameLogMessage;
+use app\service\GameLogNormalizer;
 use app\service\GameLogQueue;
 use app\service\GatewayThirdPartyScriptRuntime;
 use app\service\InviteRewardService;
@@ -523,18 +524,7 @@ class Events
 
     private static function formatLogPayload(array $payload): string
     {
-        $parts = [];
-        if (!empty($payload['time'])) {
-            $parts[] = (string)$payload['time'];
-        }
-        if (!empty($payload['level'])) {
-            $parts[] = '[' . strtoupper((string)$payload['level']) . ']';
-        }
-        if (!empty($payload['category'])) {
-            $parts[] = '[' . (string)$payload['category'] . ']';
-        }
-        $parts[] = (string)($payload['message'] ?? '');
-        return trim(implode(' ', array_filter($parts)));
+        return (new GameLogNormalizer())->formatStructuredLog($payload);
     }
 
     private static function closeWithError(string $clientId, string $message): void

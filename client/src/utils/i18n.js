@@ -2,10 +2,14 @@ import { createI18n } from 'vue-i18n';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 export const LOCALE_KEY = 'gameassist_locale';
-export const DEFAULT_LOCALE = 'zh_CN';
+export const DEFAULT_LOCALE = 'vi';
 export const SUPPORTED_LOCALES = ['zh_CN', 'vi'];
+export const CLIENT_LOCALE_LOCKED = true;
 
 export function normalizeLocale(locale) {
+  if (CLIENT_LOCALE_LOCKED) {
+    return DEFAULT_LOCALE;
+  }
   return SUPPORTED_LOCALES.includes(locale) ? locale : DEFAULT_LOCALE;
 }
 

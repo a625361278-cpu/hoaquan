@@ -58,12 +58,6 @@ final class PaymentOrderService
         if ($packageCode !== self::PACKAGE_CODE) {
             throw new InvalidArgumentException('不支持的充值套餐');
         }
-        $name = $this->requiredText($input, 'customer_name', 128, '付款人姓名');
-        $mobile = $this->requiredText($input, 'customer_mobile', 64, '付款人手机号');
-        $bankAccount = trim((string)($input['bank_account'] ?? ''));
-        if ($bankAccount === '') {
-            throw new InvalidArgumentException('付款帐号不能为空');
-        }
         $idempotencyKey = trim((string)($input['idempotency_key'] ?? ''));
         if (!preg_match('/^[A-Za-z0-9_-]{16,64}$/', $idempotencyKey)) {
             throw new InvalidArgumentException('幂等键格式无效');
@@ -85,6 +79,8 @@ final class PaymentOrderService
         $provider = $this->providers->get($providerCode);
         $provider->assertCanCreateOrder();
         $metadata = $provider->orderMetadata();
+        $requiresPayerInfo = $providerCode === SystemSettingService::PAYMENT_PROVIDER_RONNYPAY;
+        [$name, $mobile, $bankAccount] = $this->payerSnapshot($input, $requiresPayerInfo);
 
         $now = date('Y-m-d H:i:s');
         $merchantOrder = $this->merchantOrder();
@@ -454,6 +450,34 @@ final class PaymentOrderService
             throw new InvalidArgumentException("{$label}格式无效");
         }
         return $value;
+    }
+
+    private function optionalText(array $input, string $key, int $maxLength, string $label): string
+    {
+        $value = trim((string)($input[$key] ?? ''));
+        if ($value !== '' && (mb_strlen($value) > $maxLength || preg_match('/[\x00-\x1F\x7F]/u', $value))) {
+            throw new InvalidArgumentException("{$label}格式无效");
+        }
+        return $value;
+    }
+
+    private function payerSnapshot(array $input, bool $required): array
+    {
+        if ($required) {
+            $name = $this->requiredText($input, 'customer_name', 128, '付款人姓名');
+            $mobile = $this->requiredText($input, 'customer_mobile', 64, '付款人手机号');
+            $bankAccount = trim((string)($input['bank_account'] ?? ''));
+            if ($bankAccount === '') {
+                throw new InvalidArgumentException('付款帐号不能为空');
+            }
+            return [$name, $mobile, $bankAccount];
+        }
+
+        return [
+            $this->optionalText($input, 'customer_name', 128, '付款人姓名'),
+            $this->optionalText($input, 'customer_mobile', 64, '付款人手机号'),
+            trim((string)($input['bank_account'] ?? '')),
+        ];
     }
 
     private function merchantOrder(): string

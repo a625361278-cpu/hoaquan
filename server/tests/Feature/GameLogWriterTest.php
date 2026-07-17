@@ -80,6 +80,26 @@ class GameLogWriterTest extends TestCase
         $this->assertSame('完成1单', $events[0]['desc']);
     }
 
+    public function testWriterNormalizesEventTimeFromMillisecondTimestamp(): void
+    {
+        $queue = new ArrayGameLogQueue();
+        $repository = new ArrayGameAccountRepository([]);
+        $queue->enqueueEvents(3, [[
+            'module' => '订单',
+            'title' => '居民订单',
+            'message' => '完成1单',
+            'time' => 1721200000123,
+        ]]);
+
+        $writer = new GameLogWriter($queue, $repository);
+        $writer->drainQueues();
+        $writer->flushDueBuffers(true);
+
+        $events = $repository->listEventLogs(3, 0, 2500);
+        $this->assertCount(1, $events);
+        $this->assertSame('2024-07-17 14:06:40', $events[0]['time']);
+    }
+
     public function testClearingNormalLogsDoesNotClearEventHistory(): void
     {
         $repository = new ArrayGameAccountRepository([]);

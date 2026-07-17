@@ -95,6 +95,33 @@ final class PaymentOrderServiceTest extends TestCase
         $this->assertSame('VN01', $row['product_code']);
     }
 
+    public function testMkPayAllowsMissingPayerSnapshot(): void
+    {
+        $userId = $this->createUser('0.00');
+        $gateway = new FakeMkPayGateway([
+            'pay_order_id' => 'MK-001',
+            'product_type' => 'PAY',
+            'currency' => 'VND',
+            'redirect_url' => 'https://pay.example.com/checkout/MK-001',
+            'qr_code_url' => '',
+            'status_code' => 1,
+        ]);
+
+        $input = [
+            'package_code' => 'quota_30',
+            'idempotency_key' => 'idem_' . bin2hex(random_bytes(8)),
+        ];
+
+        $order = $this->mkPayService($gateway, 175000)->create($userId, $input);
+
+        $this->assertSame('mkpay', $order['provider']);
+        $this->assertSame(['merchant_order', 'amount'], array_keys($gateway->lastCreateOrder));
+        $row = (array)Db::table('ga_payment_orders')->where('merchant_order', $order['merchant_order'])->first();
+        $this->assertSame('', $row['customer_name']);
+        $this->assertSame('', $row['customer_mobile']);
+        $this->assertSame('', $row['bank_account']);
+    }
+
     public function testCreateRejectsEmptyBankAccountBeforeWritingOrder(): void
     {
         $userId = $this->createUser('0.00');

@@ -57,10 +57,33 @@ class AnnouncementServiceTest extends TestCase
         $this->assertSame('Thong bao moi nhat', $result['title']);
         $this->assertSame('2026-07-02 10:00:00', $result['published_at']);
         $this->assertSame([
-            ['text' => 'Khong doi tai khoan', 'color' => 'red'],
-            ['text' => 'Khong xoa bo nho dem', 'color' => 'green'],
-            ['text' => 'Noi dung thuong', 'color' => 'default'],
+            ['text' => 'Khong doi tai khoan', 'color' => 'red', 'segments' => [['type' => 'text', 'text' => 'Khong doi tai khoan']]],
+            ['text' => 'Khong xoa bo nho dem', 'color' => 'green', 'segments' => [['type' => 'text', 'text' => 'Khong xoa bo nho dem']]],
+            ['text' => 'Noi dung thuong', 'color' => 'default', 'segments' => [['type' => 'text', 'text' => 'Noi dung thuong']]],
         ], $result['content_blocks']);
+    }
+
+    public function testParsesHttpLinksIntoClickableSegments(): void
+    {
+        $service = new AnnouncementService(new InMemoryAnnouncementRepository([]));
+
+        $blocks = $service->parseContentBlocks('[red]Lien he https://www.facebook.com/share/1EyknTE679/. Cam on');
+
+        $this->assertSame([
+            [
+                'text' => 'Lien he https://www.facebook.com/share/1EyknTE679/. Cam on',
+                'color' => 'red',
+                'segments' => [
+                    ['type' => 'text', 'text' => 'Lien he '],
+                    [
+                        'type' => 'link',
+                        'text' => 'https://www.facebook.com/share/1EyknTE679/',
+                        'url' => 'https://www.facebook.com/share/1EyknTE679/',
+                    ],
+                    ['type' => 'text', 'text' => '. Cam on'],
+                ],
+            ],
+        ], $blocks);
     }
 
     public function testRejectsUnsupportedContentColorPrefix(): void

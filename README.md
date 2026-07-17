@@ -118,14 +118,15 @@ php start.php status
 - 玩家启动账号后会写入 `desired_running=1`。如果第三方连接异常断开或我方服务重启导致绑定丢失，账号进入 `reconnecting`，由 `game_account_auto_restarter` 在有空闲脚本连接时重新发送幂等 `start` 包；只有用户手动停止或第三方明确返回 `error` 时才清除运行意图。
 - `game_account_expiry_watcher` 会定期扫描已到期且仍处于 `starting/running/reconnecting` 的账号；有脚本绑定时发送 `stop` 并标记 `stopping + desired_running=0`，无绑定时标记 `stopped + desired_running=0`，同时写入普通日志说明配额到期停止，阻止自动重连继续拉起。
 - 运行日志分为普通日志和事件卡片历史。普通日志按本次运行会话保存，启动新会话和主动停止后清空；事件卡片历史只保存游戏内事件卡片，按账号保留，跨停止/重启保留。连接断开、自动重连失败、配额到期停止等平台运行状态只写普通日志，不写事件卡片历史。两类数据每个账号各最多保留 `2500` 条。
+- 第三方 `log` 和 `event` 的时间字段继续使用 `time`，可传 `Y-m-d H:i:s` 字符串、10 位秒级时间戳或 13 位毫秒时间戳，推荐第三方统一传 13 位毫秒时间戳。服务端按越南时区 `Asia/Ho_Chi_Minh` 转成 `Y-m-d H:i:s` 给用户端展示；`lines` 数组视为已格式化文本，不解析每行内部时间。
 - 日志写入按 1 万游戏账号设计：GatewayWorker 只把日志写入 64 个 Redis 分片队列，`game_log_writer` 默认 8 个进程按分片消费、内存聚合、批量落库。普通日志默认 10 秒或 50 行刷库一次，事件日志默认 2 秒或 20 条刷库一次；用户端读取结构不变，但普通日志可能有几秒延迟。
 - 第三方任务数据通过当前已绑定账号的 WebSocket 连接读写，不提供 HTTP 接口，不传 `account_id`。保存消息先写入 Redis 队列，由 `game_task_state_writer` 聚合后批量入库；我方只保存每个游戏账号的最新 JSON 快照，停止、重启、自动重连不清空，删除游戏账号时清空；单账号默认上限 `256KB`，可通过 `GAME_TASK_STATE_MAX_BYTES` 调整。
 - 用户注册和找回密码默认使用密保问题；`auth_verification_mode=email_code` 时才启用邮箱验证码。邮箱模式下 SMTP 未启用或配置不完整时，发送验证码会明确失败。
 - 新用户注册赠送点数由 `ga_system_settings.registration_reward_points` 控制，默认 `1`，后台“用户规则配置”允许设置 `0` 至 `1000` 的整数，`0` 表示关闭。仅对配置生效后的新注册用户执行，不补发历史用户。
 - 创建用户、设置初始余额和写入 `ga_user_point_transactions(type=registration_reward)` 在同一事务内完成；任一步失败都会回滚注册。注册赠送归新用户所有，与角色绑定后发给邀请人的 `1` 点邀请奖励相互独立。
-- 登录公告来自后台 `ga_announcements` 的最新启用记录；没有启用公告时用户端不弹窗，不使用前端假公告。
+- 登录公告来自后台 `ga_announcements` 的最新启用记录；没有启用公告时用户端不弹窗，不使用前端假公告。正文仍按纯文本处理，每行可用 `[red]`、`[green]`、`[blue]` 前缀控制颜色；明文 `http://` 或 `https://` 链接会在用户端公告弹窗中自动变成可点击链接。
 - 用户端“点数充值”支持 MoMoPay（内部 provider=`ronnypay`）和 MkPay 代收，套餐代码固定为 `quota_30`、到账点数固定为 `30.00`；实际支付金额由 `ga_system_settings.payment_recharge_amount_vnd` 配置，默认 `149000 VND`。活动通道来自 `ga_system_settings.payment_active_provider`，后台只允许 `disabled/ronnypay/mkpay` 单选；回调来源白名单来自 `ga_system_settings.payment_callback_allowed_ips`，留空不校验，配置后所有支付回调请求 IP 必须精确命中。通道、金额和白名单修改只影响后续回调入口校验与新订单创建，历史订单仍使用自身 provider 与金额快照回调、查单和入账。
-- 付款人姓名、手机号和付款帐号只写入当前 `ga_payment_orders` 订单快照，不修改用户长期资料。MkPay 下单不发送这三项；RonnyPay 仍按其合同发送。客户端传入的金额和点数不参与计价，付款帐号按字符串保存并保留前导零。
+- 付款人姓名、手机号和付款帐号只写入当前 `ga_payment_orders` 订单快照，不修改用户长期资料。用户端当前隐藏付款人资料表单；MkPay 下单允许这些字段为空且不发送给第三方，RonnyPay 仍按其合同要求三项资料并发送。客户端传入的金额和点数不参与计价，付款帐号按字符串保存并保留前导零。
 - 创建订单使用用户与 `idempotency_key` 唯一约束防止重复下单；创建超时保留原商户订单并进入 `unknown`，由 `payment_reconciler` 按订单 provider 查单，不自动换通道或换单。订单状态固定为 `creating/pending/unknown/success/fail/create_failed`，其中 `success` 不允许回退。
 - 两个支付通道的成功回调和主动查单共用同一个事务入账流程：锁定订单和用户、写入 `ga_user_point_transactions(type=recharge)`、增加 `30.00` 点、标记订单入账。`uniq_payment_recharge(type, related_payment_order_id)` 保证一笔支付订单最多入账一次。
 - 用户端创建订单前读取 `GET /api/recharge/config`；停用或配置不完整时不打开支付窗口。下单成功后跳转订单 `pay_url`，原页面每 3 秒查询本地订单，5 分钟后停止自动轮询并提供手动刷新。
@@ -153,7 +154,7 @@ php start.php status
 - “配额日志”权限自动跟随“GameAssist用户”菜单权限，不提供独立角色权限开关；`server/scripts/sync_admin.php` 会同步菜单并修正现有角色的关联权限。页面不提供修改、删除、补写或邀请奖励流水展示。
 - 后台“会员管理 / 支付订单”是只读页面，可按支付通道、状态、用户、商户订单号和平台订单号筛选，并允许对非成功订单按其原 provider 主动查单。后台不提供手工改成功、补点或删除订单；手机号和付款帐号在列表中脱敏展示。
 - 后台“支付方式配置”同时维护活动支付通道、`quota_30` 套餐的 VND 整数金额和支付回调白名单 IP。金额只允许 `1` 至 `999999999`；多个白名单 IP 可用换行、逗号、分号、空格或竖线分隔，只允许精确 IPv4/IPv6 地址，不支持 CIDR。保存通道、金额和白名单在同一数据库事务中完成，选择配置不完整的通道或填写非法 IP 会明确拒绝。
-- 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，不支持任意 HTML。
+- 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，明文 `http://` 或 `https://` 链接会自动可点击，不支持任意 HTML。
 - 后台“运行服务配置”负责编辑运行服务启用状态、每个用户最多游戏账号数、连接池 Token 和我方 WebSocket 地址；账号数量限制独立于运行服务启用开关。签名密钥为选填，仅用于历史 HTTP 接口签名校验。后台“脚本连接”只读展示在线连接数、空闲连接数、已绑定连接数、停止中连接数、连接明细、日志队列积压、最大分片积压、日志 writer 数和最近写入状态，不再配置第三方 URL、连接槽位或单连接容量。
 - 后台“用户规则配置”维护新用户注册赠送点数和邀请奖励最低角色等级。注册赠送修改后只影响后续注册；邀请等级阈值立即作用于后续真实 `status`，不会扫描历史数据或撤销已发奖励。
 
@@ -228,7 +229,7 @@ php start.php status
 - 后台和用户端支持 `zh_CN`、`vi` 两种语言，文案来自统一 JSON 语言包：`server/resource/translations/{zh_CN,vi}/messages.json`。
 - 用户端通过 `/api/i18n/messages?locale=zh_CN|vi` 拉取语言包，所有业务 API 请求会携带 `X-Locale`。
 - 后端语言选择优先级：`?lang=` / `?locale=`、`X-Locale` 请求头、`gameassist_locale` cookie、默认 `zh_CN`。
-- 后台和用户端都提供语言切换入口；切换后会保存到本地存储或 cookie。
+- 用户端当前默认并锁定越南语，首页与登录/注册页暂不展示语言切换入口；后台仍保留语言切换能力。恢复用户端切换时，需要重新放开 `client/src/utils/i18n.js` 的语言锁定和对应页面入口。
 - 平台生成的用户运行日志以 `[[I18N]]` 结构化翻译消息保存，用户端查看时按当前界面语言渲染；历史版本已写入的中文断线、重连、启动、到期等平台日志由前端兼容转换。第三方脚本发送的游戏原始日志保持原文，不伪造翻译。
 - 用户端游戏配置页的分组标题、配置项名称、问号说明、导入/保存提示都必须从语言包读取；礼仪分监控开启后才显示 `basic.reputation.threshold` 礼仪分阈值字段。
 - 用户端游戏配置页的种植、订单、公会、活动分组和问号说明保持当前产品配置规范；没有说明的开关不显示问号，不用占位文案伪装。

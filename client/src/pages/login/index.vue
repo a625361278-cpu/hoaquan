@@ -76,11 +76,13 @@
           <text>{{ t('client.profile.invite_registration_help') }}</text>
           <text class="invite-code">{{ inviteCode }}</text>
         </view>
+        <!-- User-side language switching is temporarily hidden; client locale is locked to Vietnamese in utils/i18n.js.
         <view class="language-switch">
           <text :class="['language-option', currentLocale === 'zh_CN' ? 'active' : '']" @click="changeLocale('zh_CN')">{{ t('client.language.zh_CN') }}</text>
           <text class="language-divider">/</text>
           <text :class="['language-option', currentLocale === 'vi' ? 'active' : '']" @click="changeLocale('vi')">{{ t('client.language.vi') }}</text>
         </view>
+        -->
       </view>
 
       <view class="showcase">
@@ -221,11 +223,10 @@ import { computed, onUnmounted, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { useI18n } from 'vue-i18n';
 import { markLoginAnnouncementPending, request, setToken } from '../../utils/api';
-import { getLocale, switchLocale } from '../../utils/i18n';
+import { getLocale } from '../../utils/i18n';
 
 const { t } = useI18n();
 const mode = ref('login');
-const currentLocale = ref(getLocale());
 const account = ref('');
 const email = ref('');
 const emailCode = ref('');
@@ -331,11 +332,6 @@ function openResetDialog() {
 
 function closeResetDialog() {
   resetVisible.value = false;
-}
-
-async function changeLocale(locale) {
-  currentLocale.value = await switchLocale(locale);
-  await loadAuthConfig();
 }
 
 async function loadAuthConfig() {
