@@ -2,6 +2,7 @@
 
 namespace plugin\admin\app\service;
 
+use app\service\GameAccountLoginMethod;
 use app\support\I18n;
 use RuntimeException;
 use support\Db;
@@ -48,6 +49,71 @@ class GameAssistUserAdminService
         }
 
         return password_hash($password, PASSWORD_DEFAULT);
+    }
+
+    public function gameAccounts(int $userId, array $filters = []): array
+    {
+        if ($userId <= 0) {
+            throw new RuntimeException($this->t('admin.gameassist.user_id_invalid'));
+        }
+
+        $user = Db::table('ga_users')
+            ->select(['id', 'account', 'nickname', 'bound_role_id'])
+            ->where('id', $userId)
+            ->first();
+        if (!$user) {
+            throw new RuntimeException($this->t('admin.gameassist.user_not_found'));
+        }
+
+        [$page, $limit] = $this->gameAccountPagination($filters);
+        $query = Db::table('ga_game_accounts')
+            ->where('user_id', $userId);
+
+        $this->applyGameAccountIdFilter($query, $filters['game_account_id'] ?? null);
+        $this->applyGameAccountLikeFilter($query, $filters['game_account'] ?? null);
+        $this->applyLoginMethodFilter($query, $filters['login_method'] ?? null);
+
+        $count = (clone $query)->count('id');
+        $rows = $query
+            ->select([
+                'id',
+                'user_id',
+                'display_name',
+                'game_username',
+                'game_uid',
+                'channel_code',
+                'login_method',
+                'server_id',
+                'server_name',
+                'status',
+                'sync_status',
+                'third_party_account_id',
+                'desired_running',
+                'expire_time',
+                'remark',
+                'created_at',
+                'updated_at',
+            ])
+            ->orderByDesc('id')
+            ->forPage($page, $limit)
+            ->get();
+
+        $boundRoleId = trim((string)($user->bound_role_id ?? ''));
+        $data = [];
+        foreach ($rows as $row) {
+            $data[] = $this->formatGameAccountRow($row, $boundRoleId);
+        }
+
+        return [
+            'count' => $count,
+            'data' => $data,
+            'user' => [
+                'id' => (int)$user->id,
+                'account' => (string)$user->account,
+                'nickname' => (string)$user->nickname,
+                'bound_role_id' => $boundRoleId,
+            ],
+        ];
     }
 
     public function grantQuota(int $userId, int $points, string $remark = '', ?int $adminId = null): array
@@ -109,6 +175,106 @@ class GameAssistUserAdminService
         ];
     }
 
+    private function gameAccountPagination(array $filters): array
+    {
+        $page = $this->positiveInteger($filters['page'] ?? 1, 'page');
+        $limit = $this->positiveInteger($filters['limit'] ?? 20, 'limit');
+        if (!in_array($limit, [20, 50, 100], true)) {
+            throw new RuntimeException($this->t('admin.gameassist.page_size_invalid'));
+        }
+        return [$page, $limit];
+    }
+
+    private function applyGameAccountIdFilter(object $query, mixed $value): void
+    {
+        $text = trim((string)$value);
+        if ($text === '') {
+            return;
+        }
+        $query->where('id', $this->positiveInteger($text, 'game_account_id'));
+    }
+
+    private function applyGameAccountLikeFilter(object $query, mixed $value): void
+    {
+        $text = trim((string)$value);
+        if ($text === '') {
+            return;
+        }
+        if (mb_strlen($text) > 128) {
+            throw new RuntimeException($this->t('admin.gameassist.filter_too_long'));
+        }
+        $query->where(function ($nested) use ($text) {
+            $nested->where('game_username', 'like', '%' . $text . '%')
+                ->orWhere('game_uid', 'like', '%' . $text . '%')
+                ->orWhere('display_name', 'like', '%' . $text . '%')
+                ->orWhere('third_party_account_id', 'like', '%' . $text . '%')
+                ->orWhere('server_name', 'like', '%' . $text . '%');
+        });
+    }
+
+    private function applyLoginMethodFilter(object $query, mixed $value): void
+    {
+        $text = trim((string)$value);
+        if ($text === '') {
+            return;
+        }
+        if (!ctype_digit($text) || !GameAccountLoginMethod::isSupported((int)$text)) {
+            throw new RuntimeException($this->t('admin.gameassist.login_method_invalid'));
+        }
+        $query->where('login_method', (int)$text);
+    }
+
+    private function positiveInteger(mixed $value, string $field): int
+    {
+        $text = trim((string)$value);
+        if ($text === '' || !ctype_digit($text) || (int)$text <= 0) {
+            throw new RuntimeException($this->t('admin.gameassist.filter_invalid', ['field' => $field]));
+        }
+        return (int)$text;
+    }
+
+    private function formatGameAccountRow(object $row, string $boundRoleId): array
+    {
+        $loginMethod = (int)$row->login_method;
+        $identity = $loginMethod === GameAccountLoginMethod::ACCOUNT_PASSWORD
+            ? (string)$row->game_username
+            : (string)$row->game_uid;
+        $thirdPartyAccountId = trim((string)$row->third_party_account_id);
+        $matchIdentity = $thirdPartyAccountId !== '' ? $thirdPartyAccountId : trim($identity);
+
+        return [
+            'id' => (int)$row->id,
+            'user_id' => (int)$row->user_id,
+            'display_name' => (string)$row->display_name,
+            'login_method' => $loginMethod,
+            'login_method_label' => $this->loginMethodLabel($loginMethod),
+            'login_identity' => $identity,
+            'channel_code' => (string)$row->channel_code,
+            'server_id' => (string)$row->server_id,
+            'server_name' => (string)$row->server_name,
+            'status' => (string)$row->status,
+            'sync_status' => (string)$row->sync_status,
+            'third_party_account_id' => $thirdPartyAccountId,
+            'bound_role_id' => $boundRoleId,
+            'is_bound' => $boundRoleId !== '' && $matchIdentity === $boundRoleId,
+            'desired_running' => (int)$row->desired_running,
+            'expire_time' => $row->expire_time === null ? '' : (string)$row->expire_time,
+            'remark' => (string)$row->remark,
+            'created_at' => (string)$row->created_at,
+            'updated_at' => (string)$row->updated_at,
+        ];
+    }
+
+    private function loginMethodLabel(int $method): string
+    {
+        return match ($method) {
+            GameAccountLoginMethod::ACCOUNT_PASSWORD => $this->t('admin.gameassist.login_method_account_password'),
+            GameAccountLoginMethod::FACEBOOK => 'Facebook',
+            GameAccountLoginMethod::GOOGLE => 'Google',
+            default => $this->t('admin.gameassist.login_method_unknown'),
+        };
+    }
+
     private function decimalToCents(string $value): int
     {
         $value = trim($value);
@@ -130,8 +296,8 @@ class GameAssistUserAdminService
         return sprintf('%s%d.%02d', $sign, intdiv($cents, 100), $cents % 100);
     }
 
-    private function t(string $key): string
+    private function t(string $key, array $parameters = []): string
     {
-        return I18n::t($key, [], $this->locale);
+        return I18n::t($key, $parameters, $this->locale);
     }
 }

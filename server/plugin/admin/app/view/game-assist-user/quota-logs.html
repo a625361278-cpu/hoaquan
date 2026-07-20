@@ -100,6 +100,19 @@
                                     <div class="layui-input-block"><input type="text" name="game_account" class="layui-input"></div>
                                 </div>
                                 <div class="layui-form-item">
+                                    <label class="layui-form-label"><?=admin_t('admin.quota_logs.transaction_type')?></label>
+                                    <div class="layui-input-block">
+                                        <select name="type">
+                                            <option value=""><?=admin_t('admin.common.all')?></option>
+                                            <option value="registration_reward"><?=admin_t('admin.quota_logs.type_registration_reward')?></option>
+                                            <option value="admin_grant"><?=admin_t('admin.quota_logs.type_admin_grant')?></option>
+                                            <option value="quota_consume"><?=admin_t('admin.quota_logs.type_quota_consume')?></option>
+                                            <option value="invite_reward"><?=admin_t('admin.quota_logs.type_invite_reward')?></option>
+                                            <option value="recharge"><?=admin_t('admin.quota_logs.type_recharge')?></option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
                                     <label class="layui-form-label"><?=admin_t('admin.quota_logs.consume_time')?></label>
                                     <div class="layui-input-block" id="consume-created-at">
                                         <input type="text" autocomplete="off" name="created_at[]" id="consume-created-at-start" class="layui-input inline-block" placeholder="<?=admin_t('admin.gameassist.start_time')?>">
@@ -194,13 +207,16 @@
                                 if (!d.user_exists) return '<span class="entity-missing"><?=admin_t('admin.quota_logs.user_deleted')?> #' + escaped(d.user_id) + '</span>';
                                 return escaped(d.user_account) + (d.user_nickname ? " / " + escaped(d.user_nickname) : "");
                             }},
-                            {title: "<?=admin_t('admin.quota_logs.game_account_id')?>", field: "game_account_id", width: 120},
+                            {title: "<?=admin_t('admin.quota_logs.transaction_type')?>", field: "type_label", minWidth: 130, templet: function(d) { return escaped(d.type_label || d.type); }},
+                            {title: "<?=admin_t('admin.quota_logs.game_account_id')?>", field: "game_account_id", width: 120, templet: function(d) { return d.game_account_has_reference ? escaped(d.game_account_id) : "-"; }},
                             {title: "<?=admin_t('admin.quota_logs.game_account')?>", minWidth: 210, templet: function(d) {
+                                if (!d.game_account_has_reference) return "-";
                                 if (!d.game_account_exists) return '<span class="entity-missing"><?=admin_t('admin.quota_logs.game_account_deleted')?> #' + escaped(d.game_account_id) + '</span>';
                                 return escaped(d.game_username) + (d.game_display_name ? " / " + escaped(d.game_display_name) : "");
                             }},
                             {title: "<?=admin_t('admin.quota_logs.server_name')?>", field: "server_name", minWidth: 130},
-                            {title: "<?=admin_t('admin.quota_logs.consumed_points')?>", field: "consumed_points", width: 120, templet: function(d) { return d.amount_invalid ? '<span class="record-invalid"><?=admin_t('admin.quota_logs.invalid_amount')?></span>' : escaped(d.consumed_points); }},
+                            {title: "<?=admin_t('admin.quota_logs.increased_points')?>", field: "increased_points", width: 120, templet: function(d) { return d.amount_invalid ? '<span class="record-invalid"><?=admin_t('admin.quota_logs.invalid_amount')?></span>' : (d.increased_points ? escaped(d.increased_points) : "-"); }},
+                            {title: "<?=admin_t('admin.quota_logs.consumed_points')?>", field: "consumed_points", width: 120, templet: function(d) { return d.amount_invalid ? '<span class="record-invalid"><?=admin_t('admin.quota_logs.invalid_amount')?></span>' : (d.consumed_points ? escaped(d.consumed_points) : "-"); }},
                             {title: "<?=admin_t('admin.quota_logs.balance_after')?>", field: "balance_after", width: 130},
                             {title: "<?=admin_t('admin.quota_logs.description')?>", field: "description", minWidth: 260}
                         ]],

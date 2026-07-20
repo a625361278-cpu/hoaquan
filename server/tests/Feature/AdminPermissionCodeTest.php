@@ -42,5 +42,10 @@ class AdminPermissionCodeTest extends TestCase
             '/app/admin/game-assist-user/quota-consume-records',
             Util::controllerToUrlPath(GameAssistUserController::class . '@quotaConsumeRecords')
         );
+
+        $this->assertSame(
+            '/app/admin/game-assist-user/game-accounts',
+            Util::controllerToUrlPath(GameAssistUserController::class . '@gameAccounts')
+        );
     }
 }

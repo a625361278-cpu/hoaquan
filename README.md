@@ -149,9 +149,9 @@ php start.php status
 - 后台按钮权限码按真实后台 URL 生成，例如 `GameAssistUserController@grantQuota` 对应 `app.admin.game-assist-user.grant-quota`；角色只要拥有“会员管理 / GameAssist用户”菜单权限，就能看到该页面内的“添加配额”等操作按钮，后端仍按菜单或具体动作权限校验。
 - 后台“GameAssist用户”管理针对产品用户表 `ga_users`，不是后台账号或 webman-admin 的 `wa_users`。
 - 后台仪表盘的今日注册、7日注册、30日注册和总用户数均统计 `ga_users.created_at`，不使用后台用户表。
-- GameAssist 用户后台允许查看、启用/禁用、重置密码和“添加配额”。添加配额只增加产品用户 `ga_users.balance`，必须填写正整数点数，可填写备注；成功后写入 `ga_user_point_transactions(type=admin_grant)` 和 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`。
-- 后台“会员管理 / 配额日志”是只读审计页面，包含“管理员添加记录”和“用户使用记录”两个标签。前者读取 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`，展示哪个管理员给哪个产品用户添加了多少配额；后者读取 `ga_user_point_transactions(type=quota_consume)`，展示用户在什么时间给哪个游戏账号消耗了多少配额。游戏账号删除后流水不删除，页面保留原始账号ID和延期说明并明确标记账号已删除。
-- “配额日志”权限自动跟随“GameAssist用户”菜单权限，不提供独立角色权限开关；`server/scripts/sync_admin.php` 会同步菜单并修正现有角色的关联权限。页面不提供修改、删除、补写或邀请奖励流水展示。
+- GameAssist 用户后台允许查看、启用/禁用、重置密码、“添加配额”和查看该用户添加过的游戏账号。游戏账号查看只读展示 `ga_game_accounts` 的账号ID、登录方式、登录标识、第三方角色ID、当前绑定角色ID、区服、运行状态和到期时间，不返回游戏密码密文、Token 密文或任何明文凭证。添加配额只增加产品用户 `ga_users.balance`，必须填写正整数点数，可填写备注；成功后写入 `ga_user_point_transactions(type=admin_grant)` 和 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`。
+- 后台“会员管理 / 配额日志”是只读审计页面，包含“管理员添加记录”和“用户配额记录”两个标签。前者读取 `ga_admin_operation_logs(action=gameassist_user.grant_quota)`，展示哪个管理员给哪个产品用户添加了多少配额；后者读取 `ga_user_point_transactions`，展示注册赠送、后台添加、充值入账、邀请奖励和游戏账号延期消耗等用户配额增加/消耗流水。游戏账号删除后流水不删除，页面保留原始账号ID和说明并明确标记账号已删除。
+- “配额日志”权限自动跟随“GameAssist用户”菜单权限，不提供独立角色权限开关；`server/scripts/sync_admin.php` 会同步菜单并修正现有角色的关联权限。页面不提供修改、删除、补写或手动改流水。
 - 后台“会员管理 / 支付订单”是只读页面，可按支付通道、状态、用户、商户订单号和平台订单号筛选，并允许对非成功订单按其原 provider 主动查单。后台不提供手工改成功、补点或删除订单；手机号和付款帐号在列表中脱敏展示。
 - 后台“支付方式配置”同时维护活动支付通道、`quota_30` 套餐的 VND 整数金额和支付回调白名单 IP。金额只允许 `1` 至 `999999999`；多个白名单 IP 可用换行、逗号、分号、空格或竖线分隔，只允许精确 IPv4/IPv6 地址，不支持 CIDR。保存通道、金额和白名单在同一数据库事务中完成，选择配置不完整的通道或填写非法 IP 会明确拒绝。
 - 后台“公告管理”维护登录公告表 `ga_announcements`。公告支持中越标题和正文、启用/停用、发布时间；正文每行可用 `[red]`、`[green]`、`[blue]` 前缀控制用户端颜色，明文 `http://` 或 `https://` 链接会自动可点击，不支持任意 HTML。

@@ -118,7 +118,7 @@ class AdminQuotaLogServiceTest extends TestCase
         }
     }
 
-    public function testConsumeRecordMarksNonNegativeAmountAsInvalid(): void
+    public function testUserQuotaRecordsIncludePositiveIncreaseTransactions(): void
     {
         $connection = Db::connection();
         $connection->beginTransaction();
@@ -127,12 +127,48 @@ class AdminQuotaLogServiceTest extends TestCase
             [$userId] = $this->createUser();
             $transactionId = (int)Db::table('ga_user_point_transactions')->insertGetId([
                 'user_id' => $userId,
-                'type' => 'quota_consume',
+                'type' => 'admin_grant',
                 'amount' => '1.00',
+                'balance_after' => '5.00',
+                'description' => '人工补偿',
+                'related_user_id' => null,
+                'related_role_id' => '',
+                'ip_address' => '',
+                'created_at' => '2026-07-10 12:00:00',
+            ]);
+
+            $result = (new GameAssistQuotaLogAdminService())->consumeRecords([
+                'user_id' => $userId,
+                'type' => 'admin_grant',
+                'page' => 1,
+                'limit' => 20,
+            ]);
+            $row = $this->findById($result['data'], $transactionId);
+            $this->assertFalse($row['amount_invalid']);
+            $this->assertSame('后台添加', $row['type_label']);
+            $this->assertSame('1.00', $row['increased_points']);
+            $this->assertNull($row['consumed_points']);
+            $this->assertFalse($row['game_account_has_reference']);
+        } finally {
+            $connection->rollBack();
+        }
+    }
+
+    public function testUserQuotaRecordMarksZeroAmountAsInvalid(): void
+    {
+        $connection = Db::connection();
+        $connection->beginTransaction();
+
+        try {
+            [$userId] = $this->createUser();
+            $transactionId = (int)Db::table('ga_user_point_transactions')->insertGetId([
+                'user_id' => $userId,
+                'type' => 'admin_grant',
+                'amount' => '0.00',
                 'balance_after' => '5.00',
                 'description' => '异常测试',
                 'related_user_id' => null,
-                'related_role_id' => '123456789',
+                'related_role_id' => '',
                 'ip_address' => '',
                 'created_at' => '2026-07-10 12:00:00',
             ]);
@@ -140,6 +176,7 @@ class AdminQuotaLogServiceTest extends TestCase
             $result = (new GameAssistQuotaLogAdminService())->consumeRecords(['user_id' => $userId, 'page' => 1, 'limit' => 20]);
             $row = $this->findById($result['data'], $transactionId);
             $this->assertTrue($row['amount_invalid']);
+            $this->assertNull($row['increased_points']);
             $this->assertNull($row['consumed_points']);
         } finally {
             $connection->rollBack();
@@ -183,8 +220,11 @@ class AdminQuotaLogServiceTest extends TestCase
             'user_id' => $userId,
             'display_name' => '角色' . $suffix,
             'game_username' => 'role_' . $suffix,
+            'game_uid' => '',
             'game_password_cipher' => '',
+            'game_token_cipher' => null,
             'channel_code' => 'official_app',
+            'login_method' => 1,
             'server_id' => '1',
             'server_name' => '测试服',
             'status' => 'stopped',

@@ -35,6 +35,12 @@
                         </div>
                     </div>
                     <div class="layui-form-item">
+                        <label class="layui-form-label"><?=admin_t('admin.gameassist.bound_role_id')?></label>
+                        <div class="layui-input-block">
+                            <input type="text" name="bound_role_id" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
                         <label class="layui-form-label"><?=admin_t('admin.gameassist.status')?></label>
                         <div class="layui-input-block">
                             <select name="status">
@@ -75,6 +81,10 @@
             </div>
         </div>
 
+        <div id="game-account-panel" style="display:none;padding:12px 16px;">
+            <table id="game-account-table" lay-filter="game-account-table"></table>
+        </div>
+
         <script type="text/html" id="table-toolbar">
             <button class="pear-btn pear-btn-primary pear-btn-md" lay-event="refresh">
                 <i class="layui-icon layui-icon-refresh"></i><?=admin_t('admin.common.refresh')?>
@@ -82,6 +92,7 @@
         </script>
 
         <script type="text/html" id="table-bar">
+            <button class="pear-btn pear-btn-xs pear-btn-primary tool-btn" lay-event="gameAccounts"><?=admin_t('admin.gameassist.game_accounts')?></button>
             <button class="pear-btn pear-btn-xs pear-btn-primary tool-btn" lay-event="grantQuota" permission="app.admin.game-assist-user.grant-quota"><?=admin_t('admin.gameassist.grant_quota')?></button>
             <button class="pear-btn pear-btn-xs tool-btn" lay-event="resetPassword" permission="app.admin.game-assist-user.reset-password"><?=admin_t('admin.gameassist.reset_password')?></button>
         </script>
@@ -96,6 +107,7 @@
             const UPDATE_API = "/app/admin/game-assist-user/update";
             const RESET_PASSWORD_URL = "/app/admin/game-assist-user/reset-password";
             const GRANT_QUOTA_URL = "/app/admin/game-assist-user/grant-quota";
+            const GAME_ACCOUNTS_API = "/app/admin/game-assist-user/game-accounts";
 
             layui.use(["laydate"], function() {
                 layui.laydate.render({
@@ -111,12 +123,14 @@
                 let $ = layui.$;
                 let common = layui.common;
                 let util = layui.util;
+                let currentGameAccountUserId = 0;
 
                 let cols = [
                     {title: "<?=admin_t('admin.gameassist.id')?>", field: "id", sort: true, width: 90},
                     {title: "<?=admin_t('admin.gameassist.account')?>", field: "account", minWidth: 140},
                     {title: "<?=admin_t('admin.gameassist.email')?>", field: "email", minWidth: 180},
                     {title: "<?=admin_t('admin.gameassist.nickname')?>", field: "nickname", minWidth: 120},
+                    {title: "<?=admin_t('admin.gameassist.bound_role_id')?>", field: "bound_role_id", minWidth: 160, templet: function(d) { return d.bound_role_id ? util.escape(d.bound_role_id) : "-"; }},
                     {title: "<?=admin_t('admin.gameassist.balance')?>", field: "balance", width: 110},
                     {title: "<?=admin_t('admin.gameassist.expire_at')?>", field: "expire_at", width: 120},
                     {
@@ -130,8 +144,48 @@
                     },
                     {title: "<?=admin_t('admin.gameassist.created_at')?>", field: "created_at", minWidth: 170},
                     {title: "<?=admin_t('admin.gameassist.updated_at')?>", field: "updated_at", minWidth: 170},
-                    {title: "<?=admin_t('admin.gameassist.operation')?>", toolbar: "#table-bar", align: "center", fixed: "right", width: 190}
+                    {title: "<?=admin_t('admin.gameassist.operation')?>", toolbar: "#table-bar", align: "center", fixed: "right", width: 270}
                 ];
+
+                function escaped(value) {
+                    return util.escape(value === null || value === undefined ? "" : String(value));
+                }
+
+                function renderGameAccountTable(userId) {
+                    table.render({
+                        elem: "#game-account-table",
+                        id: "game-account-table",
+                        url: GAME_ACCOUNTS_API,
+                        where: {user_id: userId},
+                        page: {limit: 20, limits: [20, 50, 100]},
+                        cols: [[
+                            {title: "<?=admin_t('admin.gameassist.game_account_id')?>", field: "id", sort: true, width: 110},
+                            {title: "<?=admin_t('admin.gameassist.login_method')?>", field: "login_method_label", width: 120},
+                            {title: "<?=admin_t('admin.gameassist.login_identity')?>", field: "login_identity", minWidth: 170},
+                            {title: "<?=admin_t('admin.gameassist.display_name')?>", field: "display_name", minWidth: 140},
+                            {title: "<?=admin_t('admin.gameassist.third_party_account_id')?>", field: "third_party_account_id", minWidth: 160, templet: function(d) { return d.third_party_account_id ? escaped(d.third_party_account_id) : "-"; }},
+                            {title: "<?=admin_t('admin.gameassist.bound_role_id')?>", field: "bound_role_id", minWidth: 160, templet: function(d) { return d.bound_role_id ? escaped(d.bound_role_id) : "-"; }},
+                            {title: "<?=admin_t('admin.gameassist.is_bound')?>", field: "is_bound", width: 100, templet: function(d) {
+                                return d.is_bound ? '<span class="layui-badge layui-bg-green"><?=admin_t('admin.gameassist.bound_yes')?></span>' : '<span class="layui-badge layui-bg-gray"><?=admin_t('admin.gameassist.bound_no')?></span>';
+                            }},
+                            {title: "<?=admin_t('admin.gameassist.server_name')?>", field: "server_name", minWidth: 120},
+                            {title: "<?=admin_t('admin.gameassist.game_status')?>", field: "status", width: 110},
+                            {title: "<?=admin_t('admin.gameassist.desired_running')?>", field: "desired_running", width: 110, templet: function(d) {
+                                return d.desired_running === 1 ? "<?=admin_t('admin.gameassist.yes')?>" : "<?=admin_t('admin.gameassist.no')?>";
+                            }},
+                            {title: "<?=admin_t('admin.gameassist.game_expire_time')?>", field: "expire_time", minWidth: 170, templet: function(d) { return d.expire_time ? escaped(d.expire_time) : "-"; }},
+                            {title: "<?=admin_t('admin.gameassist.game_account_created_at')?>", field: "created_at", minWidth: 170},
+                            {title: "<?=admin_t('admin.gameassist.updated_at')?>", field: "updated_at", minWidth: 170}
+                        ]],
+                        skin: "line",
+                        size: "lg",
+                        autoSort: false,
+                        defaultToolbar: ["filter", "print"],
+                        done: function(res) {
+                            if (res.code) layui.popup.failure(res.msg);
+                        }
+                    });
+                }
 
                 function render()
                 {
@@ -165,7 +219,19 @@
                 });
 
                 table.on("tool(data-table)", function(obj) {
-                    if (obj.event === "grantQuota") {
+                    if (obj.event === "gameAccounts") {
+                        currentGameAccountUserId = obj.data[PRIMARY_KEY];
+                        layer.open({
+                            type: 1,
+                            title: "<?=admin_t('admin.gameassist.platform_account')?> - " + escaped(obj.data.account) + " / <?=admin_t('admin.gameassist.game_accounts')?>",
+                            shade: 0.1,
+                            area: [common.isModile() ? "100%" : "86%", common.isModile() ? "100%" : "72%"],
+                            content: $("#game-account-panel"),
+                            success: function() {
+                                renderGameAccountTable(currentGameAccountUserId);
+                            }
+                        });
+                    } else if (obj.event === "grantQuota") {
                         layer.open({
                             type: 2,
                             title: "<?=admin_t('admin.gameassist.grant_quota')?>",

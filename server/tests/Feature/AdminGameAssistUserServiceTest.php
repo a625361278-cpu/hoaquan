@@ -136,4 +136,124 @@ class AdminGameAssistUserServiceTest extends TestCase
 
         $service->grantQuota(1, 0, '', 99);
     }
+
+    public function testGameAccountsReturnBindingInfoAndDoNotExposeSecrets(): void
+    {
+        $connection = Db::connection();
+        $connection->beginTransaction();
+
+        try {
+            $now = date('Y-m-d H:i:s');
+            $suffix = bin2hex(random_bytes(4));
+            $userId = (int)Db::table('ga_users')->insertGetId([
+                'account' => 'accounts_' . $suffix,
+                'email' => 'accounts_' . $suffix . '@example.com',
+                'nickname' => 'accounts_' . $suffix,
+                'password_hash' => password_hash('secret123', PASSWORD_DEFAULT),
+                'balance' => '2.00',
+                'bound_role_id' => 'fb_role_' . $suffix,
+                'role_bound_at' => $now,
+                'status' => 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            Db::table('ga_game_accounts')->insert([
+                'user_id' => $userId,
+                'display_name' => 'FB角色',
+                'game_username' => '',
+                'game_uid' => 'fb_uid_' . $suffix,
+                'game_password_cipher' => null,
+                'game_token_cipher' => 'secret-token-cipher',
+                'channel_code' => 'official_app',
+                'login_method' => 2,
+                'server_id' => '216',
+                'server_name' => 'VN-216',
+                'status' => 'running',
+                'sync_status' => 'synced',
+                'third_party_account_id' => 'fb_role_' . $suffix,
+                'log_session_id' => 'session_' . $suffix,
+                'desired_running' => 1,
+                'expire_time' => '2026-08-01 00:00:00',
+                'remark' => '测试',
+                'config_json' => '{}',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $result = (new GameAssistUserAdminService())->gameAccounts($userId, ['page' => 1, 'limit' => 20]);
+
+            $this->assertSame(1, $result['count']);
+            $row = $result['data'][0];
+            $this->assertSame('Facebook', $row['login_method_label']);
+            $this->assertSame('fb_uid_' . $suffix, $row['login_identity']);
+            $this->assertSame('fb_role_' . $suffix, $row['bound_role_id']);
+            $this->assertSame('fb_role_' . $suffix, $row['third_party_account_id']);
+            $this->assertTrue($row['is_bound']);
+            $this->assertArrayNotHasKey('game_password_cipher', $row);
+            $this->assertArrayNotHasKey('game_token_cipher', $row);
+            $this->assertArrayNotHasKey('password_hash', $row);
+        } finally {
+            $connection->rollBack();
+        }
+    }
+
+    public function testGameAccountsUseLoginIdentityFallbackWhenThirdPartyRoleMissing(): void
+    {
+        $connection = Db::connection();
+        $connection->beginTransaction();
+
+        try {
+            $now = date('Y-m-d H:i:s');
+            $suffix = bin2hex(random_bytes(4));
+            $gameUsername = 'role_' . $suffix;
+            $userId = (int)Db::table('ga_users')->insertGetId([
+                'account' => 'fallback_' . $suffix,
+                'email' => 'fallback_' . $suffix . '@example.com',
+                'nickname' => 'fallback_' . $suffix,
+                'password_hash' => password_hash('secret123', PASSWORD_DEFAULT),
+                'balance' => '2.00',
+                'bound_role_id' => $gameUsername,
+                'status' => 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            Db::table('ga_game_accounts')->insert([
+                'user_id' => $userId,
+                'display_name' => '账号密码角色',
+                'game_username' => $gameUsername,
+                'game_uid' => '',
+                'game_password_cipher' => 'secret-password-cipher',
+                'game_token_cipher' => null,
+                'channel_code' => 'official_app',
+                'login_method' => 1,
+                'server_id' => '1',
+                'server_name' => '测试服',
+                'status' => 'stopped',
+                'sync_status' => 'synced',
+                'third_party_account_id' => '',
+                'log_session_id' => '',
+                'desired_running' => 0,
+                'expire_time' => null,
+                'remark' => '',
+                'config_json' => '{}',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $result = (new GameAssistUserAdminService())->gameAccounts($userId, [
+                'game_account' => $gameUsername,
+                'login_method' => '1',
+                'page' => 1,
+                'limit' => 20,
+            ]);
+
+            $this->assertSame(1, $result['count']);
+            $this->assertSame('账号密码', $result['data'][0]['login_method_label']);
+            $this->assertTrue($result['data'][0]['is_bound']);
+        } finally {
+            $connection->rollBack();
+        }
+    }
 }

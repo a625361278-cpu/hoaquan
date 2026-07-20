@@ -60,12 +60,12 @@ class GameAssistQuotaLogAdminService
         [$page, $limit] = $this->pagination($filters);
         $query = Db::table('ga_user_point_transactions as transaction')
             ->leftJoin('ga_users as user', 'user.id', '=', 'transaction.user_id')
-            ->leftJoin('ga_game_accounts as game', 'game.id', '=', 'transaction.related_role_id')
-            ->where('transaction.type', 'quota_consume');
+            ->leftJoin('ga_game_accounts as game', 'game.id', '=', 'transaction.related_role_id');
 
         $this->applyIdFilter($query, 'transaction.user_id', $filters['user_id'] ?? null);
         $this->applyLikeFilter($query, 'user.account', $filters['user_account'] ?? null, 64);
         $this->applyIdFilter($query, 'transaction.related_role_id', $filters['game_account_id'] ?? null);
+        $this->applyTransactionTypeFilter($query, $filters['type'] ?? null);
         $this->applyGameAccountFilter($query, $filters['game_account'] ?? null);
         $this->applyDateRange($query, 'transaction.created_at', $filters['created_at'] ?? null);
 
@@ -74,10 +74,13 @@ class GameAssistQuotaLogAdminService
             ->select([
                 'transaction.id',
                 'transaction.user_id',
+                'transaction.type',
                 'transaction.amount',
                 'transaction.balance_after',
                 'transaction.description',
                 'transaction.related_role_id as game_account_id',
+                'transaction.related_user_id',
+                'transaction.related_payment_order_id',
                 'transaction.created_at',
                 'user.account as user_account',
                 'user.nickname as user_nickname',
@@ -134,27 +137,36 @@ class GameAssistQuotaLogAdminService
     private function formatConsumeRecord(object $row): array
     {
         $amount = (string)$row->amount;
-        $amountValid = preg_match('/^-\d+(?:\.\d{1,2})?$/', $amount) === 1 && (float)$amount < 0;
+        $amountValid = preg_match('/^-?\d+(?:\.\d{1,2})?$/', $amount) === 1 && (float)$amount !== 0.0;
         if (!$amountValid) {
-            Log::error('Quota consume transaction amount invalid', ['transaction_id' => (int)$row->id]);
+            Log::error('User quota transaction amount invalid', ['transaction_id' => (int)$row->id]);
         }
 
         $accountIdText = (string)$row->game_account_id;
+        $isIncrease = $amountValid && (float)$amount > 0;
+        $isConsume = $amountValid && (float)$amount < 0;
         return [
             'id' => (int)$row->id,
             'user_id' => (int)$row->user_id,
             'user_account' => $row->user_account === null ? '' : (string)$row->user_account,
             'user_nickname' => $row->user_nickname === null ? '' : (string)$row->user_nickname,
             'user_exists' => $row->user_account !== null,
+            'type' => (string)$row->type,
+            'type_label' => $this->transactionTypeLabel((string)$row->type),
             'game_account_id' => ctype_digit($accountIdText) ? (int)$accountIdText : $accountIdText,
+            'game_account_has_reference' => $accountIdText !== '',
             'game_username' => $row->game_username === null ? '' : (string)$row->game_username,
             'game_display_name' => $row->game_display_name === null ? '' : (string)$row->game_display_name,
             'server_name' => $row->server_name === null ? '' : (string)$row->server_name,
             'game_account_exists' => $row->game_username !== null,
             'game_account_relation_invalid' => !ctype_digit($accountIdText),
-            'consumed_points' => $amountValid ? substr($amount, 1) : null,
+            'changed_points' => $amountValid ? $amount : null,
+            'increased_points' => $isIncrease ? $amount : null,
+            'consumed_points' => $isConsume ? substr($amount, 1) : null,
             'balance_after' => (string)$row->balance_after,
             'description' => (string)$row->description,
+            'related_user_id' => $row->related_user_id === null ? null : (int)$row->related_user_id,
+            'related_payment_order_id' => $row->related_payment_order_id === null ? null : (int)$row->related_payment_order_id,
             'amount_invalid' => !$amountValid,
             'created_at' => (string)$row->created_at,
         ];
@@ -210,9 +222,35 @@ class GameAssistQuotaLogAdminService
         }
         $query->where(function ($nested) use ($text) {
             $nested->where('game.game_username', 'like', '%' . $text . '%')
+                ->orWhere('game.game_uid', 'like', '%' . $text . '%')
                 ->orWhere('game.display_name', 'like', '%' . $text . '%')
-                ->orWhere('game.server_name', 'like', '%' . $text . '%');
+                ->orWhere('game.server_name', 'like', '%' . $text . '%')
+                ->orWhere('transaction.related_role_id', 'like', '%' . $text . '%');
         });
+    }
+
+    private function applyTransactionTypeFilter(object $query, mixed $value): void
+    {
+        $text = trim((string)$value);
+        if ($text === '') {
+            return;
+        }
+        if (!preg_match('/^[a-z0-9_]{1,32}$/', $text)) {
+            throw new RuntimeException($this->t('admin.quota_logs.transaction_type_invalid'));
+        }
+        $query->where('transaction.type', $text);
+    }
+
+    private function transactionTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'registration_reward' => $this->t('admin.quota_logs.type_registration_reward'),
+            'admin_grant' => $this->t('admin.quota_logs.type_admin_grant'),
+            'quota_consume' => $this->t('admin.quota_logs.type_quota_consume'),
+            'invite_reward' => $this->t('admin.quota_logs.type_invite_reward'),
+            'recharge' => $this->t('admin.quota_logs.type_recharge'),
+            default => $type,
+        };
     }
 
     private function applyDateRange(object $query, string $column, mixed $value): void

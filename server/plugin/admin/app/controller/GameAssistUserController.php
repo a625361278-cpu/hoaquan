@@ -100,17 +100,37 @@ class GameAssistUserController extends Crud
     }
 
     /**
-     * 用户使用记录
+     * 用户配额记录
      */
     public function quotaConsumeRecords(Request $request): Response
     {
         return $this->quotaLogResponse(fn (): array => $this->quotaLogService->consumeRecords($request->get()));
     }
 
+    /**
+     * 用户游戏账号
+     */
+    public function gameAccounts(Request $request): Response
+    {
+        try {
+            $result = $this->service->gameAccounts((int)$request->get('user_id'), $request->get());
+        } catch (RuntimeException $exception) {
+            throw new BusinessException($exception->getMessage(), 2);
+        }
+
+        return json([
+            'code' => 0,
+            'msg' => 'ok',
+            'count' => (int)$result['count'],
+            'data' => $result['data'],
+            'user' => $result['user'],
+        ]);
+    }
+
     protected function selectInput(Request $request): array
     {
         [$where, $format, $limit, $field, $order] = parent::selectInput($request);
-        foreach (['account', 'email', 'nickname'] as $column) {
+        foreach (['account', 'email', 'nickname', 'bound_role_id'] as $column) {
             if (isset($where[$column]) && !is_array($where[$column])) {
                 $where[$column] = ['like', $where[$column]];
             }
