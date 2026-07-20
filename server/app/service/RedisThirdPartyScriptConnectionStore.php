@@ -88,8 +88,14 @@ class RedisThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
         }
         $this->writeConnection($clientId, $state);
         $accountId = (int)($state['account_id'] ?? 0);
-        if ($accountId > 0 && in_array((string)($state['state'] ?? ''), ['bound', 'stopping'], true)) {
-            $this->redis()->setEx($this->accountKey($accountId), self::CONNECTION_TTL, $clientId);
+        if ($accountId > 0) {
+            $connectionState = (string)($state['state'] ?? '');
+            $accountKey = $this->accountKey($accountId);
+            $currentClientId = $this->redis()->get($accountKey);
+            if ($connectionState === 'bound'
+                || ($connectionState === 'stopping' && (!$currentClientId || (string)$currentClientId === $clientId))) {
+                $this->redis()->setEx($accountKey, self::CONNECTION_TTL, $clientId);
+            }
         }
         return $state;
     }
@@ -224,9 +230,19 @@ LUA;
             return null;
         }
 
+        return $this->markClientStopping((string)$state['client_id']);
+    }
+
+    public function markClientStopping(string $clientId): ?array
+    {
+        $state = $this->connection($clientId);
+        if (!$state || (int)($state['account_id'] ?? 0) <= 0) {
+            return null;
+        }
+
         $state['state'] = 'stopping';
         $state['last_seen'] = time();
-        $this->writeConnection((string)$state['client_id'], $state);
+        $this->writeConnection($clientId, $state);
         return $state;
     }
 
@@ -237,7 +253,10 @@ LUA;
         $this->redis()->sRem($this->idleKey(), $clientId);
         $this->redis()->sRem($this->boundKey(), $clientId);
         if ($state && (int)($state['account_id'] ?? 0) > 0) {
-            $this->redis()->del($this->accountKey((int)$state['account_id']));
+            $accountKey = $this->accountKey((int)$state['account_id']);
+            if ((string)$this->redis()->get($accountKey) === $clientId) {
+                $this->redis()->del($accountKey);
+            }
         }
         return $state;
     }
@@ -302,6 +321,7 @@ LUA;
 
     private function findBoundConnectionByAccount(int $accountId): ?array
     {
+        $stoppingState = null;
         foreach ($this->setMembers($this->boundKey()) as $clientId) {
             $clientId = (string)$clientId;
             $state = $this->connection($clientId);
@@ -314,12 +334,19 @@ LUA;
             if (!in_array((string)($state['state'] ?? ''), ['bound', 'stopping'], true)) {
                 continue;
             }
+            if ((string)($state['state'] ?? '') === 'stopping') {
+                $stoppingState ??= $state;
+                continue;
+            }
 
             $this->redis()->setEx($this->accountKey($accountId), self::CONNECTION_TTL, $clientId);
             return $state;
         }
 
-        return null;
+        if ($stoppingState) {
+            $this->redis()->setEx($this->accountKey($accountId), self::CONNECTION_TTL, (string)$stoppingState['client_id']);
+        }
+        return $stoppingState;
     }
 
     private function redis(): mixed

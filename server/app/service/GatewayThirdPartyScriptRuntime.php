@@ -276,6 +276,44 @@ class GatewayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
         ];
     }
 
+    public function accountConnection(int $accountId): ?array
+    {
+        return $this->connections->connectionByAccount($accountId);
+    }
+
+    public function stopConnection(string $clientId, string $requestId): array
+    {
+        $connection = $this->connections->markClientStopping($clientId);
+        if (!$connection) {
+            return [
+                'sent' => false,
+                'client_id' => $clientId,
+                'request_id' => $requestId,
+            ];
+        }
+
+        $payload = [
+            'type' => 'stop',
+            'request_id' => $requestId,
+            'session_id' => (string)($connection['session_id'] ?? ''),
+        ];
+
+        try {
+            ($this->sessionUpdater)($clientId, ['state' => 'stopping']);
+            $sent = ($this->sender)($clientId, $this->encode($payload));
+        } catch (Throwable) {
+            $sent = false;
+        }
+
+        return [
+            'sent' => (bool)$sent,
+            'client_id' => $clientId,
+            'account_id' => (int)($connection['account_id'] ?? 0),
+            'request_id' => $requestId,
+            'session_id' => (string)($connection['session_id'] ?? ''),
+        ];
+    }
+
     private function encode(array $payload): string
     {
         return json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

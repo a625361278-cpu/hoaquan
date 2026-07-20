@@ -20,6 +20,8 @@ interface ThirdPartyScriptConnectionStoreInterface
 
     public function markStopping(int $accountId): ?array;
 
+    public function markClientStopping(string $clientId): ?array;
+
     public function releaseClient(string $clientId): ?array;
 
     public function listConnections(): array;

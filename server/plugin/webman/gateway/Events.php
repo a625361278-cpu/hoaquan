@@ -152,6 +152,10 @@ class Events
                 return;
             }
             $sessionId = (string)($state['session_id'] ?? '');
+            if (self::isStaleRuntimeSession($accountId, $sessionId) && $type !== 'stopped') {
+                self::closeStaleRuntimeConnection($clientId, $accountId, $type, $sessionId);
+                return;
+            }
             match ($type) {
                 'started' => self::markStarted($accountId, $payload, $state),
                 'log' => self::appendLogPayload($accountId, $payload, $sessionId),
@@ -197,12 +201,18 @@ class Events
 
         $accountId = (int)$state['account_id'];
         if (($state['state'] ?? '') === 'stopping') {
+            if (self::isStaleRuntimeSession($accountId, (string)($state['session_id'] ?? ''))) {
+                return;
+            }
             self::markStoppedLocally($accountId);
             return;
         }
 
         $account = self::accounts()->findById($accountId);
         if (!$account || !in_array((string)($account['status'] ?? ''), [GameAccountService::STARTING_STATUS, GameAccountService::RUNNING_STATUS, GameAccountService::RECONNECTING_STATUS], true)) {
+            return;
+        }
+        if (self::isStaleRuntimeSession($accountId, (string)($state['session_id'] ?? ''))) {
             return;
         }
 
@@ -329,6 +339,10 @@ class Events
 
     private static function markError(string $clientId, int $accountId, string $message, string $sessionId): void
     {
+        if (self::isStaleRuntimeSession($accountId, $sessionId)) {
+            self::closeStaleRuntimeConnection($clientId, $accountId, 'error', $sessionId);
+            return;
+        }
         Log::warning('Third-party script websocket closing after client error', [
             'client_id' => $clientId,
             'account_id' => $accountId,
@@ -361,6 +375,9 @@ class Events
         ]);
         self::store()->releaseClient($clientId);
         Gateway::closeClient($clientId);
+        if (self::isStaleRuntimeSession($accountId, $sessionId)) {
+            return;
+        }
         if ($connectionState === 'stopping') {
             self::markStoppedLocally($accountId);
             return;
@@ -373,6 +390,31 @@ class Events
         }
 
         self::markStoppedLocally($accountId);
+    }
+
+    private static function isStaleRuntimeSession(int $accountId, string $sessionId): bool
+    {
+        if ($accountId <= 0 || $sessionId === '') {
+            return false;
+        }
+        $account = self::accounts()->findById($accountId);
+        if (!$account) {
+            return false;
+        }
+        $currentSessionId = (string)($account['log_session_id'] ?? '');
+        return $currentSessionId !== '' && !hash_equals($currentSessionId, $sessionId);
+    }
+
+    private static function closeStaleRuntimeConnection(string $clientId, int $accountId, string $type, string $sessionId): void
+    {
+        Log::info('Third-party stale runtime message ignored', [
+            'client_id' => $clientId,
+            'account_id' => $accountId,
+            'message_type' => $type,
+            'session_id' => $sessionId,
+        ]);
+        self::store()->releaseClient($clientId);
+        Gateway::closeClient($clientId);
     }
 
     private static function markStoppedLocally(int $accountId): void

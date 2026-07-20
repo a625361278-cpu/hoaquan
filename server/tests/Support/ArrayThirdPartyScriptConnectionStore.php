@@ -68,8 +68,17 @@ class ArrayThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
         if (!$state) {
             return null;
         }
+        return $this->markClientStopping((string)$state['client_id']);
+    }
+
+    public function markClientStopping(string $clientId): ?array
+    {
+        $state = $this->connections[$clientId] ?? null;
+        if (!$state || (int)($state['account_id'] ?? 0) <= 0) {
+            return null;
+        }
         $state['state'] = 'stopping';
-        $this->connections[$state['client_id']] = $state;
+        $this->connections[$clientId] = $state;
         return $state;
     }
 
@@ -112,7 +121,10 @@ class ArrayThirdPartyScriptConnectionStore implements ThirdPartyScriptConnection
         $state = $this->connections[$clientId] ?? null;
         unset($this->connections[$clientId]);
         if ($state && (int)($state['account_id'] ?? 0) > 0) {
-            unset($this->accounts[(int)$state['account_id']]);
+            $accountId = (int)$state['account_id'];
+            if (($this->accounts[$accountId] ?? null) === $clientId) {
+                unset($this->accounts[$accountId]);
+            }
         }
         return $state;
     }

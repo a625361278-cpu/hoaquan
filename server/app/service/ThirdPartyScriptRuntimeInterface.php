@@ -21,4 +21,8 @@ interface ThirdPartyScriptRuntimeInterface
     public function startAccount(array $account, string $requestId, string $sessionId, string $credential, array $config, array $taskState = []): array;
 
     public function stopAccount(int $accountId, string $requestId): array;
+
+    public function accountConnection(int $accountId): ?array;
+
+    public function stopConnection(string $clientId, string $requestId): array;
 }

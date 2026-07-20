@@ -7,6 +7,7 @@ use app\exception\ApiException;
 use app\service\GameAccountLogService;
 use app\service\GameAccountService;
 use app\service\GameConfigVisibilityService;
+use app\service\RedisGameAccountTakeoverNoticeStore;
 use app\service\SystemSettingService;
 use app\support\ApiResponse;
 use app\support\I18n;
@@ -146,7 +147,8 @@ class GameAccountController extends BaseApiController
         return new GameAccountService(
             new DbGameAccountRepository(),
             $config,
-            I18n::localeFromRequest($request)
+            I18n::localeFromRequest($request),
+            takeoverNotices: new RedisGameAccountTakeoverNoticeStore()
         );
     }
 

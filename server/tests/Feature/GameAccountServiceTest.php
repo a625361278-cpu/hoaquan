@@ -7,6 +7,7 @@ use app\service\GameAccountResourceService;
 use app\service\GameAccountTaskStateService;
 use PHPUnit\Framework\TestCase;
 use tests\Support\ArrayGameAccountRepository;
+use tests\Support\ArrayGameAccountTakeoverNoticeStore;
 use tests\Support\ArrayGameAccountTaskStatePendingStore;
 use tests\Support\ArrayGameAccountRuntimeResourceStore;
 use tests\Support\ArrayGameAccountLoginValidationStore;
@@ -682,6 +683,186 @@ class GameAccountServiceTest extends TestCase
         $this->assertFalse($runtime->started[0]['task_state']['exists']);
         $this->assertSame(1, (int)$repository->findById(3)['desired_running']);
         $this->assertSame('启动任务已提交，等待服务器确认', $result['msg']);
+    }
+
+    public function testStartTakesOverExistingRuntimeConnectionBeforeSendingNewStart(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'running',
+                'sync_status' => 'synced',
+                'third_party_account_id' => '',
+                'log_session_id' => 'old-session',
+                'desired_running' => 1,
+                'remark' => '',
+                'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
+            ],
+        ]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $runtime->connections['old-client'] = [
+            'client_id' => 'old-client',
+            'account_id' => 3,
+            'session_id' => 'old-session',
+            'request_id' => 'old-request',
+        ];
+        $notices = new ArrayGameAccountTakeoverNoticeStore();
+        $service = new GameAccountService(
+            $repository,
+            [
+                'enabled' => true,
+                'transport' => 'websocket',
+                'script_token' => 'script-token',
+                'credential_key' => 'test-key',
+            ],
+            \app\support\I18n::DEFAULT_LOCALE,
+            $runtime,
+            taskStates: $this->taskStates($repository),
+            takeoverNotices: $notices
+        );
+
+        $result = $service->start(7, 3);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertSame('old-client', $runtime->stopped[0]['client_id']);
+        $this->assertSame('old-session', $runtime->stopped[0]['session_id']);
+        $this->assertSame(3, $runtime->started[0]['account_id']);
+        $this->assertSame('starting', $repository->findById(3)['status']);
+        $this->assertNotSame('old-session', $repository->findById(3)['log_session_id']);
+        $this->assertSame(1, (int)$repository->findById(3)['desired_running']);
+        $this->assertCount(1, $notices->notices);
+        $list = $service->listForUser(7);
+        $this->assertSame('游戏帐号已经在别处登录', $list['data']['notices'][0]['message']);
+    }
+
+    public function testTakeoverWithoutIdleConnectionDoesNotStopExistingConnection(): void
+    {
+        $repository = new ArrayGameAccountRepository([[
+            'id' => 3,
+            'user_id' => 7,
+            'display_name' => 'any-player',
+            'game_username' => 'any-player',
+            'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+            'channel_code' => 'official_app',
+            'server_id' => '',
+            'server_name' => '',
+            'status' => 'running',
+            'sync_status' => 'synced',
+            'third_party_account_id' => '',
+            'log_session_id' => 'old-session',
+            'desired_running' => 1,
+            'remark' => '',
+            'config_json' => '{}',
+            'expire_time' => '2099-01-01 00:00:00',
+        ]]);
+        $runtime = new ArrayThirdPartyScriptRuntime(false);
+        $runtime->connections['old-client'] = ['client_id' => 'old-client', 'account_id' => 3, 'session_id' => 'old-session'];
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository));
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('服务器未准备好，请联系管理员');
+
+        try {
+            $service->start(7, 3);
+        } finally {
+            $this->assertSame([], $runtime->stopped);
+            $this->assertSame('running', $repository->findById(3)['status']);
+            $this->assertSame('old-session', $repository->findById(3)['log_session_id']);
+        }
+    }
+
+    public function testTakeoverStopsWhenOldConnectionCannotBeStopped(): void
+    {
+        $repository = new ArrayGameAccountRepository([[
+            'id' => 3,
+            'user_id' => 7,
+            'display_name' => 'any-player',
+            'game_username' => 'any-player',
+            'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+            'channel_code' => 'official_app',
+            'server_id' => '',
+            'server_name' => '',
+            'status' => 'running',
+            'sync_status' => 'synced',
+            'third_party_account_id' => '',
+            'log_session_id' => 'old-session',
+            'desired_running' => 1,
+            'remark' => '',
+            'config_json' => '{}',
+            'expire_time' => '2099-01-01 00:00:00',
+        ]]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $runtime->failStopConnection = true;
+        $runtime->connections['old-client'] = ['client_id' => 'old-client', 'account_id' => 3, 'session_id' => 'old-session'];
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository));
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('原运行连接停止失败，请稍后重试');
+
+        try {
+            $service->start(7, 3);
+        } finally {
+            $this->assertSame([], $runtime->started);
+            $this->assertCount(1, $runtime->released);
+            $this->assertSame('running', $repository->findById(3)['status']);
+        }
+    }
+
+    public function testStartRejectsAccountAlreadyStopping(): void
+    {
+        $repository = new ArrayGameAccountRepository([[
+            'id' => 3,
+            'user_id' => 7,
+            'display_name' => 'any-player',
+            'game_username' => 'any-player',
+            'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+            'channel_code' => 'official_app',
+            'server_id' => '',
+            'server_name' => '',
+            'status' => 'stopping',
+            'sync_status' => 'local_unsynced',
+            'third_party_account_id' => '',
+            'log_session_id' => 'old-session',
+            'desired_running' => 0,
+            'remark' => '',
+            'config_json' => '{}',
+            'expire_time' => '2099-01-01 00:00:00',
+        ]]);
+        $runtime = new ArrayThirdPartyScriptRuntime();
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository));
+
+        $this->expectException(\app\exception\ApiException::class);
+        $this->expectExceptionMessage('游戏账号正在停止中，请稍后再启动');
+
+        try {
+            $service->start(7, 3);
+        } finally {
+            $this->assertSame([], $runtime->started);
+            $this->assertSame([], $runtime->stopped);
+        }
     }
 
     public function testExistingFacebookAccountStartsWithDecryptedTokenWhenCreationIsDisabled(): void

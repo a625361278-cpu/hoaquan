@@ -68,6 +68,55 @@ class RedisThirdPartyScriptConnectionStoreTest extends TestCase
         $this->assertSame(180, $redis->ttl($this->accountKey(3)));
     }
 
+    public function testReleasingOldClientDoesNotDeleteNewAccountIndex(): void
+    {
+        $redis = new InMemoryRedisClient();
+        $store = new RedisThirdPartyScriptConnectionStore($redis);
+        $store->registerIdle('old-client');
+        $store->registerIdle('new-client');
+        $store->allocateIdle(3, 'old-session', 'old-request');
+        $store->allocateIdle(3, 'new-session', 'new-request');
+
+        $released = $store->releaseClient('old-client');
+
+        $this->assertSame('old-client', $released['client_id']);
+        $this->assertSame('new-client', $redis->get($this->accountKey(3)));
+        $this->assertSame('new-client', $store->connectionByAccount(3)['client_id']);
+    }
+
+    public function testStoppingOldClientHeartbeatDoesNotOverwriteNewAccountIndex(): void
+    {
+        $redis = new InMemoryRedisClient();
+        $store = new RedisThirdPartyScriptConnectionStore($redis);
+        $store->registerIdle('old-client');
+        $store->registerIdle('new-client');
+        $store->allocateIdle(3, 'old-session', 'old-request');
+        $store->allocateIdle(3, 'new-session', 'new-request');
+        $store->markClientStopping('old-client');
+
+        $store->heartbeat('old-client', ['message_type' => 'log']);
+
+        $this->assertSame('new-client', $redis->get($this->accountKey(3)));
+        $this->assertSame('new-client', $store->connectionByAccount(3)['client_id']);
+    }
+
+    public function testMissingAccountIndexFallbackPrefersBoundConnectionOverStoppingConnection(): void
+    {
+        $redis = new InMemoryRedisClient();
+        $store = new RedisThirdPartyScriptConnectionStore($redis);
+        $store->registerIdle('old-client');
+        $store->registerIdle('new-client');
+        $store->allocateIdle(3, 'old-session', 'old-request');
+        $store->allocateIdle(3, 'new-session', 'new-request');
+        $store->markClientStopping('old-client');
+        $redis->del($this->accountKey(3));
+
+        $connection = $store->connectionByAccount(3);
+
+        $this->assertSame('new-client', $connection['client_id']);
+        $this->assertSame('new-client', $redis->get($this->accountKey(3)));
+    }
+
     public function testValidationConnectionOnlyReturnsIdleWhenContextMatches(): void
     {
         $redis = new InMemoryRedisClient();

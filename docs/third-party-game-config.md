@@ -26,7 +26,7 @@ ws://example.com/ws/third-party/script?token=SCRIPT_POOL_TOKEN
 
 `request_id` 是本次请求编号，不是游戏账号、区服或角色 ID；第三方回 `started/error/stopped` 时建议原样带回。`session_id` 是本次运行日志会话 ID。`login_method` 是整型账号登录方式枚举：`1` 使用 `game_username + game_password`，`2` 为 Facebook、`3` 为 Google，后两种都使用 `game_uid + token`。三组凭证字段互斥，第三方必须按该字段选择登录流程。当前游戏只有一个区服，启动包不传 `server_id`、`server_name`。
 
-`start` 是幂等的“启动或重新绑定”指令。网络断开、我方服务重启或第三方脚本重连后，只要玩家没有手动停止账号，服务端会在有空闲脚本连接时再次发送 `start`。第三方在方式 `1` 使用 `game_username`、方式 `2/3` 使用 `game_uid` 判断任务是否已经运行：已经运行时不要重复启动，只把新连接绑定到原任务并返回 `started`；未运行时正常启动。本协议不另设 `resume` 消息。
+`start` 是幂等的“启动或重新绑定”指令。网络断开、我方服务重启或第三方脚本重连后，只要玩家没有手动停止账号，服务端会在有空闲脚本连接时再次发送 `start`。第三方在方式 `1` 使用 `game_username`、方式 `2/3` 使用 `game_uid` 判断任务是否已经运行：已经运行时不要重复启动，只把新连接绑定到原任务并返回 `started`；未运行时正常启动。本协议不另设 `resume` 消息。同一游戏账号被新的脚本连接启动时，服务端会先向旧连接发送现有 `stop` 包，再向新连接发送现有 `start` 包；协议字段不变，第三方只需保证旧连接的 `stop` 不会关闭已经由新连接接管的任务。
 
 Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id/config/task_state` 与完整示例一致：
 

@@ -36,7 +36,8 @@ class GameAccountService
         ?GameAccountResourceService $resources = null,
         ?GameAccountQuotaService $quotaService = null,
         ?GameAccountTaskStateService $taskStates = null,
-        private ?GameAccountLoginValidationStoreInterface $loginValidations = null
+        private ?GameAccountLoginValidationStoreInterface $loginValidations = null,
+        private ?GameAccountTakeoverNoticeStoreInterface $takeoverNotices = null
     )
     {
         if (is_string($thirdPartyConfigOrLocale)) {
@@ -64,6 +65,7 @@ class GameAccountService
         $this->resources = $resources ?? new GameAccountResourceService();
         $this->quotaService = $quotaService ?? new GameAccountQuotaService(locale: $this->locale);
         $this->taskStates = $taskStates ?? new GameAccountTaskStateService($this->accounts);
+        $this->takeoverNotices ??= new NullGameAccountTakeoverNoticeStore();
     }
 
     public function listForUser(int $userId): array
@@ -73,6 +75,7 @@ class GameAccountService
 
         return ApiResponse::success([
             'items' => array_map([$this, 'publicAccount'], $items),
+            'notices' => array_map([$this, 'publicNotice'], $this->takeoverNotices->listForUser($userId)),
             'empty_text' => I18n::t('api.game.account_empty', [], $this->locale),
             'account_count' => $accountCount,
             'account_limit' => $this->maxAccountsPerUser,
@@ -175,9 +178,21 @@ class GameAccountService
         $this->assertNoCredentialValidation($userId, $accountId);
         $credential = $this->credentialForStart($account);
         $taskState = $this->taskStates->get($accountId);
+        $existingConnection = $this->connectionForTakeover($account);
         $logSessionId = bin2hex(random_bytes(12));
         $requestId = bin2hex(random_bytes(16));
         $reservation = $this->scriptRuntime->reserveAccount($accountId, $requestId, $logSessionId);
+
+        if ($existingConnection !== null) {
+            $stopRuntime = $this->scriptRuntime->stopConnection(
+                (string)$existingConnection['client_id'],
+                bin2hex(random_bytes(16))
+            );
+            if (!($stopRuntime['sent'] ?? false)) {
+                $this->scriptRuntime->releaseReservation($reservation);
+                throw new ApiException(I18n::t('api.game.takeover_stop_failed', [], $this->locale), 503);
+            }
+        }
 
         try {
             $this->resources->clear($accountId);
@@ -205,6 +220,19 @@ class GameAccountService
                 $taskState
             );
         } catch (\Throwable $e) {
+            if ($existingConnection !== null) {
+                $this->scriptRuntime->releaseReservation($reservation);
+                $this->accounts->updateRuntimeState($userId, $accountId, [
+                    'status' => self::ERROR_STATUS,
+                    'sync_status' => self::LOCAL_UNSYNCED_STATUS,
+                    'log_session_id' => '',
+                    'desired_running' => 0,
+                    'auto_restart_attempts' => 0,
+                    'auto_restart_next_at' => null,
+                    'auto_restart_last_error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
             $this->accounts->updateRuntimeState($userId, $accountId, [
                 'status' => (string)($account['status'] ?? self::STOPPED_STATUS),
                 'sync_status' => (string)($account['sync_status'] ?? self::LOCAL_UNSYNCED_STATUS),
@@ -215,6 +243,10 @@ class GameAccountService
                 'auto_restart_last_error' => (string)($account['auto_restart_last_error'] ?? ''),
             ]);
             throw $e;
+        }
+
+        if ($existingConnection !== null) {
+            $this->takeoverNotices->pushLoggedInElsewhere($userId, $accountId);
         }
 
         return ApiResponse::success([
@@ -349,6 +381,19 @@ class GameAccountService
         ];
     }
 
+    private function publicNotice(array $notice): array
+    {
+        $messageKey = (string)($notice['message_key'] ?? '');
+        return [
+            'id' => (string)($notice['id'] ?? ''),
+            'type' => (string)($notice['type'] ?? ''),
+            'account_id' => (int)($notice['account_id'] ?? 0),
+            'message' => $messageKey !== '' ? I18n::t($messageKey, [], $this->locale) : '',
+            'created_at' => (int)($notice['created_at'] ?? 0),
+            'expires_at' => (int)($notice['expires_at'] ?? 0),
+        ];
+    }
+
     private function requireAccount(int $userId, int $accountId): array
     {
         $account = $this->accounts->findByUserId($userId, $accountId);
@@ -379,6 +424,24 @@ class GameAccountService
         if ($this->loginValidationStore()->activeCredentialUpdateForAccount($userId, $accountId)) {
             throw new ApiException(I18n::t('api.game.credential_validation_in_progress', [], $this->locale), 409);
         }
+    }
+
+    private function connectionForTakeover(array $account): ?array
+    {
+        $status = (string)($account['status'] ?? '');
+        if ($status === self::STOPPING_STATUS) {
+            throw new ApiException(I18n::t('api.game.stop_in_progress', [], $this->locale), 409);
+        }
+        if (!in_array($status, [self::STARTING_STATUS, self::RUNNING_STATUS, self::RECONNECTING_STATUS], true)) {
+            return null;
+        }
+
+        $connection = $this->scriptRuntime->accountConnection((int)$account['id']);
+        if (!$connection) {
+            return null;
+        }
+        $clientId = trim((string)($connection['client_id'] ?? ''));
+        return $clientId !== '' ? $connection : null;
     }
 
     private function assertThirdPartyScriptReady(): void

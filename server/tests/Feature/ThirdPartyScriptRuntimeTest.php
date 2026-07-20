@@ -176,4 +176,33 @@ class ThirdPartyScriptRuntimeTest extends TestCase
         $this->assertArrayNotHasKey('account_id', $payload);
         $this->assertSame('stopping', $store->connection('client-1')['state']);
     }
+
+    public function testStopConnectionTargetsExplicitOldClient(): void
+    {
+        $store = new ArrayThirdPartyScriptConnectionStore();
+        $store->registerIdle('old-client');
+        $store->registerIdle('new-client');
+        $store->allocateIdle(3, 'old-session', 'old-request');
+        $store->allocateIdle(3, 'new-session', 'new-request');
+        $sent = [];
+        $runtime = new GatewayThirdPartyScriptRuntime(
+            $store,
+            sender: function (string $clientId, string $payload) use (&$sent): bool {
+                $sent[$clientId][] = json_decode($payload, true);
+                return true;
+            },
+            sessionUpdater: static function (): void {
+            }
+        );
+
+        $result = $runtime->stopConnection('old-client', 'stop-old');
+
+        $this->assertTrue($result['sent']);
+        $this->assertSame('old-client', $result['client_id']);
+        $this->assertSame('stop', $sent['old-client'][0]['type']);
+        $this->assertSame('old-session', $sent['old-client'][0]['session_id']);
+        $this->assertSame('stopping', $store->connection('old-client')['state']);
+        $this->assertSame('bound', $store->connection('new-client')['state']);
+        $this->assertSame('new-client', $store->connectionByAccount(3)['client_id']);
+    }
 }

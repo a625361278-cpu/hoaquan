@@ -48,7 +48,7 @@
         <view class="card-actions">
           <text :class="['status-dot', item.status === 'running' ? 'online' : '', ['starting', 'stopping', 'reconnecting'].includes(item.status) ? 'pending' : '', item.status === 'error' ? 'error' : '']"></text>
           <text class="status-text">{{ statusText(item) }}</text>
-          <button class="action primary" :disabled="isActiveAccount(item) || actionLoading" @click="startAccount(item)">{{ t('client.home.start') }}</button>
+          <button class="action primary" :disabled="!canStartAccount(item) || actionLoading" @click="startAccount(item)">{{ t('client.home.start') }}</button>
           <button class="action stop" :disabled="!isActiveAccount(item) || actionLoading" @click="stopAccount(item)">{{ t('client.home.stop') }}</button>
           <button class="action" @click="openLogs(item)">{{ t('client.home.logs') }}</button>
           <button class="action primary" @click="goGameConfig(item)">{{ t('client.home.config') }}</button>
@@ -316,6 +316,9 @@ let logTimer = null;
 let logSocket = null;
 let rechargeTimer = null;
 let credentialValidationTimer = null;
+const TAKEOVER_SEEN_KEY = 'gameassist_takeover_seen_notice_ids';
+const takeoverSeenFallback = new Set();
+const suppressTakeoverAccountIds = new Set();
 
 const accountAddText = computed(() => canAddAccount.value
   ? t('client.home.add_game_with_limit', { count: gameAccounts.value.length, limit: accountLimit.value })
@@ -429,6 +432,7 @@ async function loadHome() {
     gameAccounts.value = accounts.items || [];
     accountLimit.value = Number(accounts.account_limit || 3);
     canAddAccount.value = Boolean(accounts.can_add_account);
+    await maybeShowTakeoverNotices(accounts.notices || []);
     await maybeShowLoginAnnouncement();
     return true;
   } catch (error) {
@@ -507,6 +511,10 @@ function isActiveAccount(item) {
   return ['starting', 'running', 'reconnecting', 'stopping'].includes(item.status);
 }
 
+function canStartAccount(item) {
+  return item.status !== 'stopping';
+}
+
 function statusText(item) {
   if (item.status === 'running') return t('client.home.status.running');
   if (item.status === 'starting') return t('client.home.status.starting');
@@ -522,6 +530,7 @@ function toggleMenu(id) {
 }
 
 async function startAccount(item) {
+  suppressTakeoverAccountIds.add(Number(item.id));
   await accountAction(`/api/game-accounts/${item.id}/start`, 'POST');
 }
 
@@ -550,6 +559,67 @@ async function accountAction(url, method) {
   } finally {
     actionLoading.value = false;
   }
+}
+
+async function maybeShowTakeoverNotices(notices) {
+  if (!Array.isArray(notices) || notices.length === 0) {
+    suppressTakeoverAccountIds.clear();
+    return;
+  }
+
+  const seen = readTakeoverSeenNoticeIds();
+  for (const notice of notices) {
+    const id = String(notice?.id || '');
+    const accountId = Number(notice?.account_id || 0);
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    markTakeoverNoticeSeen(id);
+    seen.add(id);
+    if (suppressTakeoverAccountIds.has(accountId)) {
+      continue;
+    }
+    await showTakeoverNotice(notice);
+  }
+  suppressTakeoverAccountIds.clear();
+}
+
+function showTakeoverNotice(notice) {
+  const message = notice?.message || t('client.home.notice.logged_in_elsewhere');
+  return new Promise((resolve) => {
+    uni.showModal({
+      title: t('client.home.notice.title'),
+      content: message,
+      showCancel: false,
+      success: resolve,
+      fail: resolve,
+    });
+  });
+}
+
+function readTakeoverSeenNoticeIds() {
+  if (typeof window === 'undefined' || !window.sessionStorage) {
+    return new Set(takeoverSeenFallback);
+  }
+  try {
+    const raw = window.sessionStorage.getItem(TAKEOVER_SEEN_KEY);
+    const ids = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(ids) ? ids.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function markTakeoverNoticeSeen(id) {
+  takeoverSeenFallback.add(id);
+  if (typeof window === 'undefined' || !window.sessionStorage) {
+    return;
+  }
+  const ids = Array.from(readTakeoverSeenNoticeIds());
+  if (!ids.includes(id)) {
+    ids.unshift(id);
+  }
+  window.sessionStorage.setItem(TAKEOVER_SEEN_KEY, JSON.stringify(ids.slice(0, 50)));
 }
 
 function replaceAccount(account) {

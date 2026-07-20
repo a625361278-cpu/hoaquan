@@ -9,7 +9,10 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
 {
     public array $started = [];
     public array $stopped = [];
+    public array $connections = [];
+    public array $released = [];
     public bool $failSend = false;
+    public bool $failStopConnection = false;
     public bool $stopSent = true;
     public array $validations = [];
     public array $discardedValidations = [];
@@ -88,6 +91,7 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
 
     public function releaseReservation(array $reservation): void
     {
+        $this->released[] = $reservation;
     }
 
     public function startAccount(array $account, string $requestId, string $sessionId, string $credential, array $config, array $taskState = []): array
@@ -104,6 +108,34 @@ class ArrayThirdPartyScriptRuntime implements ThirdPartyScriptRuntimeInterface
             'request_id' => $requestId,
         ];
         $this->stopped[] = ['account_id' => $accountId, 'request_id' => $requestId];
+        return $runtime;
+    }
+
+    public function accountConnection(int $accountId): ?array
+    {
+        foreach ($this->connections as $connection) {
+            if ((int)($connection['account_id'] ?? 0) === $accountId) {
+                return $connection;
+            }
+        }
+        return null;
+    }
+
+    public function stopConnection(string $clientId, string $requestId): array
+    {
+        $connection = $this->connections[$clientId] ?? null;
+        $runtime = [
+            'sent' => $connection !== null && !$this->failStopConnection,
+            'client_id' => $clientId,
+            'request_id' => $requestId,
+            'session_id' => (string)($connection['session_id'] ?? ''),
+        ];
+        $this->stopped[] = [
+            'client_id' => $clientId,
+            'account_id' => (int)($connection['account_id'] ?? 0),
+            'request_id' => $requestId,
+            'session_id' => (string)($connection['session_id'] ?? ''),
+        ];
         return $runtime;
     }
 }
