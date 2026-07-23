@@ -111,7 +111,7 @@ php start.php status
 - 邀请奖励等级阈值由 `ga_system_settings.invite_reward_min_role_level` 控制，默认 `30`，后台“用户规则配置”允许设置 `1` 至 `9999`。等级只接受 JSON 整数或纯数字字符串；缺失、负数、小数或非数字不触发。奖励为邀请人 `balance + 1` 点并写入 `ga_user_point_transactions`；同一被邀请用户和同一个 `role_id` 均最多奖励一次，不再限制邀请人每日奖励数量或注册 IP。
 - `ga_users.bound_role_id` 持久保存已绑定角色，删除游戏账号不会清除用户已绑定角色；`ga_user_point_transactions` 通过 `uniq_invite_reward_user(type, related_user_id)` 在数据库层限制同一个被邀请账号只能产生一次邀请奖励流水。
 - 用户 `ga_users.balance` 是可分配配额余额。用户给某个游戏账号延期时会立即扣余额并写入 `ga_game_accounts.expire_time`，不依赖账号是否启动；删除账号不退还已分配配额。
-- 游戏账号延期固定使用基础套餐 `10` 点兑换 `11` 天，额外配额 `N` 点增加 `N` 天；总扣点 `10 + N`，总天数 `11 + N`，延期起点为 `max(当前时间, 当前账号 expire_time)`。扣点流水写入 `ga_user_point_transactions(type=quota_consume)`。
+- 游戏账号延期支持可选基础套餐和手动点数累加：基础套餐可选，选中时 `10` 点兑换 `11` 天；手动增加 `N` 点时增加 `N + floor(N / 10)` 天，即每满 `10` 点额外赠送 `1` 天。不选套餐时至少需要手动增加 `1` 点；延期起点为 `max(当前时间, 当前账号 expire_time)`。扣点流水只记录实际消耗点数并写入 `ga_user_point_transactions(type=quota_consume)`。
 - 第三方正式接入固定使用 WebSocket：第三方脚本主动连接我方 GatewayWorker，用户端启动接口会从空闲脚本连接中分配一个连接给当前账号，并等待 `request_id/session_id` 匹配且账号仍允许运行的真实 `started` 回包后才标记为运行中。
 - 运行服务未启用或未准备好时，启动和配置同步请求都会明确失败；用户端启动未启用时返回“服务器未启用，请联系管理员”，没有空闲脚本连接时返回“服务器未准备好，请联系管理员”，账号不进入 `starting`。
 - 启动账号前必须满足 `expire_time > 当前时间`。未配置或已到期会明确失败，不进入 `starting`，不占用第三方脚本连接。
@@ -205,12 +205,12 @@ php start.php status
 - 运行服务需要先在后台“运行服务配置”或 `ga_system_settings` 配置 `third_party_enabled=1`、`third_party_script_token` 和 `third_party_script_ws_url`。`third_party_sign_secret` 可为空；为空时不影响脚本连接池 WebSocket，只影响历史 HTTP 签名接口。
 - 后台不再配置第三方 URL、URL 列表或单连接容量；旧 `third_party_ws_url`、`third_party_ws_urls`、`third_party_ws_connection_capacity` 可暂留数据库用于兼容旧数据，但启动逻辑不读取。
 - 常驻进程包括 GatewayWorker 的 Gateway、BusinessWorker、Register，以及 `server/config/process.php` 中的 `game_log_writer`、`game_task_state_writer`、`game_account_auto_restarter` 和 `game_account_expiry_watcher`。脚本连接状态写入 Redis 前缀 `gameassist:third_party_scripts:*`；日志写入 `gameassist:game_logs:queue:{shard}` 分片队列，`shard=account_id%64`，再由多 writer 聚合写入分段表。任务状态写入 `gameassist:game_task_states:queue:{shard}` 分片队列，再由任务状态 writer 聚合后批量 upsert。默认 `GAME_LOG_WRITER_COUNT=8`、`GAME_TASK_STATE_WRITER_COUNT=4`，可按服务器压力调整。
-- 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端先校验账号配额未到期，再解密对应凭证、读取本地配置 JSON、原子占用空闲脚本连接并发送 `start`。如果该游戏账号已经处于 `starting/running/reconnecting` 且存在旧脚本绑定，会先预留新空闲连接，再向旧连接发送现有 `stop` 包，旧连接停止指令发送成功后才向新连接发送现有 `start` 包；启动方不弹窗，被顶掉的旧页面刷新或回到首页时提示“游戏帐号已经在别处登录”。`login_method=1` 只发送 `game_username + game_password`，`2/3` 只发送 `game_uid + token`；自动重连使用同一规则。接口成功只表示启动包已发出，不表示第三方登录成功。
+- 用户端启动账号：`POST /api/game-accounts/{id}/start`。后端先校验账号配额未到期，再使用已保存的账号密码或 Token 发起一次与添加账号相同的第三方登录验证；验证通过后，用户端带 `validation_id` 再次请求同一接口，后端确认验证属于同一账号且凭证未变化，才解密对应凭证、读取本地配置 JSON、原子占用空闲脚本连接并发送 `start`。如果该游戏账号已经处于 `starting/running/reconnecting` 且存在旧脚本绑定，会先完成启动前验证，再预留新空闲连接并向旧连接发送现有 `stop` 包，旧连接停止指令发送成功后才向新连接发送现有 `start` 包；启动方不弹窗，被顶掉的旧页面刷新或回到首页时提示“游戏帐号已经在别处登录”。`login_method=1` 只发送 `game_username + game_password`，`2/3` 只发送 `game_uid + token`；自动重连使用同一规则。第三方不需要新增字段，但必须继续支持现有登录验证消息；接口成功只表示启动包已发出，不表示第三方登录成功。
 - 后台“运行服务配置”的 Facebook/Google 开关默认开启，关闭后只禁止新增对应登录方式；已有账号仍可启动、自动重连和验证更新 Token。更新密码或 Token 前账号必须完全停止且 `desired_running=0`；第三方 `login` 返回 `code=1` 后才替换旧凭证，失败、超时或并发状态变化时旧凭证保持不变。验证成功后不自动启动，明文不会进入接口响应、日志或浏览器存储。
-- 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端向已绑定脚本发送 `stop` 后本地状态进入 `stopping` 并写入 `desired_running=0`；收到脚本 `stopped` 或连接关闭确认后才改为 `stopped` 并清空本次普通日志，事件卡片历史不会清空。
+- 用户端停止账号：`POST /api/game-accounts/{id}/stop`。后端向已绑定脚本发送 `stop` 后本地状态进入 `stopping` 并写入 `desired_running=0`；收到脚本 `stopped` 或连接关闭确认后才改为 `stopped` 并清空本次普通日志，事件卡片历史不会清空。处于 `error` 的异常账号也允许用户手动停止；如果没有可通知的脚本绑定，服务端会直接清理运行意图并回到 `stopped`，用于把红色异常状态恢复为未启动。
 - 异常断线恢复：连接关闭但用户没有手动停止时，服务端不会把账号当作已停止，而是改为 `reconnecting`，保留原 `log_session_id` 和普通日志，等待空闲脚本连接后重发幂等 `start`。第三方应按 `game_username` / `game_uid` 判断已有任务并重新绑定，不要重复启动；本协议不使用单独的 `resume` 消息。顶号替换属于主动换绑，旧会话迟到的 `stopped/onClose/status/error` 不允许覆盖新会话状态。
 - 事件卡片历史定位为玩家游戏内事件展示，只由第三方 `event` 消息或普通日志中的 `[[EVT]]` 事件 JSON 写入；平台运行状态只写普通日志。
-- 用户端增加配额：`POST /api/game-accounts/{id}/quota`，请求体 `extra_points` 默认为 `0`。接口在事务内扣除用户余额、更新账号到期时间并写扣点流水；取消前端弹窗不会请求接口，也不会产生任何数据变更。
+- 用户端增加配额：`POST /api/game-accounts/{id}/quota`，请求体 `extra_points` 默认为 `0`，`package_selected` 默认为 `true` 以兼容旧客户端。接口按可选套餐和手动点数赠送规则在事务内扣除用户余额、更新账号到期时间并写扣点流水；取消前端弹窗不会请求接口，也不会产生任何数据变更。
 - 用户端删除账号会先尝试停止仍在运行态的第三方任务，再删除账号和相关日志/快照；已配置到账号的配额不返还到用户余额。
 - 运行资源状态：第三方在账号绑定后发送 `status` 包刷新账号卡片资源，字段名以协议为准，例如金币字段是 `coin`；当前兼容第三方实际上报的 `gold` 并按 `coin` 保存。当前支持 `level`、`water`、`diamond`、`coin/gold`、`speedCard`、`hireBook`、`pearl`、`floralCoin`、`meowCoin`、`raceCoin`、`flowerFinish`、`satinFinish`、`decorateFinish`、`customerFinish`。服务端只保存最新 Redis 快照，不写 MySQL；手动启动新会话、停止、账号异常结束或删除账号会清空快照，自动重连期间保留上一份快照。
 - 第三方任务数据：后端下发 `start` 时会携带 `task_state`，脚本也可在收到 `start` 并进入绑定状态后通过 WebSocket 发送 `task_state_get` 读取最新任务快照，发送 `task_state_save` 保存最新任务 JSON。`task_state_save` 返回 `task_state_queued`，表示已写入 Redis 最新快照并进入写库队列；实际落库由 `game_task_state_writer` 异步批量处理。该数据由第三方维护，我方只负责按账号保存和在删除账号时清理。
@@ -228,8 +228,8 @@ php start.php status
 
 - 后台和用户端支持 `zh_CN`、`vi` 两种语言，文案来自统一 JSON 语言包：`server/resource/translations/{zh_CN,vi}/messages.json`。
 - 用户端通过 `/api/i18n/messages?locale=zh_CN|vi` 拉取语言包，所有业务 API 请求会携带 `X-Locale`。
-- 后端语言选择优先级：`?lang=` / `?locale=`、`X-Locale` 请求头、`gameassist_locale` cookie、默认 `zh_CN`。
-- 用户端当前默认并锁定越南语，首页与登录/注册页暂不展示语言切换入口；后台仍保留语言切换能力。恢复用户端切换时，需要重新放开 `client/src/utils/i18n.js` 的语言锁定和对应页面入口。
+- 用户端语言选择优先级：`?lang=` / `?locale=`、`X-Locale` 请求头、`gameassist_locale` cookie、默认 `zh_CN`。
+- 用户端当前默认并锁定越南语，首页与登录/注册页暂不展示语言切换入口；后台默认中文，并使用独立的 `gameassist_admin_locale` cookie 保留后台语言切换能力，不读取用户端 `gameassist_locale`。恢复用户端切换时，需要重新放开 `client/src/utils/i18n.js` 的语言锁定和对应页面入口。
 - 平台生成的用户运行日志以 `[[I18N]]` 结构化翻译消息保存，用户端查看时按当前界面语言渲染；历史版本已写入的中文断线、重连、启动、到期等平台日志由前端兼容转换。第三方脚本发送的游戏原始日志保持原文，不伪造翻译。
 - 用户端游戏配置页的分组标题、配置项名称、问号说明、导入/保存提示都必须从语言包读取；礼仪分监控开启后才显示 `basic.reputation.threshold` 礼仪分阈值字段。
 - 用户端游戏配置页的种植、订单、公会、活动分组和问号说明保持当前产品配置规范；没有说明的开关不显示问号，不用占位文案伪装。

@@ -12,7 +12,7 @@ class GameAssistThirdPartyConnectionController extends Base
 
     public function __construct()
     {
-        $this->service = new ThirdPartyConnectionAdminService(locale: I18n::localeFromRequest());
+        $this->service = new ThirdPartyConnectionAdminService(locale: I18n::adminLocaleFromRequest());
     }
 
     public function index(): Response

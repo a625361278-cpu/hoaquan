@@ -15,7 +15,7 @@ class GameAssistThirdPartyConfigController extends Base
 
     public function __construct()
     {
-        $this->service = new ThirdPartyConfigAdminService(locale: I18n::localeFromRequest());
+        $this->service = new ThirdPartyConfigAdminService(locale: I18n::adminLocaleFromRequest());
     }
 
     public function index(): Response

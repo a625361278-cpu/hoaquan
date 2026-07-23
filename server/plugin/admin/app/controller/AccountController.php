@@ -260,7 +260,7 @@ class AccountController extends Crud
 
     private function t(string $key): string
     {
-        return I18n::t($key, [], I18n::localeFromRequest());
+        return I18n::t($key, [], I18n::adminLocaleFromRequest());
     }
 
 }

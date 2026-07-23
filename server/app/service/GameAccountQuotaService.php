@@ -10,6 +10,7 @@ class GameAccountQuotaService
 {
     public const BASE_COST_POINTS = 10;
     public const BASE_DAYS = 11;
+    public const EXTRA_BONUS_STEP_POINTS = 10;
 
     public function __construct(
         private mixed $nowProvider = null,
@@ -20,14 +21,20 @@ class GameAccountQuotaService
         $this->locale = I18n::normalizeLocale($this->locale);
     }
 
-    public function extendAccount(int $userId, int $accountId, int $extraPoints = 0): array
+    public function extendAccount(int $userId, int $accountId, int $extraPoints = 0, bool $packageSelected = true): array
     {
         if ($extraPoints < 0) {
             throw new ApiException($this->t('api.game.quota_extra_invalid'), 422);
         }
 
-        $costPoints = self::BASE_COST_POINTS + $extraPoints;
-        $addDays = self::BASE_DAYS + $extraPoints;
+        $baseCostPoints = $packageSelected ? self::BASE_COST_POINTS : 0;
+        $baseDays = $packageSelected ? self::BASE_DAYS : 0;
+        $bonusDays = intdiv($extraPoints, self::EXTRA_BONUS_STEP_POINTS);
+        $costPoints = $baseCostPoints + $extraPoints;
+        if ($costPoints < 1) {
+            throw new ApiException($this->t('api.game.quota_minimum_required'), 422);
+        }
+        $addDays = $baseDays + $extraPoints + $bonusDays;
         $now = $this->now();
         $newExpireTime = '';
         $balanceAfter = '';
@@ -101,6 +108,8 @@ class GameAccountQuotaService
             'balance' => $balanceAfter,
             'cost_points' => $costPoints,
             'add_days' => $addDays,
+            'bonus_days' => $bonusDays,
+            'package_selected' => $packageSelected,
             'expire_time' => $newExpireTime,
         ];
     }

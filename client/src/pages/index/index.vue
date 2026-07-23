@@ -95,23 +95,29 @@
           </view>
           <button class="quota-recharge" @click="goPointRecharge">{{ t('client.recharge.title') }}</button>
         </view>
-        <text class="quota-line">{{ t('client.quota.current_expire') }}：{{ quotaDialog.account?.expire_time || t('client.home.expired') }}</text>
+        <view class="quota-line quota-expire-line">
+          <text>{{ t('client.quota.current_expire') }}：</text>
+          <text :class="['quota-expire-value', quotaCurrentExpireActive ? 'active' : '']">{{ quotaCurrentExpireText }}</text>
+        </view>
         <text class="quota-line">{{ t('client.quota.choose_duration') }}：</text>
 
-        <view class="quota-package">
+        <view :class="['quota-package', quotaDialog.packageSelected ? 'selected' : '']" @click="toggleQuotaPackage">
           <view class="quota-package-main">
             <text class="quota-package-title">{{ t('client.quota.package_title') }}</text>
-            <text class="quota-tag">{{ t('client.quota.package_badge') }}</text>
+            <text class="quota-tag">{{ quotaDialog.packageSelected ? t('client.quota.package_selected') : t('client.quota.package_unselected') }}</text>
           </view>
-          <text class="quota-cost">-{{ BASE_QUOTA_COST }}{{ t('client.quota.points_unit') }}</text>
+          <text class="quota-cost">-{{ quotaPackageCost }}{{ t('client.quota.points_unit') }}</text>
           <text class="quota-desc">{{ t('client.quota.package_desc') }}</text>
         </view>
 
         <view class="quota-extra-head">
           <text>{{ t('client.quota.extra_label') }}：</text>
-          <text class="quota-total">{{ quotaTotalCost }} {{ t('client.quota.points_unit') }}</text>
+          <view class="quota-extra-total">
+            <text class="quota-total">{{ quotaTotalCost }} {{ t('client.quota.points_unit') }}</text>
+            <text v-if="quotaExtraBonusDays > 0" class="quota-bonus">{{ t('client.quota.bonus_badge', { days: quotaExtraBonusDays }) }}</text>
+          </view>
         </view>
-        <text class="quota-warning">{{ t('client.quota.notice', { base: BASE_QUOTA_COST, extra: quotaDialog.extraPoints, total: quotaTotalCost, days: quotaTotalDays }) }}</text>
+        <text class="quota-warning">{{ t('client.quota.notice') }}</text>
         <slider
           class="quota-slider"
           :value="quotaDialog.extraPoints"
@@ -127,8 +133,10 @@
           <input v-model="quotaDialog.extraInput" class="quota-number" type="number" @input="onQuotaInputChange" />
         </view>
         <view class="quota-summary">
-          <text>{{ t('client.quota.package_points', { points: BASE_QUOTA_COST }) }}</text>
+          <text>{{ t('client.quota.package_points', { points: quotaPackageCost, days: quotaPackageDays }) }}</text>
           <text>{{ t('client.quota.extra_points', { points: quotaDialog.extraPoints }) }}</text>
+          <text>{{ t('client.quota.bonus_days', { days: quotaExtraBonusDays }) }}</text>
+          <text>{{ t('client.quota.total_days', { points: quotaTotalCost, days: quotaTotalDays }) }}</text>
         </view>
         <view class="quota-estimate">
           <text>{{ t('client.quota.estimated_expire') }}：</text>
@@ -388,6 +396,7 @@ const passwordDialog = reactive({
 const quotaDialog = reactive({
   visible: false,
   account: null,
+  packageSelected: true,
   extraPoints: 0,
   extraInput: '0',
 });
@@ -497,9 +506,16 @@ function resourceValue(item, key) {
   return value === undefined || value === null || value === '' ? 0 : value;
 }
 
+function expireTimestamp(item) {
+  if (!item?.expire_time) return null;
+  const timestamp = new Date(String(item.expire_time).replace(/-/g, '/')).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
 function isExpired(item) {
-  if (!item.expire_time) return true;
-  return new Date(String(item.expire_time).replace(/-/g, '/')).getTime() < Date.now();
+  const timestamp = expireTimestamp(item);
+  if (timestamp === null) return true;
+  return timestamp < Date.now();
 }
 
 function expireText(item) {
@@ -508,7 +524,7 @@ function expireText(item) {
 }
 
 function isActiveAccount(item) {
-  return ['starting', 'running', 'reconnecting', 'stopping'].includes(item.status);
+  return ['starting', 'running', 'reconnecting', 'stopping', 'error'].includes(item.status);
 }
 
 function canStartAccount(item) {
@@ -531,7 +547,27 @@ function toggleMenu(id) {
 
 async function startAccount(item) {
   suppressTakeoverAccountIds.add(Number(item.id));
-  await accountAction(`/api/game-accounts/${item.id}/start`, 'POST');
+  actionLoading.value = true;
+  try {
+    let result = await request({ url: `/api/game-accounts/${item.id}/start`, method: 'POST' });
+    if (result.requires_validation) {
+      await pollStartValidation(result.validation_id);
+      result = await request({
+        url: `/api/game-accounts/${item.id}/start`,
+        method: 'POST',
+        data: { validation_id: result.validation_id },
+      });
+    }
+    if (result.account) {
+      replaceAccount(result.account);
+    }
+    await loadHome();
+  } catch (error) {
+    suppressTakeoverAccountIds.delete(Number(item.id));
+    uni.showToast({ title: error.message, icon: 'none' });
+  } finally {
+    actionLoading.value = false;
+  }
 }
 
 async function stopAccount(item) {
@@ -542,6 +578,7 @@ async function addQuota(item) {
   activeMenuId.value = null;
   quotaDialog.visible = true;
   quotaDialog.account = item;
+  quotaDialog.packageSelected = true;
   quotaDialog.extraPoints = 0;
   quotaDialog.extraInput = '0';
 }
@@ -559,6 +596,49 @@ async function accountAction(url, method) {
   } finally {
     actionLoading.value = false;
   }
+}
+
+async function pollStartValidation(validationId) {
+  if (!validationId) {
+    throw new Error(t('client.home.start_validation_invalid_response'));
+  }
+
+  const deadline = Date.now() + 25000;
+  let lastNetworkError = null;
+  while (Date.now() <= deadline) {
+    let result;
+    try {
+      result = await request({ url: `/api/game-account-validations/${validationId}` });
+      lastNetworkError = null;
+    } catch (error) {
+      lastNetworkError = error;
+      await delay(1000);
+      continue;
+    }
+
+    if (result.purpose !== 'start_account') {
+      throw new Error(t('client.home.start_validation_invalid_response'));
+    }
+    if (result.status === 'verifying') {
+      await delay(1000);
+      continue;
+    }
+    if (result.status === 'success') {
+      return;
+    }
+    if (result.status === 'rejected') {
+      throw new Error(result.message || t('client.home.start_validation_rejected'));
+    }
+    if (result.status === 'timeout') {
+      throw new Error(t('client.add.login_validation_timeout'));
+    }
+    throw new Error(result.message || t('client.home.start_validation_invalid_response'));
+  }
+  throw lastNetworkError || new Error(t('client.add.login_validation_timeout'));
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 async function maybeShowTakeoverNotices(notices) {
@@ -626,15 +706,18 @@ function replaceAccount(account) {
   gameAccounts.value = gameAccounts.value.map((item) => (item.id === account.id ? account : item));
 }
 
-const quotaTotalCost = computed(() => BASE_QUOTA_COST + quotaDialog.extraPoints);
-const quotaTotalDays = computed(() => BASE_QUOTA_DAYS + quotaDialog.extraPoints);
-const quotaExtraMax = computed(() => Math.max(0, Math.floor(Number(user.value.balance || 0)) - BASE_QUOTA_COST));
+const quotaPackageCost = computed(() => (quotaDialog.packageSelected ? BASE_QUOTA_COST : 0));
+const quotaPackageDays = computed(() => (quotaDialog.packageSelected ? BASE_QUOTA_DAYS : 0));
+const quotaExtraBonusDays = computed(() => Math.floor(quotaDialog.extraPoints / 10));
+const quotaTotalCost = computed(() => quotaPackageCost.value + quotaDialog.extraPoints);
+const quotaTotalDays = computed(() => quotaPackageDays.value + quotaDialog.extraPoints + quotaExtraBonusDays.value);
+const quotaExtraMax = computed(() => Math.max(0, Math.floor(Number(user.value.balance || 0)) - quotaPackageCost.value));
+const quotaCurrentExpireText = computed(() => expireText(quotaDialog.account || {}));
+const quotaCurrentExpireActive = computed(() => !isExpired(quotaDialog.account || {}));
 const quotaEstimatedExpire = computed(() => {
   if (!quotaDialog.account) return '';
-  const currentExpire = quotaDialog.account.expire_time
-    ? new Date(String(quotaDialog.account.expire_time).replace(/-/g, '/')).getTime()
-    : 0;
-  const base = Math.max(Date.now(), Number.isFinite(currentExpire) ? currentExpire : 0);
+  const currentExpire = expireTimestamp(quotaDialog.account) || 0;
+  const base = Math.max(Date.now(), currentExpire);
   const estimated = new Date(base + quotaTotalDays.value * 24 * 60 * 60 * 1000);
   return formatDateTime(estimated);
 });
@@ -642,8 +725,14 @@ const quotaEstimatedExpire = computed(() => {
 function closeQuotaDialog() {
   quotaDialog.visible = false;
   quotaDialog.account = null;
+  quotaDialog.packageSelected = true;
   quotaDialog.extraPoints = 0;
   quotaDialog.extraInput = '0';
+}
+
+function toggleQuotaPackage() {
+  quotaDialog.packageSelected = !quotaDialog.packageSelected;
+  setQuotaExtra(quotaDialog.extraPoints);
 }
 
 function onQuotaSliderChange(event) {
@@ -663,6 +752,10 @@ function setQuotaExtra(value) {
 
 async function submitQuota() {
   if (!quotaDialog.account) return;
+  if (quotaTotalCost.value < 1) {
+    uni.showToast({ title: t('client.quota.minimum_required'), icon: 'none' });
+    return;
+  }
   if (Number(user.value.balance || 0) < quotaTotalCost.value) {
     uni.showToast({ title: t('client.quota.insufficient'), icon: 'none' });
     return;
@@ -672,7 +765,10 @@ async function submitQuota() {
     const result = await request({
       url: `/api/game-accounts/${quotaDialog.account.id}/quota`,
       method: 'POST',
-      data: { extra_points: quotaDialog.extraPoints },
+      data: {
+        extra_points: quotaDialog.extraPoints,
+        package_selected: quotaDialog.packageSelected,
+      },
     });
     if (result.account) {
       replaceAccount(result.account);
@@ -1799,12 +1895,26 @@ async function refreshRechargeOrder() {
   font-size: 23rpx;
 }
 
+.quota-expire-line {
+  display: flex;
+  align-items: center;
+}
+
+.quota-expire-value.active {
+  color: #1677ff;
+  font-weight: 700;
+}
+
 .quota-package {
   margin: 24rpx 0;
   padding: 22rpx;
   border: 1px solid #29b6f6;
   border-radius: 8px;
   background: #edfaff;
+}
+
+.quota-package.selected {
+  box-shadow: inset 0 0 0 1px #1677ff;
 }
 
 .quota-package-main {
@@ -1847,6 +1957,12 @@ async function refreshRechargeOrder() {
   font-size: 24rpx;
 }
 
+.quota-extra-total {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
 .quota-warning {
   display: block;
   margin: 16rpx 0;
@@ -1881,11 +1997,23 @@ async function refreshRechargeOrder() {
 }
 
 .quota-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10rpx 18rpx;
   margin-top: 18rpx;
   padding-bottom: 18rpx;
   border-bottom: 1px solid #edf2f7;
   color: #98a2b3;
   font-size: 22rpx;
+}
+
+.quota-bonus {
+  padding: 4rpx 10rpx;
+  border-radius: 4px;
+  background: #ecfdf3;
+  color: #039855;
+  font-size: 21rpx;
+  font-weight: 800;
 }
 
 .quota-estimate {
@@ -2198,8 +2326,7 @@ async function refreshRechargeOrder() {
     padding: 24rpx;
   }
 
-  .quota-current,
-  .quota-summary {
+  .quota-current {
     align-items: flex-start;
     flex-direction: column;
     gap: 12rpx;

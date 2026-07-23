@@ -6,7 +6,6 @@ use plugin\admin\app\common\Auth;
 use plugin\admin\app\common\Tree;
 use plugin\admin\app\model\Role;
 use plugin\admin\app\model\Rule;
-use plugin\admin\app\service\GameAssistQuotaLogPermission;
 use support\exception\BusinessException;
 use support\Request;
 use support\Response;
@@ -78,9 +77,6 @@ class RoleController extends Crud
     {
         if ($request->method() === 'POST') {
             $data = $this->insertInput($request);
-            if (array_key_exists('rules', $data)) {
-                $data['rules'] = GameAssistQuotaLogPermission::normalizeRuleString((string)$data['rules']);
-            }
             $pid = $data['pid'] ?? null;
             if (!$pid) {
                 return $this->json(1, '请选择父级角色组');
@@ -108,9 +104,6 @@ class RoleController extends Crud
             return raw_view('role/update');
         }
         [$id, $data] = $this->updateInput($request);
-        if (array_key_exists('rules', $data)) {
-            $data['rules'] = GameAssistQuotaLogPermission::normalizeRuleString((string)$data['rules']);
-        }
         $is_supper_admin = Auth::isSuperAdmin();
         $descendant_role_ids = Auth::getScopeRoleIds();
         if (!$is_supper_admin && !in_array($id, $descendant_role_ids)) {
@@ -210,7 +203,7 @@ class RoleController extends Crud
         if ($rule_id_string === '') {
             return $this->json(0, 'ok', []);
         }
-        $rules = Rule::where('key', '<>', GameAssistQuotaLogPermission::QUOTA_LOG_RULE_KEY)->get();
+        $rules = Rule::get();
         $include = [];
         if ($rule_id_string !== '*') {
             $include = explode(',', $rule_id_string);

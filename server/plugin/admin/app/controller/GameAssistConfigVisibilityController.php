@@ -15,7 +15,7 @@ class GameAssistConfigVisibilityController extends Base
 
     public function __construct()
     {
-        $this->service = new GameConfigVisibilityAdminService(locale: I18n::localeFromRequest());
+        $this->service = new GameConfigVisibilityAdminService(locale: I18n::adminLocaleFromRequest());
     }
 
     public function index(): Response

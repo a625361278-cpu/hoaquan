@@ -93,7 +93,7 @@
                     switchCaptcha();
                 });
                 $('[data-locale]').on('click', function () {
-                    document.cookie = 'gameassist_locale=' + this.dataset.locale + '; path=/; max-age=31536000; SameSite=Lax';
+                    document.cookie = 'gameassist_admin_locale=' + this.dataset.locale + '; path=/; max-age=31536000; SameSite=Lax';
                     location.reload();
                 });
             })

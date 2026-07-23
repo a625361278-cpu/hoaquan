@@ -121,7 +121,7 @@ class RuleController extends Crud
         ];
         $key = (string)($item['key'] ?? '');
         if (isset($map[$key])) {
-            return I18n::t($map[$key], [], I18n::localeFromRequest());
+            return I18n::t($map[$key], [], I18n::adminLocaleFromRequest());
         }
         return (string)$item['title'];
     }

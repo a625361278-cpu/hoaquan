@@ -58,8 +58,8 @@ class ConfigController extends Base
             }
         }
         $config = json_decode($config, true);
-        $config['logo']['title'] = I18n::t('admin.brand.title', [], I18n::localeFromRequest());
-        $config['tab']['index']['title'] = I18n::t('admin.config.dashboard', [], I18n::localeFromRequest());
+        $config['logo']['title'] = I18n::t('admin.brand.title', [], I18n::adminLocaleFromRequest());
+        $config['tab']['index']['title'] = I18n::t('admin.config.dashboard', [], I18n::adminLocaleFromRequest());
         return $config;
     }
 

@@ -70,7 +70,13 @@ class GameAccountController extends BaseApiController
     public function start(Request $request, int $id): Response
     {
         $userId = $this->authService($request)->resolveUserId($this->bearerToken($request));
-        return ApiResponse::json($this->gameAccountService($request)->start($userId, $id));
+        $input = $this->jsonInput($request);
+        $validationId = trim((string)($input['validation_id'] ?? ''));
+        return ApiResponse::json($this->gameAccountService($request)->start(
+            $userId,
+            $id,
+            $validationId === '' ? null : $validationId
+        ));
     }
 
     public function stop(Request $request, int $id): Response
@@ -103,7 +109,8 @@ class GameAccountController extends BaseApiController
         return ApiResponse::json($this->gameAccountService($request)->addQuota(
             $userId,
             $id,
-            $this->nonNegativeInteger($input['extra_points'] ?? 0, I18n::localeFromRequest($request))
+            $this->nonNegativeInteger($input['extra_points'] ?? 0, I18n::localeFromRequest($request)),
+            $this->optionalBoolean($input['package_selected'] ?? null, true, I18n::localeFromRequest($request))
         ));
     }
 
@@ -171,5 +178,29 @@ class GameAccountController extends BaseApiController
             throw new ApiException(I18n::t('api.game.quota_extra_invalid', [], $locale), 422);
         }
         return $intValue;
+    }
+
+    private function optionalBoolean(mixed $value, bool $default, string $locale): bool
+    {
+        if ($value === null) {
+            return $default;
+        }
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) && in_array($value, [0, 1], true)) {
+            return $value === 1;
+        }
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if (in_array($normalized, ['1', 'true'], true)) {
+                return true;
+            }
+            if (in_array($normalized, ['0', 'false'], true)) {
+                return false;
+            }
+        }
+
+        throw new ApiException(I18n::t('api.game.quota_package_invalid', [], $locale), 422);
     }
 }

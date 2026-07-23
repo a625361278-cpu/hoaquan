@@ -666,14 +666,23 @@ class GameAccountServiceTest extends TestCase
             ],
         ]);
         $runtime = new ArrayThirdPartyScriptRuntime();
+        $validations = new ArrayGameAccountLoginValidationStore();
         $service = new GameAccountService($repository, [
             'enabled' => true,
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, $runtime);
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, loginValidations: $validations);
 
-        $result = $service->start(7, 3);
+        $validation = $service->start(7, 3);
+
+        $this->assertSame('verifying', $validation['data']['status']);
+        $this->assertTrue($validation['data']['requires_validation']);
+        $this->assertSame('start_account', $validation['data']['purpose']);
+        $this->assertSame([], $runtime->started);
+
+        $validations->complete((string)$validation['data']['validation_id'], 'success', '账号验证通过', 3);
+        $result = $service->start(7, 3, (string)$validation['data']['validation_id']);
 
         $this->assertSame(0, $result['code']);
         $this->assertSame('starting', $result['data']['account']['status']);
@@ -715,6 +724,7 @@ class GameAccountServiceTest extends TestCase
             'request_id' => 'old-request',
         ];
         $notices = new ArrayGameAccountTakeoverNoticeStore();
+        $validations = new ArrayGameAccountLoginValidationStore();
         $service = new GameAccountService(
             $repository,
             [
@@ -726,10 +736,14 @@ class GameAccountServiceTest extends TestCase
             \app\support\I18n::DEFAULT_LOCALE,
             $runtime,
             taskStates: $this->taskStates($repository),
+            loginValidations: $validations,
             takeoverNotices: $notices
         );
 
-        $result = $service->start(7, 3);
+        $validation = $service->start(7, 3);
+        $this->assertSame([], $runtime->stopped);
+        $validations->complete((string)$validation['data']['validation_id'], 'success', '账号验证通过', 3);
+        $result = $service->start(7, 3, (string)$validation['data']['validation_id']);
 
         $this->assertSame(0, $result['code']);
         $this->assertSame('old-client', $runtime->stopped[0]['client_id']);
@@ -770,7 +784,7 @@ class GameAccountServiceTest extends TestCase
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository));
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository), loginValidations: new ArrayGameAccountLoginValidationStore());
 
         $this->expectException(\app\exception\ApiException::class);
         $this->expectExceptionMessage('服务器未准备好，请联系管理员');
@@ -807,18 +821,22 @@ class GameAccountServiceTest extends TestCase
         $runtime = new ArrayThirdPartyScriptRuntime();
         $runtime->failStopConnection = true;
         $runtime->connections['old-client'] = ['client_id' => 'old-client', 'account_id' => 3, 'session_id' => 'old-session'];
+        $validations = new ArrayGameAccountLoginValidationStore();
         $service = new GameAccountService($repository, [
             'enabled' => true,
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository));
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository), loginValidations: $validations);
+
+        $validation = $service->start(7, 3);
+        $validations->complete((string)$validation['data']['validation_id'], 'success', '账号验证通过', 3);
 
         $this->expectException(\app\exception\ApiException::class);
         $this->expectExceptionMessage('原运行连接停止失败，请稍后重试');
 
         try {
-            $service->start(7, 3);
+            $service->start(7, 3, (string)$validation['data']['validation_id']);
         } finally {
             $this->assertSame([], $runtime->started);
             $this->assertCount(1, $runtime->released);
@@ -847,18 +865,22 @@ class GameAccountServiceTest extends TestCase
             'expire_time' => '2099-01-01 00:00:00',
         ]]);
         $runtime = new ArrayThirdPartyScriptRuntime();
+        $validations = new ArrayGameAccountLoginValidationStore();
         $service = new GameAccountService($repository, [
             'enabled' => true,
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository));
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $this->taskStates($repository), loginValidations: $validations);
+
+        $validation = $service->start(7, 3);
+        $validations->complete((string)$validation['data']['validation_id'], 'success', '账号验证通过', 3);
 
         $this->expectException(\app\exception\ApiException::class);
         $this->expectExceptionMessage('游戏账号正在停止中，请稍后再启动');
 
         try {
-            $service->start(7, 3);
+            $service->start(7, 3, (string)$validation['data']['validation_id']);
         } finally {
             $this->assertSame([], $runtime->started);
             $this->assertSame([], $runtime->stopped);
@@ -887,15 +909,16 @@ class GameAccountServiceTest extends TestCase
             'expire_time' => '2099-01-01 00:00:00',
         ]]);
         $runtime = new ArrayThirdPartyScriptRuntime();
+        $validations = new ArrayGameAccountLoginValidationStore();
         $service = new GameAccountService($repository, [
             'enabled' => true,
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
             'facebook_login_enabled' => false,
-        ], \app\support\I18n::DEFAULT_LOCALE, $runtime);
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, loginValidations: $validations);
 
-        $service->start(7, 3);
+        $this->startAfterSuccessfulValidation($service, $validations);
 
         $this->assertSame(2, $runtime->started[0]['login_method']);
         $this->assertSame('facebook-token', $runtime->started[0]['credential']);
@@ -930,14 +953,15 @@ class GameAccountServiceTest extends TestCase
             'saved_at' => '2026-07-09 12:00:00',
         ]]);
         $runtime = new ArrayThirdPartyScriptRuntime();
+        $validations = new ArrayGameAccountLoginValidationStore();
         $service = new GameAccountService($repository, [
             'enabled' => true,
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $taskStates);
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, taskStates: $taskStates, loginValidations: $validations);
 
-        $service->start(7, 3);
+        $this->startAfterSuccessfulValidation($service, $validations);
 
         $this->assertTrue($runtime->started[0]['task_state']['exists']);
         $this->assertSame(2, $runtime->started[0]['task_state']['state']->step);
@@ -966,6 +990,7 @@ class GameAccountServiceTest extends TestCase
         ]);
         $store = new ArrayGameAccountRuntimeResourceStore();
         $store->save(3, ['level' => 14, 'coin' => 236000]);
+        $validations = new ArrayGameAccountLoginValidationStore();
         $service = new GameAccountService(
             $repository,
             [
@@ -977,10 +1002,11 @@ class GameAccountServiceTest extends TestCase
             \app\support\I18n::DEFAULT_LOCALE,
             new ArrayThirdPartyScriptRuntime(),
             new GameAccountResourceService($store),
-            taskStates: $this->taskStates($repository)
+            taskStates: $this->taskStates($repository),
+            loginValidations: $validations
         );
 
-        $result = $service->start(7, 3);
+        $result = $this->startAfterSuccessfulValidation($service, $validations);
 
         $this->assertSame('starting', $result['data']['account']['status']);
         $this->assertSame([3], $store->cleared);
@@ -1012,7 +1038,7 @@ class GameAccountServiceTest extends TestCase
             'transport' => 'websocket',
             'script_token' => 'script-token',
             'credential_key' => 'test-key',
-        ], \app\support\I18n::DEFAULT_LOCALE, new ArrayThirdPartyScriptRuntime(false), taskStates: $this->taskStates($repository));
+        ], \app\support\I18n::DEFAULT_LOCALE, new ArrayThirdPartyScriptRuntime(false), taskStates: $this->taskStates($repository), loginValidations: new ArrayGameAccountLoginValidationStore());
 
         try {
             $service->start(7, 3);
@@ -1280,5 +1306,22 @@ class GameAccountServiceTest extends TestCase
     private function taskStates(ArrayGameAccountRepository $repository): GameAccountTaskStateService
     {
         return new GameAccountTaskStateService($repository, 1024, pendingStore: new ArrayGameAccountTaskStatePendingStore());
+    }
+
+    private function startAfterSuccessfulValidation(
+        GameAccountService $service,
+        ArrayGameAccountLoginValidationStore $validations,
+        int $userId = 7,
+        int $accountId = 3
+    ): array {
+        $validation = $service->start($userId, $accountId);
+        $this->assertSame(0, $validation['code']);
+        $this->assertTrue($validation['data']['requires_validation']);
+        $this->assertSame('start_account', $validation['data']['purpose']);
+
+        $validationId = (string)$validation['data']['validation_id'];
+        $validations->complete($validationId, 'success', '账号验证通过', $accountId);
+
+        return $service->start($userId, $accountId, $validationId);
     }
 }

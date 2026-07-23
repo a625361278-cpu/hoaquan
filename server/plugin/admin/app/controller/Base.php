@@ -58,11 +58,11 @@ class Base
 
     protected function success(string $msg = '成功', array $data = []): Response
     {
-        return $this->json(0, $msg === '成功' ? I18n::t('admin.common.success', [], I18n::localeFromRequest()) : $msg, $data);
+        return $this->json(0, $msg === '成功' ? I18n::t('admin.common.success', [], I18n::adminLocaleFromRequest()) : $msg, $data);
     }
 
     protected function fail(string $msg = '失败', array $data = []): Response
     {
-        return $this->json(1, $msg === '失败' ? I18n::t('admin.common.failure', [], I18n::localeFromRequest()) : $msg, $data);
+        return $this->json(1, $msg === '失败' ? I18n::t('admin.common.failure', [], I18n::adminLocaleFromRequest()) : $msg, $data);
     }
 }

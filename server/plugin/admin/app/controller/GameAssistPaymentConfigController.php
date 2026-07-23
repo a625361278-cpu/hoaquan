@@ -15,7 +15,7 @@ final class GameAssistPaymentConfigController extends Base
 
     public function __construct()
     {
-        $this->service = new PaymentConfigAdminService(locale: I18n::localeFromRequest());
+        $this->service = new PaymentConfigAdminService(locale: I18n::adminLocaleFromRequest());
     }
 
     public function index(): Response

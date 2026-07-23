@@ -170,13 +170,20 @@ class GameAccountService
         ], I18n::t('api.game.config_imported', [], $this->locale));
     }
 
-    public function start(int $userId, int $accountId): array
+    public function start(int $userId, int $accountId, ?string $validationId = null): array
     {
         $account = $this->requireAccount($userId, $accountId);
         $this->assertQuotaActive($account);
         $this->assertThirdPartyScriptReady();
         $this->assertNoCredentialValidation($userId, $accountId);
         $credential = $this->credentialForStart($account);
+        if ($validationId === null || trim($validationId) === '') {
+            $validation = $this->loginValidationService()->beginStartValidation($userId, $account, $credential);
+            $validation['data']['requires_validation'] = true;
+            return $validation;
+        }
+
+        $this->loginValidationService()->consumeSuccessfulStartValidation($userId, $accountId, trim($validationId));
         $taskState = $this->taskStates->get($accountId);
         $existingConnection = $this->connectionForTakeover($account);
         $logSessionId = bin2hex(random_bytes(12));
@@ -342,15 +349,17 @@ class GameAccountService
         return ApiResponse::success([], I18n::t('api.game.deleted', [], $this->locale));
     }
 
-    public function addQuota(int $userId, int $accountId, int $extraPoints = 0): array
+    public function addQuota(int $userId, int $accountId, int $extraPoints = 0, bool $packageSelected = true): array
     {
         $this->requireAccount($userId, $accountId);
-        $result = $this->quotaService->extendAccount($userId, $accountId, $extraPoints);
+        $result = $this->quotaService->extendAccount($userId, $accountId, $extraPoints, $packageSelected);
         return ApiResponse::success([
             'account' => $this->publicAccount($result['account']),
             'balance' => $result['balance'],
             'cost_points' => $result['cost_points'],
             'add_days' => $result['add_days'],
+            'bonus_days' => $result['bonus_days'],
+            'package_selected' => $result['package_selected'],
             'expire_time' => $result['expire_time'],
         ], I18n::t('api.game.quota_extended', [], $this->locale));
     }

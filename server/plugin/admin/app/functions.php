@@ -96,7 +96,7 @@ EOF
 
 function admin_locale(): string
 {
-    return I18n::localeFromRequest();
+    return I18n::adminLocaleFromRequest();
 }
 
 function admin_t(string $key, array $parameters = []): string

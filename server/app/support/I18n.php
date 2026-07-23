@@ -9,6 +9,7 @@ class I18n
 {
     public const DEFAULT_LOCALE = 'zh_CN';
     public const COOKIE_NAME = 'gameassist_locale';
+    public const ADMIN_COOKIE_NAME = 'gameassist_admin_locale';
     public const SUPPORTED_LOCALES = ['zh_CN', 'vi'];
 
     private static array $messages = [];
@@ -34,6 +35,27 @@ class I18n
         }
 
         $cookieLocale = $request->cookie(self::COOKIE_NAME, '');
+        if ($cookieLocale) {
+            return self::normalizeLocale((string)$cookieLocale);
+        }
+
+        return self::DEFAULT_LOCALE;
+    }
+
+    public static function adminLocaleFromRequest(?Request $request = null): string
+    {
+        $request ??= request();
+        $queryLocale = $request->get('lang') ?: $request->get('locale');
+        if ($queryLocale) {
+            return self::normalizeLocale((string)$queryLocale);
+        }
+
+        $headerLocale = $request->header('x-locale', '');
+        if ($headerLocale) {
+            return self::normalizeLocale($headerLocale);
+        }
+
+        $cookieLocale = $request->cookie(self::ADMIN_COOKIE_NAME, '');
         if ($cookieLocale) {
             return self::normalizeLocale((string)$cookieLocale);
         }

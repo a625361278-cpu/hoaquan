@@ -15,7 +15,7 @@ class GameAssistUserRulesController extends Base
 
     public function __construct()
     {
-        $this->service = new UserRuleConfigAdminService(locale: I18n::localeFromRequest());
+        $this->service = new UserRuleConfigAdminService(locale: I18n::adminLocaleFromRequest());
     }
 
     public function index(): Response

@@ -69,12 +69,12 @@ class GameAssistAnnouncementController extends Crud
     {
         foreach (['title_zh_cn', 'title_vi', 'content_zh_cn', 'content_vi', 'published_at'] as $field) {
             if (trim((string)($data[$field] ?? '')) === '') {
-                throw new BusinessException(I18n::t('admin.announcement.field_required', [], I18n::localeFromRequest()), 2);
+                throw new BusinessException(I18n::t('admin.announcement.field_required', [], I18n::adminLocaleFromRequest()), 2);
             }
         }
 
         if (!isset($data['status']) || !in_array((string)$data['status'], ['0', '1'], true)) {
-            throw new BusinessException(I18n::t('admin.announcement.status_invalid', [], I18n::localeFromRequest()), 2);
+            throw new BusinessException(I18n::t('admin.announcement.status_invalid', [], I18n::adminLocaleFromRequest()), 2);
         }
         $data['status'] = (int)$data['status'];
 

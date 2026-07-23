@@ -45,7 +45,7 @@ class IndexController
             $name = 'system_config';
             $config = Option::where('name', $name)->value('value');
             $config = json_decode($config, true);
-            $title = I18n::t('admin.brand.title', [], I18n::localeFromRequest());
+            $title = I18n::t('admin.brand.title', [], I18n::adminLocaleFromRequest());
             $logo = $config['logo']['image'] ?? '/app/admin/admin/images/logo.png';
             return raw_view('account/login',['logo'=>$logo,'title'=>$title]);
         }

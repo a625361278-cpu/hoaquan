@@ -22,8 +22,8 @@ class GameAssistUserController extends Crud
     public function __construct()
     {
         $this->model = new GameAssistUser();
-        $this->service = new GameAssistUserAdminService(I18n::localeFromRequest());
-        $this->quotaLogService = new GameAssistQuotaLogAdminService(I18n::localeFromRequest());
+        $this->service = new GameAssistUserAdminService(I18n::adminLocaleFromRequest());
+        $this->quotaLogService = new GameAssistQuotaLogAdminService(I18n::adminLocaleFromRequest());
     }
 
     public function index(): Response
@@ -33,12 +33,12 @@ class GameAssistUserController extends Crud
 
     public function insert(Request $request): Response
     {
-        throw new BusinessException(I18n::t('admin.gameassist.create_forbidden', [], I18n::localeFromRequest()));
+        throw new BusinessException(I18n::t('admin.gameassist.create_forbidden', [], I18n::adminLocaleFromRequest()));
     }
 
     public function delete(Request $request): Response
     {
-        throw new BusinessException(I18n::t('admin.gameassist.delete_forbidden', [], I18n::localeFromRequest()));
+        throw new BusinessException(I18n::t('admin.gameassist.delete_forbidden', [], I18n::adminLocaleFromRequest()));
     }
 
     public function resetPassword(Request $request): Response
@@ -51,7 +51,7 @@ class GameAssistUserController extends Crud
         $password = (string)$request->post('password', '');
         $user = $this->model->find($id);
         if (!$user) {
-            throw new BusinessException(I18n::t('admin.gameassist.user_not_found', [], I18n::localeFromRequest()), 2);
+            throw new BusinessException(I18n::t('admin.gameassist.user_not_found', [], I18n::adminLocaleFromRequest()), 2);
         }
 
         try {
@@ -143,7 +143,7 @@ class GameAssistUserController extends Crud
         $primaryKey = $this->model->getKeyName();
         $id = $request->post($primaryKey);
         if (!$this->model->find($id)) {
-            throw new BusinessException(I18n::t('admin.gameassist.user_not_found', [], I18n::localeFromRequest()), 2);
+            throw new BusinessException(I18n::t('admin.gameassist.user_not_found', [], I18n::adminLocaleFromRequest()), 2);
         }
 
         try {
@@ -167,11 +167,11 @@ class GameAssistUserController extends Crud
         } elseif (is_string($value) && preg_match('/^\d+$/', trim($value))) {
             $points = (int)trim($value);
         } else {
-            throw new BusinessException(I18n::t('admin.gameassist.quota_positive', [], I18n::localeFromRequest()), 2);
+            throw new BusinessException(I18n::t('admin.gameassist.quota_positive', [], I18n::adminLocaleFromRequest()), 2);
         }
 
         if ($points <= 0) {
-            throw new BusinessException(I18n::t('admin.gameassist.quota_positive', [], I18n::localeFromRequest()), 2);
+            throw new BusinessException(I18n::t('admin.gameassist.quota_positive', [], I18n::adminLocaleFromRequest()), 2);
         }
         return $points;
     }
