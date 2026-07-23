@@ -122,11 +122,11 @@ export const CONFIG_SCHEMA = [
         key: 'task',
         titleKey: 'client.config.group.task',
         items: [
-          item('basic.task.daily', 'client.config.item.daily_task', false, 'client.config.help.daily_task'),
-          item('basic.task.weekly', 'client.config.item.weekly_task', false, 'client.config.help.weekly_task'),
-          item('basic.task.main', 'client.config.item.main_task', false, 'client.config.help.main_task'),
-          item('basic.task.story', 'client.config.item.main_story', false, 'client.config.help.main_story'),
-          item('basic.task.achieve', 'client.config.item.flower_reward', false, 'client.config.help.flower_reward'),
+          item('basic.task.daily', 'client.config.item.daily_task', true, 'client.config.help.daily_task'),
+          item('basic.task.weekly', 'client.config.item.weekly_task', true, 'client.config.help.weekly_task'),
+          item('basic.task.main', 'client.config.item.main_task', true, 'client.config.help.main_task'),
+          item('basic.task.story', 'client.config.item.main_story', true, 'client.config.help.main_story'),
+          item('basic.task.achieve', 'client.config.item.flower_reward', true, 'client.config.help.flower_reward'),
         ],
       },
       {
@@ -150,7 +150,7 @@ export const CONFIG_SCHEMA = [
         key: 'daily_wish',
         titleKey: 'client.config.group.daily_wish',
         items: [
-          item('basic.sign.daily', 'client.config.item.auto_wish'),
+          item('basic.sign.daily', 'client.config.item.auto_wish', true),
           item('basic.sign.patch', 'client.config.item.auto_retroactive'),
         ],
       },
@@ -158,8 +158,8 @@ export const CONFIG_SCHEMA = [
         key: 'pearl',
         titleKey: 'client.config.group.pearl',
         items: [
-          item('basic.pearl.freePearl', 'client.config.item.free_pearl', false, 'client.config.help.free_pearl'),
-          item('basic.pearl.autoHire', 'client.config.item.auto_hire', false, 'client.config.help.auto_hire'),
+          item('basic.pearl.freePearl', 'client.config.item.free_pearl', true, 'client.config.help.free_pearl'),
+          item('basic.pearl.autoHire', 'client.config.item.auto_hire', true, 'client.config.help.auto_hire'),
           numberItem('basic.pearl.maxHireLevel', 'client.config.item.level_limit', 0, '', 'client.config.help.level_limit', {
             visibleWhen: { path: 'basic.pearl.autoHire', equals: true },
           }),
@@ -240,7 +240,7 @@ export const CONFIG_SCHEMA = [
         key: 'water',
         titleKey: 'client.config.group.water',
         items: [
-          item('plant.water.enabled', 'client.config.item.water_drop', false, 'client.config.help.water_drop'),
+          item('plant.water.enabled', 'client.config.item.water_drop', true, 'client.config.help.water_drop'),
           item('plant.water.timedEnabled', 'client.config.item.timed_water', false, 'client.config.help.timed_water', {
             visibleWhen: { path: 'plant.water.enabled', equals: true },
           }),
@@ -259,8 +259,8 @@ export const CONFIG_SCHEMA = [
         key: 'flower',
         titleKey: 'client.config.group.flower',
         items: [
-          item('plant.flower.unlockLand', 'client.config.item.unlock_land', false, 'client.config.help.unlock_land'),
-          item('plant.flower.harvestEnabled', 'client.config.item.auto_harvest', false, 'client.config.help.auto_harvest'),
+          item('plant.flower.unlockLand', 'client.config.item.unlock_land', true, 'client.config.help.unlock_land'),
+          item('plant.flower.harvestEnabled', 'client.config.item.auto_harvest', true, 'client.config.help.auto_harvest'),
           item('plant.flower.plantEnabled', 'client.config.item.auto_plant', false, 'client.config.help.auto_plant'),
           item('plant.flower.videoSpeedup', 'client.config.item.video_speedup', false, 'client.config.help.flower_video_speedup', {
             visibleWhen: { path: 'plant.flower.plantEnabled', equals: true },
@@ -311,7 +311,7 @@ export const CONFIG_SCHEMA = [
         key: 'friend',
         titleKey: 'client.config.group.friend_steal',
         items: [
-          item('plant.friendSteal.enabled', 'client.config.item.friend_steal', false, 'client.config.help.friend_steal'),
+          item('plant.friendSteal.enabled', 'client.config.item.friend_steal', true, 'client.config.help.friend_steal'),
           item('plant.friendSteal.includeElf', 'client.config.item.steal_elf', false, 'client.config.help.steal_elf', {
             visibleWhen: { path: 'plant.friendSteal.enabled', equals: true },
           }),
@@ -345,7 +345,7 @@ export const CONFIG_SCHEMA = [
           }),
           item('plant.elves.applyAid', 'client.config.item.apply_aid'),
           item('plant.elves.recvAid', 'client.config.item.recv_aid', false, 'client.config.help.recv_aid'),
-          item('plant.elves.helpFriend', 'client.config.item.help_friend'),
+          item('plant.elves.helpFriend', 'client.config.item.help_friend', true),
           item('plant.elves.dispatch', 'client.config.item.dispatch_elf', false, 'client.config.help.dispatch_elf'),
           item('plant.elves.speedupDispatch', 'client.config.item.speedup_dispatch', false, 'client.config.help.speedup_dispatch'),
           item('plant.elves.recvDispatchReward', 'client.config.item.recv_dispatch_reward', false, 'client.config.help.recv_dispatch_reward'),
@@ -445,11 +445,11 @@ export const CONFIG_SCHEMA = [
         key: 'resident_order',
         titleKey: 'client.config.group.order_resident',
         items: [
-          item('order.resident.normal', 'client.config.item.resident_order', false, 'client.config.help.resident_order'),
+          item('order.resident.normal', 'client.config.item.resident_order', true, 'client.config.help.resident_order'),
           numberItem('order.resident.normalMaxNum', 'client.config.item.resident_order_limit', 1200, '', 'client.config.help.resident_order_limit', {
             visibleWhen: { path: 'order.resident.normal', equals: true },
           }),
-          item('order.resident.satin', 'client.config.item.satin_order', false, 'client.config.help.satin_order'),
+          item('order.resident.satin', 'client.config.item.satin_order', true, 'client.config.help.satin_order'),
           numberItem('order.resident.satinMaxNum', 'client.config.item.satin_order_limit', 120, '', 'client.config.help.satin_order_limit', {
             visibleWhen: { path: 'order.resident.satin', equals: true },
           }),
@@ -472,7 +472,7 @@ export const CONFIG_SCHEMA = [
         key: 'customer_order',
         titleKey: 'client.config.group.order_customer',
         items: [
-          item('order.customer.enabled', 'client.config.item.auto_complete', false, 'client.config.help.customer_order'),
+          item('order.customer.enabled', 'client.config.item.auto_complete', true, 'client.config.help.customer_order'),
           item('order.customer.rejectEnabled', 'client.config.item.auto_reject', false, 'client.config.help.auto_reject', {
             visibleWhen: { path: 'order.customer.enabled', equals: true },
           }),
@@ -482,7 +482,7 @@ export const CONFIG_SCHEMA = [
         key: 'palace_order',
         titleKey: 'client.config.group.order_palace',
         items: [
-          item('order.palace.enabled', 'client.config.item.auto_complete'),
+          item('order.palace.enabled', 'client.config.item.auto_complete', true),
           multiSelectItem('order.palace.qualities', 'client.config.item.quality_limit', QUALITY_OPTIONS.map((item) => item.value), QUALITY_OPTIONS, 'client.config.help.palace_quality_limit', {
             visibleWhen: { path: 'order.palace.enabled', equals: true },
           }),
@@ -495,7 +495,7 @@ export const CONFIG_SCHEMA = [
         key: 'group_order',
         titleKey: 'client.config.group.order_group',
         items: [
-          item('order.group.enabled', 'client.config.item.auto_complete', false, 'client.config.help.group_order'),
+          item('order.group.enabled', 'client.config.item.auto_complete', true, 'client.config.help.group_order'),
           item('order.group.oneMore', 'client.config.item.one_more_order', false, 'client.config.help.one_more_order', {
             visibleWhen: { path: 'order.group.enabled', equals: true },
           }),
@@ -517,7 +517,7 @@ export const CONFIG_SCHEMA = [
         key: 'land',
         titleKey: 'client.config.group.union_land',
         items: [
-          item('union.land.harvest', 'client.config.item.union_harvest'),
+          item('union.land.harvest', 'client.config.item.union_harvest', true),
           item('union.land.plant', 'client.config.item.union_plant', false, 'client.config.help.union_plant'),
           radioItem('union.land.plantMode', 'client.config.item.union_plant_mode', 'quality', [
             option('quality', 'client.config.option.mode_quality'),
@@ -566,7 +566,7 @@ export const CONFIG_SCHEMA = [
         key: 'touch',
         titleKey: 'client.config.group.union_touch',
         items: [
-          item('union.flower.touch', 'client.config.item.union_touch', false, 'client.config.help.union_touch'),
+          item('union.flower.touch', 'client.config.item.union_touch', true, 'client.config.help.union_touch'),
           radioItem('union.flower.touchMode', 'client.config.item.touch_mode', 'quality', FLOWER_MODE_OPTIONS, 'client.config.help.touch_mode', {
             visibleWhen: { path: 'union.flower.touch', equals: true },
           }),

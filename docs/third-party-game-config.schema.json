@@ -14,17 +14,64 @@
   ],
   "allOf": [
     {
-      "if": { "properties": { "login_method": { "const": 1 } } },
+      "if": {
+        "properties": {
+          "login_method": {
+            "const": 1
+          }
+        }
+      },
       "then": {
-        "required": ["game_username", "game_password"],
-        "not": { "anyOf": [{ "required": ["game_uid"] }, { "required": ["token"] }] }
+        "required": [
+          "game_username",
+          "game_password"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "game_uid"
+              ]
+            },
+            {
+              "required": [
+                "token"
+              ]
+            }
+          ]
+        }
       }
     },
     {
-      "if": { "properties": { "login_method": { "enum": [2, 3] } } },
+      "if": {
+        "properties": {
+          "login_method": {
+            "enum": [
+              2,
+              3
+            ]
+          }
+        }
+      },
       "then": {
-        "required": ["game_uid", "token"],
-        "not": { "anyOf": [{ "required": ["game_username"] }, { "required": ["game_password"] }] }
+        "required": [
+          "game_uid",
+          "token"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "game_username"
+              ]
+            },
+            {
+              "required": [
+                "game_password"
+              ]
+            }
+          ]
+        }
       }
     }
   ],
@@ -46,7 +93,11 @@
     },
     "login_method": {
       "type": "integer",
-      "enum": [1, 2, 3],
+      "enum": [
+        1,
+        2,
+        3
+      ],
       "description": "登录方式：1账号密码，2Facebook，3Google"
     },
     "game_username": {
@@ -164,23 +215,23 @@
               "properties": {
                 "daily": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "weekly": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "main": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "story": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "achieve": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 }
               }
             },
@@ -226,7 +277,7 @@
               "properties": {
                 "daily": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "patch": {
                   "type": "boolean",
@@ -250,11 +301,11 @@
               "properties": {
                 "freePearl": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "autoHire": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "maxHireLevel": {
                   "type": "number",
@@ -440,7 +491,7 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "timedEnabled": {
                   "type": "boolean",
@@ -483,11 +534,11 @@
               "properties": {
                 "unlockLand": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "harvestEnabled": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "plantEnabled": {
                   "type": "boolean",
@@ -631,7 +682,7 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "includeElf": {
                   "type": "boolean",
@@ -735,7 +786,7 @@
                 },
                 "helpFriend": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "dispatch": {
                   "type": "boolean",
@@ -981,7 +1032,7 @@
               "properties": {
                 "normal": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "normalMaxNum": {
                   "type": "number",
@@ -989,7 +1040,7 @@
                 },
                 "satin": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "satinMaxNum": {
                   "type": "number",
@@ -1035,7 +1086,7 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "rejectEnabled": {
                   "type": "boolean",
@@ -1054,7 +1105,7 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "qualities": {
                   "type": "array",
@@ -1094,7 +1145,7 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "oneMore": {
                   "type": "boolean",
@@ -1154,7 +1205,7 @@
               "properties": {
                 "harvest": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "plant": {
                   "type": "boolean",
@@ -1288,7 +1339,7 @@
                 },
                 "touch": {
                   "type": "boolean",
-                  "default": false
+                  "default": true
                 },
                 "touchMode": {
                   "type": "string",

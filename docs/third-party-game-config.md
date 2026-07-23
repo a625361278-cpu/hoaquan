@@ -655,11 +655,11 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 任务配置
 
-- `basic.task.daily`：每日任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每日任务完成奖励，阶段宝箱奖励
-- `basic.task.weekly`：每周任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取每周任务完成奖励
-- `basic.task.main`：主线任务；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取主线任务完成奖励
-- `basic.task.story`：主线剧情；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动解锁主线剧情
-- `basic.task.achieve`：花坊悬赏；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取花坊悬赏完成奖励
+- `basic.task.daily`：每日任务；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动领取每日任务完成奖励，阶段宝箱奖励
+- `basic.task.weekly`：每周任务；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动领取每周任务完成奖励
+- `basic.task.main`：主线任务；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动领取主线任务完成奖励
+- `basic.task.story`：主线剧情；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动解锁主线剧情
+- `basic.task.achieve`：花坊悬赏；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动领取花坊悬赏完成奖励
 
 #### 邮件配置
 
@@ -674,13 +674,13 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 每日祈愿
 
-- `basic.sign.daily`：自动祈愿；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `basic.sign.daily`：自动祈愿；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：无
 - `basic.sign.patch`：自动补签；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 
 #### 珍珠配置
 
-- `basic.pearl.freePearl`：免费珍珠；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动看视频领取免费珍珠
-- `basic.pearl.autoHire`：雇佣劳工；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动雇佣劳工
+- `basic.pearl.freePearl`：免费珍珠；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动看视频领取免费珍珠
+- `basic.pearl.autoHire`：雇佣劳工；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动雇佣劳工
 - `basic.pearl.maxHireLevel`：等级限制；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：只雇佣等级<=此值的用户，0表示不限制
 - `basic.pearl.maxHireTicketUsage`：雇佣券上限；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：当日最大可以使用的雇佣券数量, 为0则不限制。
 - `basic.pearl.open`：自动开珍珠；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
@@ -720,7 +720,7 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 水滴配置
 
-- `plant.water.enabled`：水车水滴；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：3分钟领取一次水滴，这样才能最大化暴击，所以领取会略慢。
+- `plant.water.enabled`：水车水滴；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：3分钟领取一次水滴，这样才能最大化暴击，所以领取会略慢。
 - `plant.water.timedEnabled`：限时水滴；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动领取限时水滴
 - `plant.water.threshold`：水滴阈值；控件类型：`number`；数据类型：`number`；默认值：`0`；说明：若设置100，你的水滴低于100点才会领取，0代表不限制，设置0才会及时领水哦，不理解的建议无脑设置0
 - `plant.water.forceCollectEnabled`：无视阈值直接领；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：会根据设置好的时间段，到时间点后就无视水滴阈值且每次领水不等待3分钟直接领取
@@ -728,8 +728,8 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 种花配置
 
-- `plant.flower.unlockLand`：解锁土地；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动花费金币解锁可解锁的土地
-- `plant.flower.harvestEnabled`：自动收获；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成土地收获
+- `plant.flower.unlockLand`：解锁土地；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动花费金币解锁可解锁的土地
+- `plant.flower.harvestEnabled`：自动收获；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动完成土地收获
 - `plant.flower.plantEnabled`：自动种植；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成土地浇水，加速，种植
 - `plant.flower.videoSpeedup`：视频加速；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动观看视频加速收获，当所有土地种了花且可加速才会使用，避免浪费视频加速次数
 - `plant.flower.useSpeedCard`：使用加速；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：使用加速券加速收获
@@ -746,7 +746,7 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 好友偷花
 
-- `plant.friendSteal.enabled`：自动偷花；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：默认不会偷取花灵，但在好友种植花灵时会偷取花朵，需要在偷花模式里设置排除花朵，排除花灵主花
+- `plant.friendSteal.enabled`：自动偷花；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：默认不会偷取花灵，但在好友种植花灵时会偷取花朵，需要在偷花模式里设置排除花朵，排除花灵主花
 - `plant.friendSteal.includeElf`：偷取花灵；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后偷取有花灵的地块，关闭则跳过有花灵的地块
 - `plant.friendSteal.stealMode`：偷花模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择偷花过滤模式：指定品质或指定花朵或排除花朵；可选值：指定品质=`"quality"` / 指定花朵=`"flower"` / 排除花朵=`"exclude"`
 - `plant.friendSteal.qualities`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：只偷取指定品质的花朵；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
@@ -761,7 +761,7 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 - `plant.elves.selectedIds`：指定花灵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`[]`；说明：数组内为花灵 ID，ID 来自当前花灵选项，不传显示名。
 - `plant.elves.applyAid`：自动申请协助；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
 - `plant.elves.recvAid`：自动领取协助加成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：当协助人数达到5人时自动领取协助加成
-- `plant.elves.helpFriend`：自动协助好友；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `plant.elves.helpFriend`：自动协助好友；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：无
 - `plant.elves.dispatch`：自动派遣花灵；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动将背包中的花灵派遣到空闲位置
 - `plant.elves.speedupDispatch`：自动加速派遣；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：花费元宝加速派遣中的花灵
 - `plant.elves.recvDispatchReward`：自动领取派遣奖励；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：派遣完成后自动领取星辰币奖励
@@ -808,9 +808,9 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 居民订单
 
-- `order.resident.normal`：居民订单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动提交居民订单，不包括建材和绸缎订单，如果花库存不足，需要配合种植开启任务优先使用
+- `order.resident.normal`：居民订单；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动提交居民订单，不包括建材和绸缎订单，如果花库存不足，需要配合种植开启任务优先使用
 - `order.resident.normalMaxNum`：居民订单上限；控件类型：`number`；数据类型：`number`；默认值：`1200`；说明：居民订单单日最大完成次数
-- `order.resident.satin`：绸缎订单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动提交绸缎订单，如果花库存不足，需要配合种植开启任务优先使用
+- `order.resident.satin`：绸缎订单；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动提交绸缎订单，如果花库存不足，需要配合种植开启任务优先使用
 - `order.resident.satinMaxNum`：绸缎订单上限；控件类型：`number`；数据类型：`number`；默认值：`120`；说明：绸缎订单单日最大完成次数
 - `order.resident.building`：建材订单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动提交建材订单，如果花库存不足，需要配合种植开启任务优先使用
 - `order.resident.buildingMaxNum`：建材订单上限；控件类型：`number`；数据类型：`number`；默认值：`120`；说明：建材订单单日最大完成次数
@@ -818,18 +818,18 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 顾客订单
 
-- `order.customer.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成顾客订单
+- `order.customer.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动完成顾客订单
 - `order.customer.rejectEnabled`：自动拒绝；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动拒绝无法培育且库存不足的订单
 
 #### 宫廷订单
 
-- `order.palace.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `order.palace.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：无
 - `order.palace.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅接受指定品质的宫廷订单，不符合时自动免费刷新一次（每天限1次），刷新后仍不符合则跳过；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 - `order.palace.ignoreQuality`：不论品质；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：开启后，若没有用户设置的品质，且没有免费刷新了，则会无视品质做完这个宫廷订单
 
 #### 组团订单
 
-- `order.group.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动完成团单
+- `order.group.enabled`：自动完成；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动完成团单
 - `order.group.oneMore`：再来一单；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：花费元宝再来一单
 - `order.group.submitOnlyCultivatedFlowers`：仅已培育；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：仅提交已培育的花朵
 - `order.group.qualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：仅提交指定品质的花朵到团单；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
@@ -838,7 +838,7 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 公会土地
 
-- `union.land.harvest`：自动收获；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：无
+- `union.land.harvest`：自动收获；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：无
 - `union.land.plant`：自动种植；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动种植空闲土地，自动将不符合限定条件的已种土地替换为目标花朵
 - `union.land.plantMode`：种植策略；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：三种模式均为低等级优先；可选值：指定品质=`"quality"` / 指定花朵=`"flower"` / 库存模式=`"stock"`
 - `union.land.flowers`：指定品质；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：留空则不限制品质；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
@@ -860,7 +860,7 @@ Facebook / Google 启动包的凭证部分如下，其余 `request_id/session_id
 
 #### 公会摸花
 
-- `union.flower.touch`：自动摸花；控件类型：`switch`；数据类型：`boolean`；默认值：`false`；说明：自动摸取别人分享的花
+- `union.flower.touch`：自动摸花；控件类型：`switch`；数据类型：`boolean`；默认值：`true`；说明：自动摸取别人分享的花
 - `union.flower.touchMode`：摸花模式；控件类型：`radio`；数据类型：`string`；默认值：`"quality"`；说明：选择摸花模式：品质模式或指定花模式；可选值：指定品质=`"quality"` / 指定花朵=`"flower"`
 - `union.flower.touchQualities`：品质限定；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["green","blue","purple","gold","red"]`；说明：限定要从公会拿取的花朵品质；可选值：绿=`"green"` / 蓝=`"blue"` / 紫=`"purple"` / 金=`"gold"` / 红=`"red"`
 - `union.flower.touchFlowers`：指定花朵；控件类型：`multiSelect`；数据类型：`string[]`；默认值：`["23001"]`；说明：选择要从公会摸取的具体花朵

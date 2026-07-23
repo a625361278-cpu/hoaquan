@@ -179,6 +179,9 @@ class GameAccountService
         $credential = $this->credentialForStart($account);
         if ($validationId === null || trim($validationId) === '') {
             $validation = $this->loginValidationService()->beginStartValidation($userId, $account, $credential);
+            if (($validation['data']['status'] ?? '') === 'success' && !empty($validation['data']['validation_id'])) {
+                return $this->start($userId, $accountId, (string)$validation['data']['validation_id']);
+            }
             $validation['data']['requires_validation'] = true;
             return $validation;
         }

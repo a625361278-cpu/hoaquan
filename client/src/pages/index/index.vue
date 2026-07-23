@@ -528,7 +528,7 @@ function isActiveAccount(item) {
 }
 
 function canStartAccount(item) {
-  return item.status !== 'stopping';
+  return !['starting', 'running', 'reconnecting', 'stopping'].includes(item.status);
 }
 
 function statusText(item) {
@@ -546,6 +546,9 @@ function toggleMenu(id) {
 }
 
 async function startAccount(item) {
+  if (!canStartAccount(item)) {
+    return;
+  }
   suppressTakeoverAccountIds.add(Number(item.id));
   actionLoading.value = true;
   try {

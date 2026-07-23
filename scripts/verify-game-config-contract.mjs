@@ -2,6 +2,28 @@ import { readFileSync } from 'node:fs';
 import { serializeGameConfigVisibilityCatalog } from './generate-game-config-visibility-catalog.mjs';
 
 const expectedCategoryCountOptions = ['1', '2', '4', '8', '16'];
+const expectedEnabledSwitchDefaults = [
+  'basic.task.daily',
+  'basic.task.weekly',
+  'basic.task.main',
+  'basic.task.story',
+  'basic.task.achieve',
+  'basic.sign.daily',
+  'basic.pearl.freePearl',
+  'basic.pearl.autoHire',
+  'plant.water.enabled',
+  'plant.flower.unlockLand',
+  'plant.flower.harvestEnabled',
+  'plant.friendSteal.enabled',
+  'plant.elves.helpFriend',
+  'order.resident.normal',
+  'order.resident.satin',
+  'order.customer.enabled',
+  'order.palace.enabled',
+  'order.group.enabled',
+  'union.land.harvest',
+  'union.flower.touch',
+];
 
 function assert(condition, message) {
   if (!condition) {
@@ -13,6 +35,17 @@ function assertArrayEqual(actual, expected, label) {
   assert(
     JSON.stringify(actual) === JSON.stringify(expected),
     `${label} 应为 ${JSON.stringify(expected)}，实际为 ${JSON.stringify(actual)}`,
+  );
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function contractSchemaNode(contractSchema, path) {
+  return path.split('.').reduce(
+    (node, part) => node?.properties?.[part],
+    contractSchema.properties.config,
   );
 }
 
@@ -37,6 +70,16 @@ assertArrayEqual(categoryOptions, expectedCategoryCountOptions, '前端选择数
 const contractSchema = JSON.parse(
   readFileSync('docs/third-party-game-config.schema.json', 'utf8'),
 );
+for (const path of expectedEnabledSwitchDefaults) {
+  const escapedPath = escapeRegExp(path);
+  assert(
+    new RegExp(`item\\('${escapedPath}',[^\\n]*true`).test(schemaSource),
+    `前端配置 schema 中 ${path} 默认值必须是 true`,
+  );
+  const node = contractSchemaNode(contractSchema, path);
+  assert(node?.type === 'boolean', `协议 JSON schema 中 ${path} 必须是 boolean`);
+  assert(node.default === true, `协议 JSON schema 中 ${path} 默认值必须是 true`);
+}
 const contractDebug = contractSchema.properties.config.properties.basic.properties.debug;
 assert(contractDebug?.type === 'boolean', '协议 JSON schema 中 basic.debug 必须是 boolean');
 assert(contractDebug.default === true, '协议 JSON schema 中 basic.debug 默认值必须是 true');
@@ -78,6 +121,13 @@ assertArrayEqual(
 
 for (const docPath of ['docs/third-party-game-config.md', 'docs/协议说明.txt']) {
   const doc = readFileSync(docPath, 'utf8');
+  for (const path of expectedEnabledSwitchDefaults) {
+    const escapedPath = escapeRegExp(path);
+    assert(
+      new RegExp(`${escapedPath}.*默认值：\`?true\`?`).test(doc),
+      `${docPath} 中 ${path} 默认值必须是 true`,
+    );
+  }
   assert(
     /basic\.debug.*默认值：`?true`?/.test(doc),
     `${docPath} 中 basic.debug 默认值必须是 true`,

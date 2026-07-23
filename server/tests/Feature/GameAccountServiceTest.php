@@ -694,6 +694,56 @@ class GameAccountServiceTest extends TestCase
         $this->assertSame('启动任务已提交，等待服务器确认', $result['msg']);
     }
 
+    public function testStartContinuesWhenSavedCredentialValidationCompletesImmediately(): void
+    {
+        $repository = new ArrayGameAccountRepository([
+            [
+                'id' => 3,
+                'user_id' => 7,
+                'display_name' => 'any-player',
+                'game_username' => 'any-player',
+                'game_password_cipher' => (new \app\service\CredentialCipher('test-key'))->encrypt('secret-password'),
+                'channel_code' => 'official_app',
+                'server_id' => '',
+                'server_name' => '',
+                'status' => 'local_preview',
+                'sync_status' => 'local_unsynced',
+                'third_party_account_id' => '',
+                'remark' => '服务器未配置，本地预览账号',
+                'config_json' => '{}',
+                'expire_time' => '2099-01-01 00:00:00',
+            ],
+        ]);
+        $validations = new ArrayGameAccountLoginValidationStore();
+        $runtime = new class($validations) extends ArrayThirdPartyScriptRuntime {
+            public function __construct(private ArrayGameAccountLoginValidationStore $validationStore)
+            {
+                parent::__construct();
+            }
+
+            public function sendLoginValidationCommand(array $reservation, int $loginMethod, string $identity, string $credential): array
+            {
+                $result = parent::sendLoginValidationCommand($reservation, $loginMethod, $identity, $credential);
+                $this->validationStore->complete((string)$reservation['validation_id'], 'success', '账号验证通过', 3);
+                return $result;
+            }
+        };
+        $service = new GameAccountService($repository, [
+            'enabled' => true,
+            'transport' => 'websocket',
+            'script_token' => 'script-token',
+            'credential_key' => 'test-key',
+        ], \app\support\I18n::DEFAULT_LOCALE, $runtime, loginValidations: $validations);
+
+        $result = $service->start(7, 3);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertArrayNotHasKey('requires_validation', $result['data']);
+        $this->assertSame('starting', $result['data']['account']['status']);
+        $this->assertSame(3, $runtime->started[0]['account_id']);
+        $this->assertSame('secret-password', $runtime->started[0]['game_password']);
+    }
+
     public function testStartTakesOverExistingRuntimeConnectionBeforeSendingNewStart(): void
     {
         $repository = new ArrayGameAccountRepository([
